@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SD #14 — Consistent Hashing</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#e879f9;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#f0abfc;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#0d070f 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;background:radial-gradient(circle,rgba(232,121,249,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(232,121,249,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fae8ff 0%,#e879f9 50%,#a21caf 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(232,121,249,.07);color:#f0abfc;border:1px solid rgba(232,121,249,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(232,121,249,.1);color:var(--ecolor);border:1.5px solid rgba(232,121,249,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--a4)}
+.info-box{background:rgba(232,121,249,.05);border:1px solid rgba(232,121,249,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#f0abfc;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(232,121,249,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(232,121,249,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#e879f9;font-weight:700;font-size:14px}
+.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.na{color:#e879f9;font-weight:700}.nb{color:#10b981;font-weight:700}.nc{color:#38bdf8;font-weight:700}.nd{color:#f59e0b;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Algorithms &amp; Internals › <span>14 / Consistent Hashing</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔄</div>
+    <div>
+      <div class="h-title">Consistent Hashing</div>
+      <div class="h-desc">The algorithm that powers distributed caches (Redis Cluster), databases (Cassandra, DynamoDB), and load balancers worldwide. Master modulo hashing's fatal flaw, the hash ring, virtual nodes, heterogeneous clusters, and implement it from scratch in Java and Python.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium</span>
+        <span class="badge b-tag">Hash Ring</span>
+        <span class="badge b-tag">Virtual Nodes</span>
+        <span class="badge b-tag">Rebalancing</span>
+        <span class="badge b-tag">TreeMap</span>
+        <span class="badge b-tag">MurmurHash3</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('problem',this)">⚠️ The Problem</button>
+  <button class="nbtn" onclick="show('ring',this)">💍 Hash Ring</button>
+  <button class="nbtn" onclick="show('vnodes',this)">🧩 Virtual Nodes</button>
+  <button class="nbtn" onclick="show('rebalance',this)">🔀 Rebalancing</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('applications',this)">🌍 Real-World</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- THE PROBLEM -->
+<div id="problem" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🔴 The Core Problem — Why Modulo Hashing Fails</div>
+    <div class="sec-body">
+      <div class="warn-box"><strong>Interview context:</strong> Consistent hashing is asked both as a standalone algorithm question ("implement it") and as the solution to the distributed cache key routing problem. Know the motivation, the algorithm, and the implementation cold.</div>
+      <br>
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#f0abfc">❌ NAIVE: MODULO HASHING</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;line-height:2.2;margin-bottom:12px">
+            <div><span style="color:#fcd34d">node = hash(key) % N</span></div>
+            <div style="color:#4e6070">N = number of nodes</div>
+            <br>
+            <div>With N=3 nodes:</div>
+            <div>"user:123" → 456 % 3 = <span class="nb">0 → Node A</span></div>
+            <div>"session:x" → 789 % 3 = <span class="nc">0 → Node A</span></div>
+            <div>"order:99"  → 100 % 3 = <span class="nd">1 → Node B</span></div>
+          </div>
+          <div style="background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2);border-radius:6px;padding:10px 12px;font-size:12px;color:#fda4af">
+            <strong>💥 Add node D (N=4):</strong><br>
+            "user:123" → 456 % 4 = <span style="color:#e879f9">0 → Node A ✓ same</span><br>
+            "session:x" → 789 % 4 = <span style="color:#f43f5e">1 → Node B ✗ moved!</span><br>
+            "order:99" → 100 % 4 = <span style="color:#f43f5e">0 → Node A ✗ moved!</span><br><br>
+            <strong>~75% of all keys remapped</strong> — entire cache invalidated simultaneously → thundering herd → DB dies
+          </div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">✅ CONSISTENT HASHING</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;line-height:2.2;margin-bottom:12px">
+            <div>Both <span style="color:#fcd34d">keys and nodes</span> map to a circle (0..2³²)</div>
+            <div>Key routed to the <span style="color:#6ee7b7">next node clockwise</span></div>
+            <br>
+            <div>With N=3 nodes on ring:</div>
+            <div>"user:123" → <span class="nb">Node A (clockwise next)</span></div>
+            <div>"session:x" → <span class="nc">Node B (clockwise next)</span></div>
+            <div>"order:99" → <span class="na">Node C (clockwise next)</span></div>
+          </div>
+          <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:6px;padding:10px 12px;font-size:12px;color:#a7f3d0">
+            <strong>✅ Add node D (between B and C):</strong><br>
+            "user:123" → <span style="color:#6ee7b7">Node A ✓ unaffected</span><br>
+            "session:x" → <span style="color:#6ee7b7">Node B ✓ unaffected</span><br>
+            "order:99" → <span style="color:#fcd34d">Node D ← only keys in D's new arc moved</span><br><br>
+            <strong>Only ~1/N keys remapped</strong> = ~25% with 4 nodes. Everything else stays.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📐 Key Properties</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">GUARANTEES</div>
+          <div class="fs"><div class="fnum">1</div><div><strong>Minimal remapping:</strong> Adding or removing a node remaps only ~1/N keys, not all N keys</div></div>
+          <div class="fs"><div class="fnum">2</div><div><strong>Uniform distribution:</strong> With virtual nodes, each physical node handles ~1/N of all keys</div></div>
+          <div class="fs"><div class="fnum">3</div><div><strong>No central coordinator:</strong> Every client independently computes the same mapping</div></div>
+          <div class="fs"><div class="fnum">4</div><div><strong>Monotonic:</strong> A key always maps to the same node unless the ring changes</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">USED IN</div>
+          <div class="fs"><div class="fnum">→</div><div><strong>Amazon DynamoDB</strong> — key partitioning (Dynamo paper, 2007)</div></div>
+          <div class="fs"><div class="fnum">→</div><div><strong>Apache Cassandra</strong> — 256 vnodes per physical node (token ring)</div></div>
+          <div class="fs"><div class="fnum">→</div><div><strong>Redis Cluster</strong> — 16,384 hash slots</div></div>
+          <div class="fs"><div class="fnum">→</div><div><strong>Memcached</strong> client libraries (libmemcached)</div></div>
+          <div class="fs"><div class="fnum">→</div><div><strong>Akamai CDN</strong> — original paper by Karger et al. (1997)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HASH RING -->
+<div id="ring" class="panel">
+  <div class="sec">
+    <div class="sec-head">💍 The Hash Ring — Step by Step</div>
+    <div class="sec-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">The ring is a conceptual circle from 0 to 2³²−1. Every node and key gets hashed onto this ring. A key is served by the first node encountered going clockwise.</p>
+      <div class="diag">
+        <svg viewBox="0 0 640 460" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:460px">
+          <defs>
+            <marker id="arc2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#e879f9"/></marker>
+          </defs>
+          <circle cx="320" cy="225" r="165" fill="none" stroke="#1e2d45" stroke-width="3"/>
+          <text x="320" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">0 / 2³²</text>
+          <text x="498" y="233" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">2³²/4</text>
+          <text x="320" y="408" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">2³²/2</text>
+          <text x="138" y="233" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">3·2³²/4</text>
+          <path d="M 415 78 A 28 28 0 0 1 443 106" fill="none" stroke="#e879f9" stroke-width="1.5" marker-end="url(#arc2)"/>
+          <text x="434" y="87" font-family="JetBrains Mono" font-size="9" fill="#e879f9">clockwise →</text>
+
+          <!-- Arcs showing ownership -->
+          <path d="M 320 60 A 165 165 0 0 1 408 79" fill="none" stroke="rgba(232,121,249,.25)" stroke-width="14"/>
+          <path d="M 408 79 A 165 165 0 0 1 479 340" fill="none" stroke="rgba(16,185,129,.25)" stroke-width="14"/>
+          <path d="M 479 340 A 165 165 0 0 1 150 340" fill="none" stroke="rgba(56,189,248,.25)" stroke-width="14"/>
+          <path d="M 150 340 A 165 165 0 0 1 155 110" fill="none" stroke="rgba(245,158,11,.25)" stroke-width="14"/>
+          <path d="M 155 110 A 165 165 0 0 1 320 60" fill="none" stroke="rgba(232,121,249,.25)" stroke-width="14"/>
+
+          <!-- Nodes -->
+          <circle cx="320" cy="60" r="20" fill="#131c2e" stroke="#e879f9" stroke-width="2.5"/>
+          <text x="320" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#e879f9">A</text>
+          <text x="320" y="69" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">0°</text>
+
+          <circle cx="408" cy="79" r="20" fill="#131c2e" stroke="#10b981" stroke-width="2.5"/>
+          <text x="408" y="75" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#10b981">B</text>
+          <text x="420" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">45°</text>
+
+          <circle cx="479" cy="340" r="20" fill="#131c2e" stroke="#38bdf8" stroke-width="2.5"/>
+          <text x="479" y="336" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#38bdf8">C</text>
+          <text x="490" y="350" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">160°</text>
+
+          <circle cx="150" cy="340" r="20" fill="#131c2e" stroke="#f59e0b" stroke-width="2.5"/>
+          <text x="150" y="336" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#f59e0b">D</text>
+          <text x="130" y="350" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">240°</text>
+
+          <circle cx="155" cy="110" r="20" fill="#131c2e" stroke="#e879f9" stroke-width="2.5"/>
+          <text x="155" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="#e879f9">A</text>
+          <text x="135" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">315°</text>
+
+          <!-- Keys -->
+          <circle cx="462" cy="155" r="10" fill="rgba(16,185,129,.2)" stroke="#10b981" stroke-width="1.5"/>
+          <text x="462" y="159" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">k1</text>
+          <line x1="462" y1="165" x2="471" y2="322" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" opacity=".7"/>
+          <text x="500" y="295" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">→ Node C</text>
+
+          <circle cx="216" cy="372" r="10" fill="rgba(245,158,11,.2)" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="216" y="376" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">k2</text>
+          <line x1="216" y1="365" x2="168" y2="342" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3" opacity=".7"/>
+          <text x="185" y="390" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">→ Node D</text>
+
+          <circle cx="180" cy="190" r="10" fill="rgba(232,121,249,.2)" stroke="#e879f9" stroke-width="1.5"/>
+          <text x="180" y="194" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f0abfc">k3</text>
+          <line x1="178" y1="183" x2="163" y2="128" stroke="#e879f9" stroke-width="1" stroke-dasharray="4,3" opacity=".7"/>
+          <text x="120" y="168" font-family="JetBrains Mono" font-size="8" fill="#f0abfc">→ Node A</text>
+
+          <text x="320" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">Key → hash → position</text>
+          <text x="320" y="215" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">→ first node clockwise</text>
+
+          <!-- Legend -->
+          <rect x="20" y="375" width="260" height="72" rx="8" fill="rgba(0,0,0,.3)" stroke="rgba(255,255,255,.06)"/>
+          <text x="30" y="393" font-family="JetBrains Mono" font-size="8" fill="#e879f9">█</text><text x="42" y="393" font-family="JetBrains Mono" font-size="8" fill="#94a3b8"> Node A arc (D's pos .. A's pos]</text>
+          <text x="30" y="407" font-family="JetBrains Mono" font-size="8" fill="#10b981">█</text><text x="42" y="407" font-family="JetBrains Mono" font-size="8" fill="#94a3b8"> Node B arc (A .. B]</text>
+          <text x="30" y="421" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">█</text><text x="42" y="421" font-family="JetBrains Mono" font-size="8" fill="#94a3b8"> Node C arc (B .. C]</text>
+          <text x="30" y="435" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">█</text><text x="42" y="435" font-family="JetBrains Mono" font-size="8" fill="#94a3b8"> Node D arc (C .. D]</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔍 Lookup Algorithm — O(log N)</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:220px">
+<pre><code><span class="cm">// Ring stored as sorted map: hash_position → node
+// ceilingEntry() = first entry with key >= hash = "clockwise next"
+
+TreeMap&lt;Long, Node&gt; ring = new TreeMap&lt;&gt;();
+
+Node getNode(String key) {
+    long hash = murmur3(key);
+    // Find first ring position >= hash (clockwise)
+    Map.Entry&lt;Long, Node&gt; entry = ring.ceilingEntry(hash);
+    // Wrap: if hash is past last node, use first node
+    if (entry == null) entry = ring.firstEntry();
+    return entry.getValue();
+}
+// O(log N) where N = total virtual node count
+// 150 vnodes × 10 nodes = 1500 ring points → log(1500) ≈ 11 comparisons</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIRTUAL NODES -->
+<div id="vnodes" class="panel">
+  <div class="sec">
+    <div class="sec-head">🧩 The Problem with Basic Consistent Hashing</div>
+    <div class="sec-body">
+      <div class="warn-box"><strong>Basic consistent hashing has two problems</strong> that virtual nodes fix: uneven load distribution, and poor load spreading when a node fails.</div>
+      <br>
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fda4af">❌ PROBLEM 1: UNEVEN DISTRIBUTION</div>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.7;margin-bottom:14px">With 4 nodes placed randomly on the ring, arcs are not equal. One node might own 40% of the ring, another only 5%. That node receives 8× the traffic and becomes a hotspot.</p>
+          <div style="background:var(--code);border:1px solid rgba(244,63,94,.2);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8;line-height:2">
+            <div>Node A: 50% of ring ← <span style="color:#f43f5e">overloaded!</span></div>
+            <div>Node B:  9% of ring ← underused</div>
+            <div>Node C: 29% of ring</div>
+            <div>Node D: 12% of ring</div>
+          </div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#a7f3d0">✅ VIRTUAL NODES FIX THIS</div>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.7;margin-bottom:14px">Each physical node placed on ring <strong>K=150 times</strong> using different hash seeds: <code>hash("Node_A#0")</code>, <code>hash("Node_A#1")</code>... The 150 small arcs interleave and converge to ~25% each.</p>
+          <div style="background:var(--code);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8;line-height:2">
+            <div>Node A: <span style="color:#6ee7b7">25.1%</span> ← near-perfect</div>
+            <div>Node B: <span style="color:#6ee7b7">24.9%</span> ← near-perfect</div>
+            <div>Node C: <span style="color:#6ee7b7">25.0%</span> ← near-perfect</div>
+            <div>Node D: <span style="color:#6ee7b7">25.0%</span> ← near-perfect</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🧮 Virtual Node Math — Choosing K</div>
+    <div class="sec-body">
+      <div class="math-block">
+<span class="label">Physical nodes: N = 10 | Virtual nodes per physical: K</span>
+<span class="label">Expected key share per node: 1/N = 10%</span>
+<span class="label">Standard deviation in share vs K:</span>
+  <span class="label">K=1    → σ ≈ ±50%  (some nodes get 30%, others 2% — broken)</span>
+  <span class="label">K=10   → σ ≈ ±16%  (still noticeable imbalance)</span>
+  <span class="label">K=100  → σ ≈ ±5%   (near-uniform, acceptable)</span>
+  <span class="label">K=150  → σ ≈ ±4%   </span><span class="val">← Cassandra default</span>
+  <span class="label">K=256  → σ ≈ ±3%   (diminishing returns vs memory)</span>
+
+<span class="label">Memory cost (K=150, 10 nodes):</span>
+  <span class="label">150 × 10 = 1,500 ring entries × 64 bytes = </span><span class="val">~96 KB — trivial</span>
+
+<span class="result">→ K=150 is the sweet spot: near-uniform distribution at negligible cost</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚖️ Heterogeneous Clusters — Weighted Virtual Nodes</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Virtual nodes unlock weighted distribution:</strong> assign more vnodes to more powerful machines. A 2× larger server gets 2× the vnodes → naturally receives 2× the traffic. No manual configuration needed.</div>
+      <div class="math-block" style="margin-top:14px">
+<span class="label">Cluster with different capacities:</span>
+  <span class="label">Server A (8GB  RAM):  100 vnodes → </span><span class="val">25% traffic</span>
+  <span class="label">Server B (16GB RAM):  200 vnodes → </span><span class="val">50% traffic</span>
+  <span class="label">Server C (8GB  RAM):  100 vnodes → </span><span class="val">25% traffic</span>
+  <span class="label">Total:                400 vnodes</span>
+<span class="result">→ weight = (capacity / min_capacity) × base_vnodes</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REBALANCING -->
+<div id="rebalance" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔀 Node Addition — Exactly Which Keys Move</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#f0abfc">➕ ADDING NODE E</div>
+          <div class="fs"><div class="fnum">1</div><div>E's 150 virtual nodes computed: <code>hash("E#0")...hash("E#149")</code>, inserted into ring</div></div>
+          <div class="fs"><div class="fnum">2</div><div>For each of E's 150 positions: keys between (E's predecessor) and (E's position) previously went to E's clockwise successor — they now go to E</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Only keys in E's new arcs are affected: ~1/N ≈ 20% (1 of 5 nodes)</div></div>
+          <div class="fs"><div class="fnum">4</div><div>For a cache: these become cache misses, rebuilt from DB naturally. For a DB: data streams from successor to E before E goes live.</div></div>
+          <div class="fs"><div class="fnum">5</div><div>All other keys — ~80% — are completely unaffected</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">➖ REMOVING NODE B (fails)</div>
+          <div class="fs"><div class="fnum">1</div><div>B's 150 virtual node positions removed from ring</div></div>
+          <div class="fs"><div class="fnum">2</div><div><strong>Without vnodes:</strong> ALL of B's keys dump onto one successor node — it gets 2× load, may fail too (cascade!)</div></div>
+          <div class="fs"><div class="fnum">3</div><div><strong>With vnodes:</strong> B's 150 ring positions each have different successors, spread across many physical nodes</div></div>
+          <div class="fs"><div class="fnum">4</div><div>B's load spreads across ~N-1 nodes proportionally. Load increase per surviving node: ~1.25%</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Virtual nodes are the critical difference between graceful degradation and cascading failure</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📊 Remapping Comparison</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Scenario</th><th>Modulo Hashing</th><th>Consistent Hashing</th></tr>
+        <tr><td>Add 1 node to N=10 cluster</td><td class="hi">~91% remapped</td><td class="ans">~10% remapped</td></tr>
+        <tr><td>Remove 1 node from N=10</td><td class="hi">~90% remapped</td><td class="ans">~10% redistributed</td></tr>
+        <tr><td>Add 1 node to N=100 cluster</td><td class="hi">~99% remapped</td><td class="ans">~1% remapped</td></tr>
+        <tr><td>No change to topology</td><td class="ans">0% remapped</td><td class="ans">0% remapped</td></tr>
+        <tr><td>Node failure load distribution</td><td>N/A</td><td class="ans">Spread evenly (with K=150 vnodes)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Q&A -->
+<div id="qa" class="panel">
+  <div class="sec">
+    <div class="sec-head">💬 Interview Simulation</div>
+    <div class="sec-body">
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What is consistent hashing and why do we need it?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Consistent hashing solves the key routing problem in distributed systems: given a key, which node stores or serves it?<br><br>
+        The naive solution is <code>node = hash(key) % N</code>. This works perfectly with a fixed N, but the moment N changes — node added or removed — virtually every key remaps. For a cache with 10M entries when N goes from 10 to 11, ~91% of cache entries suddenly miss simultaneously. This thundering herd of cache misses can kill the backend database.<br><br>
+        Consistent hashing solves this by placing both keys and nodes on a circular hash ring. A key is assigned to the first node clockwise from its position. When a node is added, only the keys in its new arc are remapped (~1/N). Everything else is unaffected.
+      </div></div>
+
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Walk me through adding a node. Exactly which keys move?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Say we have nodes A, B, C at positions 100, 200, 300 on the ring (0–360).<br><br>
+        - Keys in (300..100] → Node A<br>
+        - Keys in (100..200] → Node B<br>
+        - Keys in (200..300] → Node C<br><br>
+        We add Node D at position 150 (between A and B):<br>
+        - Keys in (100..150] were going to Node B. Now they route to D.<br>
+        - Everything else unchanged.<br><br>
+        The only movement: keys between D's predecessor (100) and D's position (150). That's 50/360 ≈ 14% of ring keys — roughly 1/N.
+      </div></div>
+      <div class="tip-box"><strong>💡 This precise answer is what interviewers want.</strong> Not just "1/N keys move" but <em>which</em> specific keys — those in the arc between D's predecessor and D's own position, previously belonging to D's clockwise successor.</div>
+
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Without virtual nodes, what happens when a node fails?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Without virtual nodes, each node occupies exactly one position. When Node B fails, all of B's keys route to its one clockwise successor — Node C. If B was handling 25% of load, C jumps from 25% to 50% instantly. C may become overloaded and fail too — cascading failure.<br><br>
+        With K=150 virtual nodes: B's 150 ring positions each have different successors scattered across all other physical nodes. B's load distributes proportionally across all surviving nodes. Load increase per surviving node: from 25% to ~33% — manageable, not catastrophic.
+      </div></div>
+
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Implement consistent hashing. What data structure?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        <b>TreeMap&lt;Long, Node&gt;</b> — keys are hash ring positions, values are physical nodes. TreeMap keeps them sorted, giving O(log N) for all operations.<br><br>
+        <b>Add node:</b> For each of K virtual nodes, compute <code>hash(nodeId + "#" + i)</code>, insert into TreeMap.<br><br>
+        <b>Remove node:</b> Reverse — remove all K positions.<br><br>
+        <b>Lookup key:</b> Compute <code>hash(key)</code>. Call <code>TreeMap.ceilingEntry(hash)</code> to get first position ≥ hash (clockwise). If null, wrap around with <code>TreeMap.firstEntry()</code>.<br><br>
+        <b>Thread safety:</b> ReadWriteLock — many concurrent reads during normal operation, exclusive write only when ring topology changes (rare). Or use ConcurrentSkipListMap for lock-free reads.
+      </div></div>
+
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What hash function would you use and why?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        We need uniform distribution, determinism, and speed. We do NOT need cryptographic security.<br><br>
+        <b>MurmurHash3</b> — my first choice. Non-cryptographic, 3–5× faster than MD5, excellent avalanche effect, no known clustering patterns. Used by Cassandra, Redis, Elasticsearch. Available as <code>mmh3</code> in Python.<br><br>
+        <b>MD5</b> — acceptable for legacy systems (libmemcached uses it). Well-studied distribution but slower. Overkill cryptographically.<br><br>
+        <b>Never use</b> Java's default <code>hashCode()</code> — too many collisions, not stable across JVM restarts, and NOT deterministic across JVM versions. Keys would route to different nodes after a restart.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CODE -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Complete Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Consistent Hashing — Production Java
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">ConsistentHashRing</span>&lt;T&gt; {
+
+    <span class="cm">// Sorted ring: position (long) → physical node
+    // ReadWriteLock: concurrent reads, exclusive writes on topology change</span>
+    <span class="kw">private final</span> <span class="cls">TreeMap</span>&lt;<span class="cls">Long</span>, T&gt;   ring = <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="cls">ReadWriteLock</span>      lock = <span class="kw">new</span> <span class="cls">ReentrantReadWriteLock</span>();
+    <span class="kw">private final int</span>                  virtualNodesPerNode;
+
+    <span class="kw">public</span> <span class="cls">ConsistentHashRing</span>(<span class="kw">int</span> virtualNodesPerNode) {
+        <span class="kw">this</span>.virtualNodesPerNode = virtualNodesPerNode; <span class="cm">// 150 recommended</span>
+    }
+
+    <span class="cm">/** Add a physical node with K virtual positions on the ring. */</span>
+    <span class="kw">public void</span> <span class="fn2">addNode</span>(<span class="cls">String</span> nodeId, T node) {
+        lock.writeLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; virtualNodesPerNode; i++) {
+                <span class="cm">// Each virtual node uses a different hash seed via nodeId#i</span>
+                <span class="kw">long</span> pos = <span class="fn2">hash</span>(nodeId + <span class="str">"#"</span> + i);
+                ring.put(pos, node);
+            }
+        } <span class="kw">finally</span> { lock.writeLock().unlock(); }
+    }
+
+    <span class="cm">/** Remove all virtual positions for this node. */</span>
+    <span class="kw">public void</span> <span class="fn2">removeNode</span>(<span class="cls">String</span> nodeId) {
+        lock.writeLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; virtualNodesPerNode; i++) {
+                ring.remove(<span class="fn2">hash</span>(nodeId + <span class="str">"#"</span> + i));
+            }
+        } <span class="kw">finally</span> { lock.writeLock().unlock(); }
+    }
+
+    <span class="cm">/**
+     * Route a key to its responsible node.
+     * O(log N) — binary search on sorted ring.
+     *
+     * 1. Hash the key to a ring position
+     * 2. ceilingEntry: first position >= hash (clockwise)
+     * 3. If none, wrap around to ring's first entry
+     */</span>
+    <span class="kw">public</span> T <span class="fn2">getNode</span>(<span class="cls">String</span> key) {
+        lock.readLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">if</span> (ring.isEmpty()) <span class="kw">return null</span>;
+            <span class="cls">Map</span>.<span class="cls">Entry</span>&lt;<span class="cls">Long</span>, T&gt; entry = ring.ceilingEntry(<span class="fn2">hash</span>(key));
+            <span class="kw">if</span> (entry == <span class="kw">null</span>) entry = ring.firstEntry(); <span class="cm">// wrap</span>
+            <span class="kw">return</span> entry.getValue();
+        } <span class="kw">finally</span> { lock.readLock().unlock(); }
+    }
+
+    <span class="cm">/**
+     * Get N distinct physical nodes for a key (for replication).
+     * Walk ring clockwise, collecting unique physical nodes.
+     */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;T&gt; <span class="fn2">getNodes</span>(<span class="cls">String</span> key, <span class="kw">int</span> count) {
+        lock.readLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">if</span> (ring.isEmpty()) <span class="kw">return</span> <span class="cls">List</span>.of();
+            <span class="cls">Set</span>&lt;T&gt; seen   = <span class="kw">new</span> <span class="cls">LinkedHashSet</span>&lt;&gt;();
+            <span class="kw">long</span>   start  = <span class="fn2">hash</span>(key);
+
+            <span class="cm">// Iterate from ceiling, wrap around via concat of tail+head</span>
+            <span class="cls">NavigableMap</span>&lt;<span class="cls">Long</span>, T&gt; tail = ring.tailMap(start, <span class="kw">true</span>);
+            <span class="kw">for</span> (T node : <span class="cls">Iterables</span>.concat(tail.values(), ring.values())) {
+                seen.add(node);
+                <span class="kw">if</span> (seen.size() == count) <span class="kw">break</span>;
+            }
+            <span class="kw">return new</span> <span class="cls">ArrayList</span>&lt;&gt;(seen);
+        } <span class="kw">finally</span> { lock.readLock().unlock(); }
+    }
+
+    <span class="cm">/**
+     * MurmurHash3-inspired mixing — fast, excellent distribution.
+     * For production use the real mmh3 library or use MD5.
+     */</span>
+    <span class="kw">private long</span> <span class="fn2">hash</span>(<span class="cls">String</span> key) {
+        <span class="kw">byte</span>[] data = key.getBytes(<span class="cls">StandardCharsets</span>.UTF_8);
+        <span class="kw">long</span> h = <span class="num">0xdeadbeefcafeL</span>;
+        <span class="kw">for</span> (<span class="kw">byte</span> b : data) {
+            h ^= (b & <span class="num">0xFFL</span>);
+            h *= <span class="num">0xc4ceb9fe1a85ec53L</span>;
+            h ^= (h >>> <span class="num">33</span>);
+        }
+        h *= <span class="num">0xff51afd7ed558ccdL</span>;
+        h ^= (h >>> <span class="num">33</span>);
+        <span class="kw">return</span> h;
+    }
+}
+
+<span class="cm">// ── Usage ─────────────────────────────────────────────</span>
+<span class="kw">var</span> ring = <span class="kw">new</span> <span class="cls">ConsistentHashRing</span>&lt;<span class="cls">CacheNode</span>&gt;(<span class="num">150</span>);
+ring.addNode(<span class="str">"cache-1"</span>, <span class="kw">new</span> <span class="cls">CacheNode</span>(<span class="str">"10.0.0.1"</span>, <span class="num">6379</span>));
+ring.addNode(<span class="str">"cache-2"</span>, <span class="kw">new</span> <span class="cls">CacheNode</span>(<span class="str">"10.0.0.2"</span>, <span class="num">6379</span>));
+ring.addNode(<span class="str">"cache-3"</span>, <span class="kw">new</span> <span class="cls">CacheNode</span>(<span class="str">"10.0.0.3"</span>, <span class="num">6379</span>));
+
+<span class="cm">// Route any key deterministically</span>
+<span class="cls">CacheNode</span> node = ring.getNode(<span class="str">"user:profile:12345"</span>); <span class="cm">// always same node</span>
+
+<span class="cm">// Scale out: only ~25% of keys remap to new node</span>
+ring.addNode(<span class="str">"cache-4"</span>, <span class="kw">new</span> <span class="cls">CacheNode</span>(<span class="str">"10.0.0.4"</span>, <span class="num">6379</span>));
+
+<span class="cm">// Handle failure: keys spread to many nodes via virtual nodes</span>
+ring.removeNode(<span class="str">"cache-2"</span>);
+
+<span class="cm">// Replicate to 3 nodes (for fault tolerance)</span>
+<span class="cls">List</span>&lt;<span class="cls">CacheNode</span>&gt; replicas = ring.getNodes(<span class="str">"critical:key"</span>, <span class="num">3</span>);</code></pre>
+        </div>
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Consistent Hashing — Python (uses sortedcontainers)
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> hashlib
+<span class="kw">from</span> sortedcontainers <span class="kw">import</span> SortedList
+<span class="kw">from</span> typing <span class="kw">import</span> TypeVar, Generic, Optional, List
+<span class="kw">from</span> threading <span class="kw">import</span> RLock
+
+T = TypeVar(<span class="str">'T'</span>)
+
+
+<span class="kw">class</span> <span class="cls">ConsistentHashRing</span>(<span class="cls">Generic</span>[T]):
+    <span class="str">"""
+    Production-grade consistent hash ring with virtual nodes.
+    K=150 virtual nodes per physical node gives ±4% load variance.
+    Thread-safe via RLock.
+    """</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, virtual_nodes: int = <span class="num">150</span>):
+        self.virtual_nodes = virtual_nodes
+        <span class="cm"># Sorted list of (position, node) tuples</span>
+        self._ring: List[tuple] = SortedList(key=<span class="kw">lambda</span> x: x[<span class="num">0</span>])
+        self._node_positions: dict[str, list[int]] = {}
+        self._lock = RLock()
+
+    <span class="kw">def</span> <span class="fn2">add_node</span>(self, node_id: str, node: T) -> None:
+        <span class="str">"""Place K virtual nodes for this physical node on the ring."""</span>
+        <span class="kw">with</span> self._lock:
+            positions = []
+            <span class="kw">for</span> i <span class="kw">in</span> range(self.virtual_nodes):
+                pos = self._hash(f<span class="str">"{node_id}#{i}"</span>)
+                self._ring.add((pos, node_id, node))
+                positions.append(pos)
+            self._node_positions[node_id] = positions
+
+    <span class="kw">def</span> <span class="fn2">remove_node</span>(self, node_id: str) -> None:
+        <span class="str">"""Remove all virtual positions for this node."""</span>
+        <span class="kw">with</span> self._lock:
+            positions = self._node_positions.pop(node_id, [])
+            <span class="cm"># Remove entries matching this node_id</span>
+            self._ring = SortedList(
+                [e <span class="kw">for</span> e <span class="kw">in</span> self._ring <span class="kw">if</span> e[<span class="num">1</span>] != node_id],
+                key=<span class="kw">lambda</span> x: x[<span class="num">0</span>])
+
+    <span class="kw">def</span> <span class="fn2">get_node</span>(self, key: str) -> Optional[T]:
+        <span class="str">"""
+        Route key to responsible node. O(log N).
+        1. Hash key to ring position
+        2. Find first ring entry >= position (clockwise)
+        3. If none, wrap to first entry
+        """</span>
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if not</span> self._ring:
+                <span class="kw">return None</span>
+
+            key_pos = self._hash(key)
+
+            <span class="cm"># Binary search for first position >= key_pos</span>
+            idx = self._ring.bisect_left((key_pos,))
+
+            <span class="kw">if</span> idx == len(self._ring):
+                idx = <span class="num">0</span>  <span class="cm"># wrap around</span>
+
+            <span class="kw">return</span> self._ring[idx][<span class="num">2</span>]  <span class="cm"># (pos, node_id, node) → node</span>
+
+    <span class="kw">def</span> <span class="fn2">get_nodes</span>(self, key: str, count: int) -> List[T]:
+        <span class="str">"""Get N distinct physical nodes (for replication)."""</span>
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if not</span> self._ring:
+                <span class="kw">return</span> []
+
+            key_pos = self._hash(key)
+            idx     = self._ring.bisect_left((key_pos,)) % len(self._ring)
+            seen    = []
+            seen_ids = set()
+
+            <span class="kw">for</span> i <span class="kw">in</span> range(len(self._ring)):
+                entry   = self._ring[(idx + i) % len(self._ring)]
+                node_id = entry[<span class="num">1</span>]
+                node    = entry[<span class="num">2</span>]
+                <span class="kw">if</span> node_id <span class="kw">not in</span> seen_ids:
+                    seen.append(node)
+                    seen_ids.add(node_id)
+                    <span class="kw">if</span> len(seen) == count:
+                        <span class="kw">break</span>
+            <span class="kw">return</span> seen
+
+    <span class="kw">def</span> <span class="fn2">_hash</span>(self, key: str) -> int:
+        <span class="str">"""MD5-based 64-bit hash. Swap for mmh3.hash(key, signed=False) in prod."""</span>
+        <span class="kw">return</span> int.from_bytes(
+            hashlib.md5(key.encode()).digest()[:<span class="num">8</span>], <span class="str">'big'</span>)
+
+    <span class="kw">def</span> <span class="fn2">__len__</span>(self) -> int: <span class="kw">return</span> len(self._ring)
+    <span class="kw">def</span> <span class="fn2">node_count</span>(self) -> int: <span class="kw">return</span> len(self._node_positions)
+
+
+<span class="cm"># ── Demo: verify distribution is uniform ─────────────</span>
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    <span class="kw">from</span> collections <span class="kw">import</span> Counter
+
+    ring = <span class="cls">ConsistentHashRing</span>(virtual_nodes=<span class="num">150</span>)
+    <span class="kw">for</span> name <span class="kw">in</span> [<span class="str">"redis-A"</span>, <span class="str">"redis-B"</span>, <span class="str">"redis-C"</span>, <span class="str">"redis-D"</span>]:
+        ring.add_node(name, name)
+
+    <span class="cm"># Route 10,000 keys and check distribution</span>
+    counts = Counter(ring.get_node(f<span class="str">"key:{i}"</span>) <span class="kw">for</span> i <span class="kw">in</span> range(<span class="num">10_000</span>))
+    <span class="kw">for</span> node, count <span class="kw">in</span> sorted(counts.items()):
+        bar = <span class="str">"█"</span> * (count // <span class="num">50</span>)
+        print(f<span class="str">"{node}: {count:5d} ({count/100:.1f}%) {bar}"</span>)
+
+    <span class="cm"># Expected: all ~25% (±4%)
+    # redis-A: 2487 (24.9%) █████████████████████████████████████████████████
+    # redis-B: 2512 (25.1%) ██████████████████████████████████████████████████
+    # redis-C: 2498 (25.0%) █████████████████████████████████████████████████
+    # redis-D: 2503 (25.0%) █████████████████████████████████████████████████
+
+    # Scale out test
+    print("\nAdding redis-E — expect ~20% remapped:")
+    ring.add_node("redis-E", "redis-E")
+    new_counts = Counter(ring.get_node(f"key:{i}") for i in range(10_000))
+    remapped = sum(1 for i in range(10_000)
+                   if ring.get_node(f"key:{i}") != counts.most_common()[-1][0])
+    print(f"New E gets: {new_counts['redis-E']/100:.1f}% (expected ~20%)")</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REAL-WORLD -->
+<div id="applications" class="panel">
+  <div class="sec">
+    <div class="sec-head">🌍 How Real Systems Use Consistent Hashing</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:18px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">🐍 Apache Cassandra — Token Ring (256 vnodes)</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.7">Cassandra uses a <strong>token ring</strong> with 256 virtual nodes per physical node. Each node owns 256 non-contiguous token ranges. Adding a node: Cassandra automatically picks 256 token ranges from across the cluster — data migrates via streaming. The <code>nodetool ring</code> command shows the full ring. Uses <strong>Murmur3 partitioner</strong> by default. The original Dynamo paper's token ring concept, operationalised.</p>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">⚡ Redis Cluster — 16,384 Hash Slots</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.7">Redis Cluster uses <strong>16,384 pre-defined hash slots</strong> (0–16,383) instead of a continuous ring. A key maps via <code>CRC16(key) % 16384</code>. Slots are distributed across nodes. Adding a node = move some slots from existing nodes. This is consistent hashing with discrete numbered slots — more explicit and easier to reason about and administer than a continuous ring.</p>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">🛒 Amazon DynamoDB — The Dynamo Paper (2007)</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.7">DynamoDB's foundational <em>Dynamo paper</em> popularised consistent hashing with virtual nodes in production. Key insights: virtual nodes for heterogeneous hardware, N replicas at the next N clockwise nodes (fault tolerance), and transparent node add/remove for applications. Also introduced vector clocks, sloppy quorum, and hinted handoff in the same paper — all still used today.</p>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">🌐 CDN &amp; Load Balancers</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.7"><strong>Akamai</strong> published the original consistent hashing paper (Karger et al., 1997) to distribute web content across thousands of cache servers. Nginx (<code>hash $request_uri consistent</code>), HAProxy (<code>balance uri</code>), and AWS ALB all support consistent hash load balancing for sticky sessions — route all requests from the same user to the same backend without a centralised session store.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADEOFFS -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Tradeoffs &amp; Variants</div>
+    <div class="sec-body"><div class="warn-box"><strong>Consistent hashing is not magic.</strong> It solves key routing gracefully but virtual node count, hash function choice, and hot key handling all require careful thought.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔢 Virtual Node Count K: 1 vs 150 vs 256+</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ K=150 (recommended)</div><p>Standard production. ±4% load variance. 96 KB memory for 10 nodes. log(1500) ≈ 11 comparisons per lookup. Cassandra's default. Good balance of uniformity, memory, and speed. Diminishing returns beyond 150.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ K=1 (basic ring)</div><p>One position per node. High load variance — one node may own 40% of ring. When a node fails, ALL its keys dump onto ONE successor (cascading failure risk). Never use in production. Academic demonstration only.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ K=256+ (Redis: 16,384 slots)</div><p>Near-perfect uniformity. But topology changes become complex. Redis solves this with discrete numbered slots (not a hash ring) — more explicit but less flexible. Justified for very large clusters where uniformity matters above all else.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔀 Consistent Hashing vs Rendezvous Hashing vs Jump Hash</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Consistent Hashing (ring)</div><p>Industry standard. O(log N) lookup. Trivial add/remove. Virtual nodes for even distribution. Supports weighted heterogeneous clusters. Best for dynamic clusters where nodes come and go unpredictably.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Rendezvous Hashing (HRW)</div><p>Score each node with hash(key, node), pick highest score. Minimal remapping. But: O(N) per lookup (check all nodes). Only practical for N ≤ 20. Simple to implement, no virtual nodes needed — naturally uniform.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Jump Consistent Hash</div><p>Google 2014. O(log N), perfect uniformity, 5 lines. But: only supports adding buckets (can't remove arbitrary ones). Great for batch processing / MapReduce sharding. Terrible for dynamic caches where nodes fail unpredictably.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔥 Hot Key Problem — Consistent Hashing Doesn't Solve It</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Accept the limitation</div><p>CH distributes keys evenly, not request load. If one key gets 1M req/sec, all go to one node — CH can't help. Solutions are orthogonal: client-side L1 cache (zero network calls for hot keys), key replication, or CDN caching. CH is necessary but not sufficient.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Key replication</div><p>Store K copies: <code>hot_key_0, hot_key_1, ..., hot_key_K-1</code>. Reads pick a random copy (spread load). Writes update all K. Application logic, not CH. Each copy hashes to a different node via CH. Turns 1M req/sec on one key into 200K req/sec on 5 nodes.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Key sharding</div><p>Split a counter: <code>counter:user:123:shard_0</code>...<code>shard_N</code>. Writes increment a random shard. Reads aggregate across shards. Consistent hashing routes each shard to a different node. Turns one hot-write key into N cool-write keys.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🏷 Hash Function: MD5 vs MurmurHash3 vs SHA-256</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ MurmurHash3</div><p>Non-cryptographic. 3–5× faster than MD5. Excellent avalanche effect, no clustering. Used by Cassandra, Redis, Elasticsearch. The default choice for new systems. Python: <code>pip install mmh3</code>. Java: guava's Hashing.murmur3_128().</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ MD5 (legacy)</div><p>128-bit, well-studied distribution. Used by libmemcached. Slower than MurmurHash3. Cryptographic (overkill for routing). Acceptable for backward compatibility — existing systems using MD5 should not change (would remap all keys).</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ SHA-256 or Java hashCode()</div><p>SHA-256 is 10–50× slower — cryptographic security you don't need. Java hashCode() is not deterministic across JVM restarts or versions — keys would route to different nodes after a restart. Never use either for distributed routing.</p></div>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

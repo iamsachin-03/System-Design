@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #9 — Web Crawler</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;
+  --accent:#10b981;--a2:#059669;--a3:#f59e0b;--a4:#38bdf8;--a5:#f43f5e;--a6:#a78bfa;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#6ee7b7;--code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#080f0c 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;
+  background:radial-gradient(circle,rgba(16,185,129,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(16,185,129,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#a7f3d0 0%,#10b981 50%,#059669 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(16,185,129,.07);color:#a7f3d0;border:1px solid rgba(16,185,129,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 10px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(16,185,129,.1);color:var(--ecolor);border:1.5px solid rgba(16,185,129,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(16,185,129,.08);color:var(--accent);border:1px solid rgba(16,185,129,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--accent)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--a3)}
+.info-box{background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bae6fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--a4)}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(16,185,129,.1);color:var(--accent);border:1.5px solid rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}.math-block .result{color:#10b981;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(16,185,129,.07);color:#10b981;border-bottom:2px solid #10b981}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--accent)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a3)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.class-grid{grid-template-columns:1fr}}
+.cb{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cb-name{background:rgba(16,185,129,.08);padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.cb-fields{padding:12px 18px;border-bottom:1px solid var(--border)}.cb-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .cft{color:#a78bfa}.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(16,185,129,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:160px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Search Infrastructure › <span>09 / Web Crawler</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🕷</div>
+    <div>
+      <div class="h-title">Web Crawler</div>
+      <div class="h-desc">Design a distributed web crawler capable of crawling 1 billion pages/day — URL frontier management, BFS traversal, politeness policies (robots.txt, rate limiting), content deduplication, and recrawl scheduling.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium-Hard</span>
+        <span class="badge b-tag">BFS / Priority Queue</span>
+        <span class="badge b-tag">Bloom Filter</span>
+        <span class="badge b-tag">robots.txt</span>
+        <span class="badge b-tag">DNS Cache</span>
+        <span class="badge b-tag">Content Dedup</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══ REQUIREMENTS ══ -->
+<div id="req" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🎯 Clarify Scope</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Web crawlers have many use cases.</strong> Google-scale general crawler. Focused crawler (specific domains). News crawler (freshness-first). Price tracker. SEO auditor. Each has different priority rules and recrawl logic.</div><br>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>General-purpose (HTML/text) or also images, PDFs, JavaScript-rendered content?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Target scale — how many pages/day?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Recrawl policy — how often to revisit pages?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Content storage — store raw HTML or just extracted text?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Must respect robots.txt?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>What's the output — indexed content for a search engine?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>HTML pages only. No JavaScript rendering, no images.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>1 billion pages/day (~11,574 pages/sec)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Recrawl: daily for news sites, monthly for static content</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Store raw HTML + extracted links + metadata</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Yes — must respect robots.txt and crawl-delay</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Output feeds into a search index (Elasticsearch)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">✅ Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:12px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>URL Frontier:</strong> Maintain a priority queue of URLs to crawl next. Prioritise by page importance (PageRank-like) and freshness requirements.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Fetch:</strong> Download HTML content of each URL. Handle HTTP redirects, timeouts, and errors gracefully.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Parse:</strong> Extract all hyperlinks from downloaded HTML. Normalise and canonicalise extracted URLs.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Deduplicate URLs:</strong> Never crawl the same URL twice in a crawl cycle. Use Bloom Filter for memory-efficient tracking.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Content Deduplication:</strong> Detect duplicate or near-duplicate content (mirror pages, syndicated articles) using content fingerprinting.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Politeness:</strong> Respect robots.txt (disallow rules). Enforce minimum crawl delay per domain. Avoid overwhelming any single server.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Recrawl:</strong> Periodically revisit already-crawled pages based on their change frequency and importance.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">OUT OF SCOPE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--muted)"></div><div>JavaScript rendering (Headless Chrome) · Image crawling · Search index building · PageRank computation · Malware detection · Login-required pages</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">THROUGHPUT</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>1 billion pages/day = <strong>11,574 pages/sec</strong></div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Distribute crawl load across ≥1,000 crawler workers</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Each worker: ~10 concurrent HTTP connections</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">RELIABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Resumable: if a crawler node dies, its work is reassigned</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>No duplicate crawls: each URL processed exactly once per cycle</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>No data loss: crawled content durably stored before URL marked done</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">POLITENESS</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Max 1 request per domain per second (configurable)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Respect robots.txt Disallow rules per domain</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Identify crawler with User-Agent: "MyCrawler/1.0"</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a6);font-weight:700;letter-spacing:.08em;margin-bottom:12px">STORAGE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>~500 PB for full web (15 TB/day of raw HTML)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>URL seen set: &lt;10 GB (Bloom Filter)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Frontier: 100M pending URLs in priority queue</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Q&A ══ -->
+<div id="qa" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🎙 Phase 1 — Architecture & Hard Problems</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · SCOPE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design a web crawler. What are the core challenges?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        A web crawler has five hard sub-problems worth naming upfront:<br><br>
+        <b>1. URL Frontier management:</b> The web has ~60 billion pages. We can't hold all pending URLs in memory. The frontier must be persisted, prioritised, and efficiently queued for billions of URLs.<br><br>
+        <b>2. URL deduplication:</b> Any page links to other pages. Naively, a crawler would revisit the same URL thousands of times as multiple pages link to it. We need to track which URLs have been seen — efficiently for billions of URLs with minimal memory.<br><br>
+        <b>3. Politeness:</b> We can't hammer servers. We need to throttle requests per domain, respect robots.txt, and avoid getting our IP blocked. This limits throughput — every domain gets at most 1 req/sec from us.<br><br>
+        <b>4. Content deduplication:</b> Many pages contain identical or near-identical content (mirrors, republished articles). Processing duplicates wastes storage and compute.<br><br>
+        <b>5. Recrawl scheduling:</b> Pages change over time. News pages change hourly. Static pages rarely change. We need to recrawl the right pages at the right frequency.<br><br>
+        The key data structures are: <em>Priority Queue</em> (URL frontier), <em>Bloom Filter</em> (URL dedup), <em>SimHash</em> (content dedup), and <em>Per-domain politeness queues</em>.
+      </div></div>
+      <div class="tip-box"><strong>💡 Structure first.</strong> Naming the five problems immediately shows you've thought deeply about crawlers. Most candidates just say "download pages, extract links, repeat" — missing the hard parts entirely.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🌐 Phase 2 — URL Frontier & Priority Queue</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · URL FRONTIER</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design the URL frontier. There are 100 million pending URLs. How do you manage them?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The URL frontier has two conflicting requirements: <em>priority</em> (crawl important pages first) and <em>politeness</em> (don't hammer a single domain). These pull in different directions — a simple priority queue would try to crawl all of Wikipedia simultaneously.<br><br>
+        <b>Two-tier frontier architecture:</b><br><br>
+        <b>Front Queue (Priority-based):</b><br>
+        Multiple FIFO queues, each for a priority level (e.g., High/Medium/Low based on PageRank of the page). A Prioritizer assigns incoming URLs to queues based on importance. A Selector picks the next queue to draw from, weighted toward higher-priority queues.<br><br>
+        <b>Back Queue (Politeness-based):</b><br>
+        One queue <em>per domain</em>. URLs from the same domain always go to the same back queue. Each back queue has a last-crawled timestamp and a crawl-delay (from robots.txt or default 1 req/sec). Worker threads pick from back queues whose delay has elapsed.<br><br>
+        <b>Mapping:</b> Front → Back is done by a Dispatcher: pops URL from front priority queue, routes to the appropriate domain back queue. Back queues are stored in Redis (domain → sorted set of URLs by priority).<br><br>
+        <b>Scale:</b> 100M pending URLs in Redis: 100 bytes per URL × 100M = 10 GB. Manageable. Back queues expire domain entries after crawl window to prevent memory bloat.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you handle a domain with millions of URLs (e.g., Wikipedia with 60M articles)?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Wikipedia gets ~60M URLs but only 1 req/sec politeness limit. At that rate, a full Wikipedia crawl takes ~694 days. Clearly we can't put all 60M in one back queue.<br><br>
+        <b>Solution: Domain shard limits.</b> Each domain gets a back queue with a cap of N URLs (e.g., 10,000). New Wikipedia URLs are sampled: only accept a URL if <code>hash(url) % sampling_rate == 0</code>. This ensures we crawl a representative sample of Wikipedia rather than trying to crawl everything.<br><br>
+        Alternatively, for major domains, pre-configure a higher concurrency allowance (Wikipedia explicitly allows multiple crawlers in their robots.txt). Google Googlebot gets special treatment.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔍 Phase 3 — URL Deduplication with Bloom Filter</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · DEDUPLICATION</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you efficiently check if a URL has already been crawled? You have 1 billion URLs.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Naïve approach: HashSet of all crawled URLs. 1 billion × 100 bytes = 100 GB just for the set. Too much RAM.<br><br>
+        <b>Solution: Bloom Filter</b><br>
+        A Bloom filter is a probabilistic data structure: it can definitively say "URL has NOT been seen" (no false negatives) or "URL has PROBABLY been seen" (small false positive rate).<br><br>
+        <b>How it works:</b>
+        <ol>
+          <li>A bit array of M bits, initially all 0</li>
+          <li>K independent hash functions</li>
+          <li>To add a URL: compute K hash positions, set those M bits to 1</li>
+          <li>To check: compute K hash positions, if ALL are 1 → "probably seen". If ANY is 0 → "definitely not seen"</li>
+        </ol>
+        <b>Math for our scale:</b><br>
+        For 1 billion URLs with 1% false positive rate:<br>
+        M = -n × ln(p) / ln(2)² = -1B × ln(0.01) / 0.48 = ~9.6 billion bits = <em>~1.2 GB</em><br>
+        K = M/n × ln(2) = 9.6 × ln(2) = ~6.7 → <em>7 hash functions</em><br><br>
+        <b>1.2 GB fits in RAM</b> for 1 billion URLs with 1% false positive rate. Compare to 100 GB for a HashSet. 80× more memory efficient.<br><br>
+        <b>False positive impact:</b> A 1% false positive means 1 in 100 new URLs is incorrectly skipped. For a crawler, this is acceptable — missing 1% of new URLs doesn't significantly hurt crawl coverage.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Bloom filters can't delete entries. What if a URL needs to be recrawled?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Good catch. Recrawl is handled separately from the "URL seen" Bloom filter. The Bloom filter tracks URLs that have <em>ever entered the frontier</em> — not "currently active in the frontier". Two solutions:<br><br>
+        <b>Option 1 — Separate recrawl tracking:</b> The Bloom filter prevents re-adding a URL to the frontier. A separate recrawl scheduler maintains a list of already-crawled URLs with their next recrawl timestamp. When a recrawl is due, the scheduler adds the URL back to the frontier, and we <em>do not check the Bloom filter</em> for scheduled recrawls (they bypass dedup).<br><br>
+        <b>Option 2 — Time-windowed Bloom filter:</b> Reset the Bloom filter periodically (e.g., daily). Within a day's crawl window, deduplicate with the filter. When the daily window ends, reset and start fresh. Each URL is recrawled once per day at most — fine for news sites.<br><br>
+        Option 2 is simpler operationally. Option 1 gives more control for variable recrawl frequencies.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🤝 Phase 4 — Politeness: robots.txt & Rate Limiting</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · POLITENESS</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you implement politeness — robots.txt, crawl delay, and not getting blocked?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Politeness has three components:<br><br>
+        <b>1. robots.txt compliance:</b><br>
+        Before crawling any domain, fetch <code>https://domain.com/robots.txt</code>. Parse the Disallow rules for <code>User-agent: *</code> and our specific User-Agent. Cache the parsed rules per domain in Redis (TTL: 24 hours). Before fetching any URL, check if it matches any Disallow rule — skip if so.<br><br>
+        <b>2. Crawl-delay enforcement:</b><br>
+        robots.txt may specify <code>Crawl-delay: 10</code> (seconds between requests). Store <code>last_crawl_time[domain]</code> in Redis. Before fetching, check if enough time has elapsed. If not, put the URL back in the domain queue and pick a different domain.<br><br>
+        <b>3. Per-domain rate limiting:</b><br>
+        Our default: 1 request per second per domain. This is implemented per worker: worker thread picks a URL from a domain queue, fetches it, sleeps for <code>max(crawl_delay, 1) seconds</code> before picking another URL from the <em>same domain</em>. During that sleep, the worker can fetch URLs from <em>other domains</em>.<br><br>
+        <b>4. Respect HTTP response codes:</b><br>
+        - <code>429 Too Many Requests</code> → back off exponentially, slow down crawl for that domain<br>
+        - <code>503 Service Unavailable</code> → re-queue URL, try again in 1 hour<br>
+        - <code>404 Not Found</code> → discard URL, remove from frontier<br>
+        - <code>301/302 Redirect</code> → follow redirect, add redirect target to frontier (check Bloom filter first)
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🧪 Phase 5 — Content Dedup, DNS, & Traps</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · EDGE CASES</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you detect duplicate content? Two pages with the same article but different URLs.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        <b>Exact deduplication:</b> Compute MD5/SHA-1 of the downloaded content. Store hash in a seen-hashes set. If hash exists → discard (duplicate). This catches exact duplicates (e.g., printer-friendly version of a page).<br><br>
+        <b>Near-duplicate detection (SimHash):</b> Many pages are 90% similar (translated pages, lightly edited syndicated content). SimHash produces a 64-bit fingerprint where similar documents produce similar fingerprints (hamming distance &lt;3 = near-duplicate).<br>
+        How SimHash works:<br>
+        1. Tokenise page into shingles (n-grams of words)<br>
+        2. For each shingle, compute a 64-bit hash<br>
+        3. For each bit position: sum +1 if hash has bit=1, -1 if bit=0, weighted by word frequency<br>
+        4. Final SimHash: bit[i] = sign(sum[i])<br>
+        Similar pages → similar SimHash → small hamming distance → mark as near-duplicate.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What's a crawler trap and how do you prevent infinite loops?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        <b>Crawler traps</b> are URLs that infinitely generate new unique URLs, trapping a naive crawler in an infinite loop:<br>
+        <ul>
+          <li>Dynamic calendars: clicking "next month" generates <code>/cal?month=1&year=2026</code>, <code>/cal?month=2...</code> → infinitely</li>
+          <li>Session IDs in URLs: <code>/page?sessionid=abc123</code> generates unique URLs per visitor</li>
+          <li>Infinite parameter permutations: <code>/search?sort=date&order=asc&page=1</code>, <code>&page=2</code>, etc.</li>
+        </ul>
+        <b>Prevention strategies:</b><br>
+        <ul>
+          <li><b>URL depth limit:</b> Never crawl pages more than N path segments deep (e.g., max depth 10). Most legitimate content is accessible within 5 hops from the homepage.</li>
+          <li><b>URL canonicalisation:</b> Strip session IDs, tracking parameters. <code>/page?sessionid=abc&utm_source=x</code> → <code>/page</code>. Many different URLs collapse to the same canonical form → Bloom filter catches them.</li>
+          <li><b>Domain page limit:</b> Max 100,000 pages per domain per crawl cycle. Prevents one site from consuming unlimited crawler resources.</li>
+          <li><b>Content similarity threshold:</b> If 50+ pages from the same domain are near-duplicates, the domain is likely a trap. Stop crawling it.</li>
+        </ul>
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What about DNS? Crawling 11,574 pages/sec means 11,574 DNS lookups/sec minimum.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        DNS is a critical bottleneck. Public DNS resolvers have rate limits and latency (~20-100ms per lookup). At 11,574 pages/sec, naïve DNS would add 200ms of latency to every fetch.<br><br>
+        <b>Solution: Local DNS cache</b><br>
+        Each crawler worker maintains a local DNS cache (TTL 30 minutes): <code>domain → IP</code>. First visit to a domain: DNS lookup. Subsequent visits (up to 30 min): serve from cache. Given that we're crawling 1B pages from a much smaller number of domains (~100M unique domains), cache hit rate is very high.<br><br>
+        Additionally: use a local recursive DNS resolver (unbound/bind) on the crawler cluster. Keep it warm with frequent preloaded domains. This gives sub-millisecond DNS resolution for known domains.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPACITY ══ -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Web crawling is I/O-bound, not compute-bound.</strong> Most time is spent waiting for HTTP responses. Design for maximum concurrency.</div></div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">1</div><div><div class="step-title">Crawl Throughput — Workers Needed</div><div class="step-sub">How many crawler workers to achieve 1B pages/day?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Target: 1 billion pages/day</span>
+
+<span class="label">Average pages/second:</span>
+  <span class="label">1B ÷ 86,400                                = </span><span class="val">11,574 pages/sec</span>
+
+<span class="label">Average HTTP round-trip time (fetch latency): ~500ms</span>
+<span class="label">(incl. DNS, TCP connect, server response time)</span>
+
+<span class="label">Pages per worker per second (with concurrency):</span>
+  <span class="label">Each worker: 10 concurrent HTTP connections</span>
+  <span class="label">1 connection: 2 pages/sec (1/500ms)</span>
+  <span class="label">10 connections: 20 pages/sec per worker</span>
+
+<span class="label">Workers needed:</span>
+  <span class="label">11,574 ÷ 20                                = </span><span class="val">579 workers</span>
+
+<span class="label">With politeness limit (1 req/sec/domain, avg 100 pages per domain visit):</span>
+  <span class="label">Workers can't always run at full speed</span>
+  <span class="label">Utilisation ~60-70% due to politeness delays</span>
+  <span class="label">Adjusted workers: 579 ÷ 0.65                = </span><span class="val">~900 workers</span>
+  <span class="label">With headroom                               = </span><span class="val">1,000-1,200 workers</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">2</div><div><div class="step-title">Storage — Raw HTML</div><div class="step-sub">How much storage for crawled pages?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Average HTML page size: 30 KB (compressed ~10 KB)</span>
+
+<span class="label">Daily storage (uncompressed):</span>
+  <span class="label">1B × 30 KB                                 = </span><span class="val">30 TB/day</span>
+
+<span class="label">Daily storage (gzip compressed):</span>
+  <span class="label">1B × 10 KB                                 = </span><span class="val">10 TB/day</span>
+
+<span class="label">Annual accumulation:</span>
+  <span class="label">10 TB × 365                                = </span><span class="val">3.65 PB/year</span>
+
+<span class="label">The entire crawlable web (~60B pages × 10KB):</span>
+  <span class="label">60B × 10 KB                                = </span><span class="val">~600 PB</span>  <span class="label">(Google's actual index is ~15 EB)</span>
+
+<span class="label">Storage in S3/GCS (tiered: hot recent crawl, cold archive):</span>
+  <span class="label">Hot (last 30 days): 10 TB × 30             = </span><span class="val">300 TB</span>
+  <span class="label">Archive (older): remaining PBs on Glacier</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">3</div><div><div class="step-title">URL Frontier Size</div><div class="step-sub">How much memory/storage for the pending URL queue?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Pending URLs at any time: 100 million (back queue + front queue)</span>
+
+<span class="label">Per URL entry:</span>
+  <span class="label">URL (avg 100 chars) + priority score (8B) + domain (50B) + metadata (50B)</span>
+  <span class="label">Total per URL                              ≈ </span><span class="val">200 bytes</span>
+
+<span class="label">100M × 200B                                = </span><span class="val">20 GB</span>  <span class="label">frontier storage</span>
+
+<span class="label">Redis-based frontier (sorted sets per domain):</span>
+  <span class="label">With 2× Redis overhead                     = </span><span class="val">~40 GB RAM</span>
+  <span class="label">Needs 2-3 Redis nodes (32GB each)          = </span><span class="val">3 Redis nodes</span>
+
+<span class="label">URL Seen Bloom Filter:</span>
+  <span class="label">1B URLs, 1% false positive → 1.2 GB        = </span><span class="val">1.2 GB RAM</span>  <span class="label">(per seed URL set)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">4</div><div><div class="step-title">Network Bandwidth</div><div class="step-sub">Outbound and inbound bandwidth requirements</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Inbound bandwidth (downloading pages):</span>
+  <span class="label">11,574 pages/sec × 30 KB avg               = </span><span class="val">~347 MB/s</span>  <span class="label">= ~2.8 Gbps inbound</span>
+
+<span class="label">Outbound bandwidth (HTTP GET requests, small):</span>
+  <span class="label">11,574 requests/sec × 200B request         = </span><span class="val">~2.3 MB/s</span>  <span class="label">negligible</span>
+
+<span class="label">DNS queries (with local cache, ~1% miss rate):</span>
+  <span class="label">11,574 × 1%                                = </span><span class="val">~116 DNS queries/sec</span>  <span class="label">manageable</span>
+
+<span class="label">Per worker node bandwidth:</span>
+  <span class="label">1,000 workers × 20 pages/sec × 30KB        = </span><span class="val">600 MB/s per cluster</span>
+  <span class="label">Per worker: 600 MB/s ÷ 1000              = </span><span class="val">600 KB/s per worker</span>  <span class="label">(very light)</span>
+  <span class="result">→ 10 Gbps network easily handles 2.8 Gbps inbound across the cluster</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Target crawl rate</td><td class="hi">1B pages/day = 11,574/sec</td><td>Given</td></tr>
+        <tr><td>Crawler worker nodes</td><td class="hi">~1,000</td><td>10 connections × 20 pages/sec each</td></tr>
+        <tr><td>Raw HTML storage/day</td><td class="hi">10 TB (compressed)</td><td>30 KB avg, 3× compression</td></tr>
+        <tr><td>Annual storage</td><td class="hi">~3.65 PB</td><td>S3 tiered hot/cold</td></tr>
+        <tr><td>URL Frontier RAM</td><td class="hi">~40 GB</td><td>100M pending URLs in Redis</td></tr>
+        <tr><td>Bloom Filter RAM</td><td class="hi">~1.2 GB</td><td>1B URLs, 1% false positive</td></tr>
+        <tr><td>Inbound bandwidth</td><td class="hi">~2.8 Gbps</td><td>11,574/sec × 30KB avg</td></tr>
+        <tr><td>DNS cache hit rate</td><td class="hi">~99%</td><td>Local DNS cache per worker</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ API ══ -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 API Design</div>
+    <div class="sec-body"><div class="info-box"><strong>The crawler API is primarily internal.</strong> External-facing: a Seed URL submission API and a crawl status API. Internal: the Frontier Service API used by worker nodes.</div></div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/seeds</span><span class="api-desc">Submit seed URLs to start a crawl</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">urls</span><span class="ft">string[]</span><span class="fr">required</span><span class="fd">Seed URLs to add to frontier. Automatically canonicalized. Max 10,000 per batch.</span></div>
+        <div class="frow"><span class="fn">priority</span><span class="ft">enum</span><span class="fo">optional</span><span class="fd"><code>HIGH</code> | <code>MEDIUM</code> | <code>LOW</code>. Default: <code>MEDIUM</code>. HIGH seeds crawled first.</span></div>
+        <div class="frow"><span class="fn">recrawl_interval_hours</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">How often to recrawl these seeds. Default: 24h. News sites: 1h. Static sites: 720h (30 days).</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 202</div>
+        <div class="frow"><span class="fn">accepted</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Number of URLs accepted into frontier (deduped against Bloom filter)</span></div>
+        <div class="frow"><span class="fn">duplicates_skipped</span><span class="ft">integer</span><span class="fo"></span><span class="fd">URLs already seen (Bloom filter hit)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/frontier/next?worker_id={id}&count={n}</span><span class="api-desc">Worker requests next batch of URLs to crawl</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Notes — Internal API used by crawler workers</div>
+        <div class="frow"><span class="fn">worker_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Worker identifier. Frontier service assigns URLs to workers and tracks in-progress work for fault tolerance.</span></div>
+        <div class="frow"><span class="fn">count</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Batch size. Default 10. Frontier returns URLs from different domains (respects per-domain politeness timing).</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">urls</span><span class="ft">CrawlTask[]</span><span class="fo"></span><span class="fd">Array of tasks. Each: <code>{"task_id": "uuid", "url": "https://...", "priority": "HIGH", "crawl_delay_ms": 1000}</code></span></div>
+        <div class="frow"><span class="fn">ack_deadline_seconds</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Worker must ACK each task within this time or it gets re-queued (fault tolerance).</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/frontier/complete</span><span class="api-desc">Worker reports crawl result</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">task_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Task ID from the next-batch response</span></div>
+        <div class="frow"><span class="fn">status</span><span class="ft">enum</span><span class="fr">required</span><span class="fd"><code>SUCCESS</code> | <code>ERROR_404</code> | <code>ERROR_TIMEOUT</code> | <code>ERROR_ROBOTS</code> | <code>DUPLICATE_CONTENT</code></span></div>
+        <div class="frow"><span class="fn">http_status</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">HTTP response code received</span></div>
+        <div class="frow"><span class="fn">extracted_urls</span><span class="ft">string[]</span><span class="fo">optional</span><span class="fd">New URLs extracted from this page. Frontier service adds to queue after dedup check.</span></div>
+        <div class="frow"><span class="fn">content_hash</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">MD5 hash of page content for exact dedup detection</span></div>
+        <div class="frow"><span class="fn">storage_path</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">S3 path where raw HTML was stored (e.g., <code>s3://crawl-bucket/2026/03/22/{domain}/{hash}.html.gz</code>)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HLD ══ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">👥 Actors</div>
+    <div class="sec-body">
+      <div class="actor-grid">
+        <div class="actor-card"><div class="actor-icon">🕷</div><div class="actor-name">Crawler Worker</div><div class="actor-role">Fetches URLs from frontier. Downloads HTML. Extracts links. Stores content. Reports back to frontier. 1,000+ workers.</div></div>
+        <div class="actor-card"><div class="actor-icon">📋</div><div class="actor-name">Frontier Service</div><div class="actor-role">Manages URL priority queue. Enforces politeness per domain. Tracks in-progress tasks. Reassigns failed tasks.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔍</div><div class="actor-name">URL Filter</div><div class="actor-role">Checks Bloom filter (URL seen?). Validates URL (valid scheme, not blacklisted domain). Normalises URLs.</div></div>
+        <div class="actor-card"><div class="actor-icon">🤖</div><div class="actor-name">Robots Parser</div><div class="actor-role">Fetches and caches robots.txt per domain. Enforces Disallow rules and Crawl-delay. Caches rules 24h in Redis.</div></div>
+        <div class="actor-card"><div class="actor-icon">🧬</div><div class="actor-name">Content Store</div><div class="actor-role">Stores raw HTML to S3. Deduplicates via content hash. Sends to Kafka for downstream processing.</div></div>
+        <div class="actor-card"><div class="actor-icon">⏰</div><div class="actor-name">Recrawl Scheduler</div><div class="actor-role">Monitors recrawl timers. Re-adds URLs to frontier when recrawl interval expires.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔄</div><div class="actor-name">Link Extractor</div><div class="actor-role">Parses HTML to extract &lt;a href&gt; links. Canonicalises URLs. Sends new URLs to frontier via URL Filter.</div></div>
+        <div class="actor-card"><div class="actor-icon">📊</div><div class="actor-name">Search Indexer</div><div class="actor-role">Kafka consumer. Takes crawled content and builds/updates the search index (Elasticsearch). Downstream from crawler.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:560px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+            <marker id="arb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+            <marker id="arp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+          </defs>
+
+          <!-- The Internet -->
+          <rect x="8" y="8" width="100" height="544" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="58" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">INTERNET</text>
+          <rect x="18" y="50" width="80" height="35" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="58" y="63" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">🌐 Web</text>
+          <text x="58" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Servers</text>
+          <rect x="18" y="100" width="80" height="35" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="58" y="113" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">📄 robots</text>
+          <text x="58" y="126" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">.txt</text>
+
+          <!-- Crawler Workers -->
+          <rect x="118" y="8" width="200" height="280" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="218" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">CRAWLER WORKERS (×1000)</text>
+          <rect x="130" y="42" width="176" height="60" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="218" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🕷 Worker Node</text>
+          <text x="218" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">fetch + parse + extract</text>
+          <text x="218" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10 concurrent connections</text>
+          <rect x="130" y="120" width="176" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="218" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🧬 Link Extractor</text>
+          <text x="218" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HTML → URLs</text>
+          <rect x="130" y="180" width="176" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="218" y="198" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🤖 Robots Parser</text>
+          <text x="218" y="212" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">cached per domain</text>
+          <rect x="130" y="240" width="176" height="32" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="218" y="253" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">🌐 DNS Cache</text>
+          <text x="218" y="265" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">domain → IP (30 min TTL)</text>
+
+          <!-- Frontier Service -->
+          <rect x="330" y="8" width="200" height="280" rx="10" fill="rgba(245,158,11,.02)" stroke="rgba(245,158,11,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="430" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">FRONTIER SERVICE</text>
+          <rect x="342" y="42" width="176" height="60" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+          <text x="430" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📋 URL Frontier</text>
+          <text x="430" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">front queue (priority)</text>
+          <text x="430" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">back queue (per domain)</text>
+          <rect x="342" y="120" width="176" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="430" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🔍 URL Filter</text>
+          <text x="430" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Bloom filter + normalise</text>
+          <rect x="342" y="180" width="176" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="430" y="198" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">⏰ Recrawl Scheduler</text>
+          <text x="430" y="212" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">next crawl time</text>
+          <rect x="342" y="240" width="176" height="32" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1"/>
+          <text x="430" y="253" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb7185">⚡ Redis</text>
+          <text x="430" y="265" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">40 GB frontier + Bloom filter</text>
+
+          <!-- Storage & Output -->
+          <rect x="542" y="8" width="200" height="280" rx="10" fill="rgba(167,139,250,.02)" stroke="rgba(167,139,250,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="642" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a78bfa">STORAGE &amp; OUTPUT</text>
+          <rect x="554" y="42" width="176" height="60" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="642" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🪣 S3 Object Store</text>
+          <text x="642" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">raw HTML (gzipped)</text>
+          <text x="642" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10 TB/day, tiered</text>
+          <rect x="554" y="120" width="176" height="42" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="642" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 Kafka</text>
+          <text x="642" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">crawled-pages topic</text>
+          <rect x="554" y="180" width="176" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="642" y="198" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🔍 Elasticsearch</text>
+          <text x="642" y="212" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">search index</text>
+          <rect x="554" y="240" width="176" height="32" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="642" y="253" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">🗄 Cassandra</text>
+          <text x="642" y="265" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">crawl metadata + schedule</text>
+
+          <!-- Monitoring -->
+          <rect x="754" y="8" width="218" height="280" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="863" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">MONITORING</text>
+          <rect x="766" y="42" width="194" height="42" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="863" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📊 Metrics (Prometheus)</text>
+          <text x="863" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">pages/sec, errors/sec</text>
+          <rect x="766" y="102" width="194" height="42" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="863" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🔔 Alerts</text>
+          <text x="863" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">blocked domains, failures</text>
+
+          <!-- ARROWS -->
+          <line x1="98" y1="67" x2="128" y2="67" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arb)"/>
+          <line x1="98" y1="117" x2="128" y2="190" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arb)"/>
+          <line x1="306" y1="67" x2="340" y2="67" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <line x1="340" y1="140" x2="306" y2="60" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <line x1="306" y1="138" x2="340" y2="138" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arp)"/>
+          <line x1="518" y1="67" x2="552" y2="67" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arp)"/>
+          <line x1="518" y1="90" x2="552" y2="130" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <line x1="642" y1="162" x2="642" y2="178" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+
+          <!-- Labels -->
+          <text x="100" y="55" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">HTTP GET</text>
+          <text x="312" y="55" font-family="JetBrains Mono" font-size="8" fill="#10b981">extracted URLs</text>
+          <text x="312" y="130" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">next URL batch</text>
+          <text x="524" y="55" font-family="JetBrains Mono" font-size="8" fill="#c4b5fd">store HTML</text>
+          <text x="524" y="120" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">crawl event</text>
+
+          <!-- Crawl loop arrow -->
+          <path d="M 218 290 Q 218 380 430 380 Q 640 380 640 290" fill="none" stroke="rgba(16,185,129,.3)" stroke-width="2" stroke-dasharray="6,4"/>
+          <text x="430" y="400" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">crawl loop: crawled URLs → recrawl scheduler → frontier → workers</text>
+
+          <!-- Legend -->
+          <rect x="118" y="460" width="630" height="88" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+          <text x="128" y="476" font-family="JetBrains Mono" font-size="9" fill="#fbbf24">URL PIPELINE:</text>
+          <text x="128" y="490" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">1. Worker fetches URL from frontier</text>
+          <text x="128" y="504" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">2. Downloads HTML from web server</text>
+          <text x="128" y="518" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">3. Stores to S3, publishes to Kafka</text>
+          <text x="380" y="476" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">4. Extracts links, deduplicates</text>
+          <text x="380" y="490" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">5. New URLs → URL Filter → Frontier</text>
+          <text x="380" y="504" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">6. Kafka consumer indexes into Elasticsearch</text>
+          <text x="380" y="518" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">7. Recrawl Scheduler re-adds done URLs after interval</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔄 Crawl Loop — Step by Step</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">🕷 FETCH PHASE</div>
+          <div class="fs"><div class="fnum">1</div><div>Worker requests next URL batch from Frontier Service</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Frontier checks domain back queue — returns URL only if crawl delay elapsed</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Worker checks Robots Parser cache for this domain — skip if Disallowed</div></div>
+          <div class="fs"><div class="fnum">4</div><div>DNS lookup (local cache first, TTL 30 min)</div></div>
+          <div class="fs"><div class="fnum">5</div><div>HTTP GET with User-Agent, timeout 30s</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Handle response codes: 200 → process, 301/302 → follow, 404 → discard, 429/503 → backoff</div></div>
+          <div class="fs"><div class="fnum">7</div><div>Compute content MD5 — if hash seen → duplicate, skip storage</div></div>
+          <div class="fs"><div class="fnum">8</div><div>gzip compress + store raw HTML to S3</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fcd34d">🔗 EXTRACT & QUEUE PHASE</div>
+          <div class="fs"><div class="fnum">1</div><div>Parse HTML, extract all &lt;a href&gt; links</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Canonicalise each URL: lowercase, strip fragments, normalise encoding</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Remove known-bad patterns: session IDs, tracker params, infinite loops</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Check Bloom filter: if seen → skip</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Add to Bloom filter + route to domain back queue in Frontier</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Publish crawl result to Kafka (for Elasticsearch indexer)</div></div>
+          <div class="fs"><div class="fnum">7</div><div>Report task completion to Frontier Service with extracted URLs</div></div>
+          <div class="fs"><div class="fnum">8</div><div>Recrawl Scheduler records URL + next crawl timestamp in Cassandra</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LLD ══ -->
+<div id="lld" class="panel">
+  <div class="sec">
+    <div class="sec-head">📦 Core Classes</div>
+    <div class="sec-body">
+      <div class="class-grid">
+        <div class="cb">
+          <div class="cb-name">UrlFrontier</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">frontQueues: <span class="cft">Map&lt;Priority, Queue&lt;URL&gt;&gt;</span></div>
+            <div class="cf">backQueues: <span class="cft">Map&lt;Domain, Queue&lt;URL&gt;&gt;</span> (Redis)</div>
+            <div class="cf">domainLastCrawl: <span class="cft">Map&lt;Domain, Instant&gt;</span></div>
+            <div class="cf">bloomFilter: <span class="cft">BloomFilter</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">addUrl(url, priority): void</div>
+            <div class="cm2">nextBatch(workerId, count): List&lt;CrawlTask&gt;</div>
+            <div class="cm2">complete(taskId, result): void</div>
+            <div class="cm2">reassignStale(): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">BloomFilter</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">bits: <span class="cft">byte[]</span> — 1.2 GB for 1B URLs</div>
+            <div class="cf">hashFunctions: <span class="cft">int</span> = 7</div>
+            <div class="cf">size: <span class="cft">long</span> = 10 billion bits</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">add(url: String): void</div>
+            <div class="cm2">mightContain(url: String): boolean</div>
+            <div class="cm2">hash(url, seed): long</div>
+            <div class="cm2">expectedFalsePositiveRate(): double</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">CrawlerWorker</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">httpClient: <span class="cft">AsyncHttpClient</span></div>
+            <div class="cf">dnsCache: <span class="cft">Map&lt;String, InetAddress&gt;</span></div>
+            <div class="cf">robotsParser: <span class="cft">RobotsParser</span></div>
+            <div class="cf">contentStore: <span class="cft">ContentStore</span></div>
+            <div class="cf">MAX_CONCURRENT: <span class="cft">int</span> = 10</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">run(): void (main loop)</div>
+            <div class="cm2">fetch(url): FetchResult</div>
+            <div class="cm2">extractLinks(html, baseUrl): Set&lt;URL&gt;</div>
+            <div class="cm2">canonicalise(url): String</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">RobotsParser</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">cache: <span class="cft">Map&lt;Domain, RobotsRules&gt;</span> (Redis)</div>
+            <div class="cf">TTL: <span class="cft">Duration</span> = 24 hours</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">isAllowed(url, userAgent): boolean</div>
+            <div class="cm2">getCrawlDelay(domain): Duration</div>
+            <div class="cm2">fetchAndParse(domain): RobotsRules</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🗄 Data Models & Storage Schema</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:400px">
+<pre><code><span class="cm">-- ── Cassandra: Crawl metadata + recrawl schedule ─────</span>
+<span class="kw">CREATE TABLE</span> crawled_pages (
+    url_hash      <span class="cls">TEXT</span>        <span class="kw">PRIMARY KEY</span>,  <span class="cm">-- SHA-1(normalised_url)</span>
+    url           <span class="cls">TEXT</span>,
+    domain        <span class="cls">TEXT</span>,
+    last_crawled  <span class="cls">TIMESTAMP</span>,
+    next_crawl    <span class="cls">TIMESTAMP</span>,
+    http_status   <span class="cls">INT</span>,
+    content_hash  <span class="cls">TEXT</span>,                    <span class="cm">-- MD5 for dedup</span>
+    s3_path       <span class="cls">TEXT</span>,
+    crawl_count   <span class="cls">INT</span>,
+    priority      <span class="cls">TINYINT</span>                   <span class="cm">-- 1=HIGH, 2=MEDIUM, 3=LOW</span>
+);
+
+<span class="cm">-- Index by domain for domain-level stats</span>
+<span class="kw">CREATE TABLE</span> domain_stats (
+    domain           <span class="cls">TEXT</span>       <span class="kw">PRIMARY KEY</span>,
+    pages_crawled    <span class="cls">BIGINT</span>,
+    last_crawl_time  <span class="cls">TIMESTAMP</span>,
+    crawl_delay_ms   <span class="cls">INT</span>,
+    robots_rules     <span class="cls">TEXT</span>,           <span class="cm">-- serialised robots.txt rules</span>
+    robots_fetched   <span class="cls">TIMESTAMP</span>,
+    is_blocked       <span class="cls">BOOLEAN</span>
+);
+
+<span class="cm">-- ── Redis: URL Frontier ───────────────────────────────
+-- Front queues (priority-based)
+-- Key: frontier:front:HIGH  → List (LPUSH/RPOP = FIFO)
+-- Key: frontier:front:MEDIUM
+-- Key: frontier:front:LOW
+
+-- Back queues (per-domain, politeness)
+-- Key: frontier:back:{domain}  → Sorted Set
+--   Score = priority (lower = higher priority)
+--   Member = url
+
+-- In-progress tasks (fault tolerance)
+-- Key: frontier:inprogress  → Hash: task_id → {url, worker_id, started_at}
+-- If task not completed within 5 min → reassign
+
+-- Domain last-crawl time (politeness enforcement)
+-- Key: frontier:domain_ts:{domain}  → Unix timestamp (ms)
+-- SETNX/SET with TTL = crawl_delay + buffer
+
+-- Bloom Filter
+-- Key: frontier:bloom  → Bitfield (1.2 GB, stored as Redis BITFIELD)
+-- Or: external bitset file loaded at startup</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CODE ══ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Web Crawler — Java Implementation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Bloom Filter ───────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">BloomFilter</span> {
+
+    <span class="kw">private final</span> <span class="kw">long</span>[]   bits;
+    <span class="kw">private final</span> <span class="kw">int</span>    numHashFunctions;
+    <span class="kw">private final</span> <span class="kw">long</span>   bitArraySize;
+
+    <span class="cm">/**
+     * @param expectedInsertions 1 billion for our crawler
+     * @param falsePositiveRate  0.01 (1%)
+     */</span>
+    <span class="kw">public</span> <span class="cls">BloomFilter</span>(<span class="kw">long</span> expectedInsertions, <span class="kw">double</span> falsePositiveRate) {
+        <span class="cm">// Optimal bit array size: m = -n*ln(p) / ln(2)^2</span>
+        <span class="kw">this</span>.bitArraySize = (<span class="kw">long</span>) (-expectedInsertions
+            * <span class="cls">Math</span>.log(falsePositiveRate) / (<span class="cls">Math</span>.log(<span class="num">2</span>) * <span class="cls">Math</span>.log(<span class="num">2</span>)));
+        <span class="cm">// Optimal hash functions: k = m/n * ln(2)</span>
+        <span class="kw">this</span>.numHashFunctions = (<span class="kw">int</span>) <span class="cls">Math</span>.round(
+            (<span class="kw">double</span>) bitArraySize / expectedInsertions * <span class="cls">Math</span>.log(<span class="num">2</span>));
+        <span class="cm">// Allocate bit array (long array where each long = 64 bits)</span>
+        <span class="kw">this</span>.bits = <span class="kw">new long</span>[(int) (bitArraySize / <span class="num">64</span>) + <span class="num">1</span>];
+    }
+
+    <span class="kw">public void</span> <span class="fn2">add</span>(<span class="cls">String</span> url) {
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; numHashFunctions; i++) {
+            <span class="kw">long</span> pos = <span class="fn2">hash</span>(url, i) % bitArraySize;
+            bits[(<span class="kw">int</span>)(pos / <span class="num">64</span>)] |= (<span class="num">1L</span> &lt;&lt; (pos % <span class="num">64</span>));
+        }
+    }
+
+    <span class="kw">public boolean</span> <span class="fn2">mightContain</span>(<span class="cls">String</span> url) {
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; numHashFunctions; i++) {
+            <span class="kw">long</span> pos = <span class="fn2">hash</span>(url, i) % bitArraySize;
+            <span class="kw">if</span> ((bits[(<span class="kw">int</span>)(pos / <span class="num">64</span>)] & (<span class="num">1L</span> &lt;&lt; (pos % <span class="num">64</span>))) == <span class="num">0</span>) {
+                <span class="kw">return false</span>; <span class="cm">// definitely not seen</span>
+            }
+        }
+        <span class="kw">return true</span>; <span class="cm">// probably seen (small false positive rate)</span>
+    }
+
+    <span class="kw">private long</span> <span class="fn2">hash</span>(<span class="cls">String</span> url, <span class="kw">int</span> seed) {
+        <span class="cm">// MurmurHash3: fast, good distribution</span>
+        <span class="kw">return</span> <span class="cls">Math</span>.abs((<span class="kw">long</span>) (seed * <span class="num">31</span> + url.hashCode()) * <span class="num">0x9e3779b97f4a7c15L</span>);
+    }
+}
+
+<span class="cm">// ── 2. URL Frontier ───────────────────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">UrlFrontier</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="kw">private final</span> <span class="cls">BloomFilter</span> bloomFilter = <span class="kw">new</span> <span class="cls">BloomFilter</span>(<span class="num">1_000_000_000L</span>, <span class="num">0.01</span>);
+    <span class="kw">private static final int</span> ACK_TIMEOUT_SEC = <span class="num">300</span>; <span class="cm">// 5 min</span>
+
+    <span class="kw">public void</span> <span class="fn2">addUrl</span>(<span class="cls">String</span> rawUrl, <span class="cls">Priority</span> priority) {
+        <span class="cls">String</span> url = <span class="fn2">canonicalise</span>(rawUrl);
+        <span class="kw">if</span> (url == <span class="kw">null</span> || !<span class="fn2">isValidUrl</span>(url)) <span class="kw">return</span>;
+
+        <span class="cm">// Dedup: only add if Bloom filter says "not seen"</span>
+        <span class="kw">if</span> (bloomFilter.mightContain(url)) <span class="kw">return</span>;
+
+        bloomFilter.add(url);
+        <span class="cls">String</span> domain = <span class="fn2">extractDomain</span>(url);
+
+        <span class="cm">// Domain back queue: sorted set, score = priority (lower = higher)</span>
+        redis.opsForZSet().add(
+            <span class="str">"frontier:back:"</span> + domain,
+            url,
+            (<span class="kw">double</span>) priority.ordinal()
+        );
+    }
+
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">CrawlTask</span>&gt; <span class="fn2">nextBatch</span>(<span class="cls">String</span> workerId, <span class="kw">int</span> count) {
+        <span class="cls">List</span>&lt;<span class="cls">CrawlTask</span>&gt; tasks = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+
+        <span class="cm">// Get domains with URLs ready to crawl (respecting delay)</span>
+        <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; readyDomains = <span class="fn2">getReadyDomains</span>(count);
+        <span class="kw">for</span> (<span class="cls">String</span> domain : readyDomains) {
+            <span class="cm">// Get highest-priority URL for this domain</span>
+            <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; urls = redis.opsForZSet()
+                .range(<span class="str">"frontier:back:"</span> + domain, <span class="num">0</span>, <span class="num">0</span>);
+            <span class="kw">if</span> (urls == <span class="kw">null</span> || urls.isEmpty()) <span class="kw">continue</span>;
+
+            <span class="cls">String</span> url     = urls.iterator().next();
+            <span class="cls">String</span> taskId  = <span class="cls">UUID</span>.randomUUID().toString();
+
+            <span class="cm">// Remove from domain queue</span>
+            redis.opsForZSet().remove(<span class="str">"frontier:back:"</span> + domain, url);
+
+            <span class="cm">// Track in-progress (for fault tolerance)</span>
+            redis.opsForHash().put(<span class="str">"frontier:inprogress"</span>, taskId,
+                url + <span class="str">"|"</span> + workerId + <span class="str">"|"</span> + <span class="cls">System</span>.currentTimeMillis());
+
+            <span class="cm">// Update domain last-crawl time</span>
+            redis.opsForValue().set(<span class="str">"frontier:domain_ts:"</span> + domain,
+                <span class="cls">String</span>.valueOf(<span class="cls">System</span>.currentTimeMillis()),
+                <span class="cls">Duration</span>.ofSeconds(<span class="num">2</span>));
+
+            tasks.add(<span class="kw">new</span> <span class="cls">CrawlTask</span>(taskId, url, ACK_TIMEOUT_SEC));
+        }
+        <span class="kw">return</span> tasks;
+    }
+
+    <span class="kw">private</span> <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; <span class="fn2">getReadyDomains</span>(<span class="kw">int</span> count) {
+        <span class="cm">// Get domains with back queues, filter out those still in delay period</span>
+        <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; allDomains = redis.keys(<span class="str">"frontier:back:*"</span>);
+        <span class="kw">return</span> allDomains.stream()
+            .map(k -> k.substring(<span class="str">"frontier:back:"</span>.length()))
+            .filter(<span class="kw">this</span>::isDomainReady)
+            .limit(count)
+            .collect(<span class="cls">Collectors</span>.toSet());
+    }
+
+    <span class="kw">private boolean</span> <span class="fn2">isDomainReady</span>(<span class="cls">String</span> domain) {
+        <span class="cls">String</span> lastTs = redis.opsForValue().get(<span class="str">"frontier:domain_ts:"</span> + domain);
+        <span class="kw">if</span> (lastTs == <span class="kw">null</span>) <span class="kw">return true</span>; <span class="cm">// never crawled</span>
+        <span class="kw">long</span> elapsed = <span class="cls">System</span>.currentTimeMillis() - <span class="cls">Long</span>.parseLong(lastTs);
+        <span class="kw">return</span> elapsed >= <span class="num">1000</span>; <span class="cm">// 1 req/sec default</span>
+    }
+
+    <span class="kw">private</span> <span class="cls">String</span> <span class="fn2">canonicalise</span>(<span class="cls">String</span> rawUrl) {
+        <span class="kw">try</span> {
+            <span class="cls">URI</span> uri = <span class="kw">new</span> <span class="cls">URI</span>(rawUrl.trim().toLowerCase());
+            <span class="cm">// Strip fragment (#section), tracking params, session IDs</span>
+            <span class="cls">String</span> path   = uri.getPath() != <span class="kw">null</span> ? uri.getPath() : <span class="str">"/"</span>;
+            <span class="cls">String</span> query  = <span class="fn2">cleanQueryString</span>(uri.getQuery());
+            <span class="kw">return</span> uri.getScheme() + <span class="str">"://"</span> + uri.getHost() + path
+                + (query.isEmpty() ? <span class="str">""</span> : <span class="str">"?"</span> + query);
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) { <span class="kw">return null</span>; }
+    }
+
+    <span class="cm">/** Reassign tasks that workers failed to complete in time */</span>
+    <span class="ann">@Scheduled</span>(fixedDelay = <span class="num">60_000</span>)
+    <span class="kw">public void</span> <span class="fn2">reassignStaleTasks</span>() {
+        <span class="kw">long</span> staleThreshold = <span class="cls">System</span>.currentTimeMillis()
+            - (ACK_TIMEOUT_SEC * <span class="num">1000L</span>);
+        redis.opsForHash().entries(<span class="str">"frontier:inprogress"</span>)
+            .forEach((taskId, value) -> {
+                <span class="cls">String</span>[] parts = ((String) value).split(<span class="str">"\\|"</span>);
+                <span class="kw">long</span> startedAt = <span class="cls">Long</span>.parseLong(parts[<span class="num">2</span>]);
+                <span class="kw">if</span> (startedAt &lt; staleThreshold) {
+                    <span class="cm">// Re-add URL to frontier and remove from in-progress</span>
+                    <span class="fn2">addUrl</span>(parts[<span class="num">0</span>], <span class="cls">Priority</span>.MEDIUM);
+                    redis.opsForHash().delete(<span class="str">"frontier:inprogress"</span>, taskId);
+                }
+            });
+    }
+}
+
+<span class="cm">// ── 3. Crawler Worker ─────────────────────────────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">CrawlerWorker</span> <span class="kw">implements</span> <span class="cls">Runnable</span> {
+
+    <span class="kw">private final</span> <span class="cls">AsyncHttpClient</span>   httpClient;
+    <span class="kw">private final</span> <span class="cls">UrlFrontier</span>       frontier;
+    <span class="kw">private final</span> <span class="cls">RobotsParser</span>      robotsParser;
+    <span class="kw">private final</span> <span class="cls">ContentStore</span>      contentStore;
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">InetAddress</span>&gt; dnsCache;
+    <span class="kw">private final</span> <span class="cls">String</span>             workerId;
+
+    <span class="kw">public void</span> <span class="fn2">run</span>() {
+        <span class="kw">while</span> (<span class="kw">true</span>) {
+            <span class="cls">List</span>&lt;<span class="cls">CrawlTask</span>&gt; tasks = frontier.nextBatch(workerId, <span class="num">10</span>);
+            <span class="kw">if</span> (tasks.isEmpty()) {
+                <span class="cls">Thread</span>.sleep(<span class="num">1000</span>); <span class="kw">continue</span>;
+            }
+            <span class="cm">// Fetch all tasks concurrently</span>
+            tasks.forEach(task -> <span class="cls">CompletableFuture</span>.runAsync(
+                () -> <span class="fn2">processTask</span>(task)));
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">processTask</span>(<span class="cls">CrawlTask</span> task) {
+        <span class="cls">String</span> url    = task.getUrl();
+        <span class="cls">String</span> domain = <span class="fn2">extractDomain</span>(url);
+
+        <span class="cm">// Check robots.txt</span>
+        <span class="kw">if</span> (!robotsParser.isAllowed(url, <span class="str">"MyCrawler/1.0"</span>)) {
+            frontier.complete(task.getTaskId(), <span class="cls">CrawlResult</span>.robotsDisallowed());
+            <span class="kw">return</span>;
+        }
+
+        <span class="kw">try</span> {
+            <span class="cls">Response</span> response = <span class="fn2">fetchWithDnsCache</span>(url);
+
+            <span class="kw">if</span> (response.getStatusCode() == <span class="num">200</span>) {
+                <span class="cls">String</span> html        = response.getResponseBody();
+                <span class="cls">String</span> contentMd5  = <span class="fn2">md5</span>(html);
+
+                <span class="cm">// Exact content dedup</span>
+                <span class="kw">if</span> (!contentStore.isContentSeen(contentMd5)) {
+                    <span class="cls">String</span> s3Path = contentStore.store(url, html);
+                    <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; links = <span class="fn2">extractLinks</span>(html, url);
+                    frontier.complete(task.getTaskId(),
+                        <span class="cls">CrawlResult</span>.success(s3Path, contentMd5, links));
+                } <span class="kw">else</span> {
+                    frontier.complete(task.getTaskId(),
+                        <span class="cls">CrawlResult</span>.duplicateContent(contentMd5));
+                }
+            } <span class="kw">else if</span> (response.getStatusCode() == <span class="num">429</span>) {
+                <span class="cm">// Back off: double the delay for this domain</span>
+                frontier.backoffDomain(domain);
+                frontier.requeue(task);
+            } <span class="kw">else if</span> (response.getStatusCode() >= <span class="num">400</span>) {
+                frontier.complete(task.getTaskId(),
+                    <span class="cls">CrawlResult</span>.error(response.getStatusCode()));
+            }
+        } <span class="kw">catch</span> (<span class="cls">TimeoutException</span> e) {
+            frontier.complete(task.getTaskId(), <span class="cls">CrawlResult</span>.timeout());
+        }
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Web Crawler — Python Implementation
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> asyncio, aiohttp, hashlib, mmh3, re, time
+<span class="kw">from</span> urllib.parse <span class="kw">import</span> urlparse, urljoin, urlencode, parse_qs
+<span class="kw">from</span> typing <span class="kw">import</span> Optional, Set, List
+<span class="kw">from</span> bs4 <span class="kw">import</span> BeautifulSoup
+
+
+<span class="cm"># ── 1. Bloom Filter ───────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">BloomFilter</span>:
+    <span class="str">"""
+    Memory-efficient URL deduplication.
+    1B URLs at 1% FPR → 1.2 GB RAM vs 100 GB for HashSet.
+    """</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, expected_insertions: int = <span class="num">1_000_000_000</span>,
+                  false_positive_rate: float = <span class="num">0.01</span>):
+        <span class="cm"># Optimal bit array size</span>
+        self.m = int(-expected_insertions * (false_positive_rate.__class__(<span class="num">1</span>)
+                  and __import__(<span class="str">'math'</span>).log(false_positive_rate))
+                  / (__import__(<span class="str">'math'</span>).log(<span class="num">2</span>) ** <span class="num">2</span>))
+        <span class="cm"># Optimal number of hash functions</span>
+        self.k = round(self.m / expected_insertions * __import__(<span class="str">'math'</span>).log(<span class="num">2</span>))
+        <span class="cm"># Bit array as bytearray (each byte = 8 bits)</span>
+        self.bits = bytearray(self.m // <span class="num">8</span> + <span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn2">add</span>(self, url: str) -> None:
+        <span class="kw">for</span> i <span class="kw">in</span> range(self.k):
+            pos = mmh3.hash(url, i, signed=<span class="kw">False</span>) % self.m
+            self.bits[pos // <span class="num">8</span>] |= (<span class="num">1</span> << (pos % <span class="num">8</span>))
+
+    <span class="kw">def</span> <span class="fn2">might_contain</span>(self, url: str) -> bool:
+        <span class="str">"""False = definitely not seen. True = probably seen (1% FPR)."""</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(self.k):
+            pos = mmh3.hash(url, i, signed=<span class="kw">False</span>) % self.m
+            <span class="kw">if not</span> (self.bits[pos // <span class="num">8</span>] & (<span class="num">1</span> << (pos % <span class="num">8</span>))):
+                <span class="kw">return False</span>  <span class="cm"># definitely new</span>
+        <span class="kw">return True</span>  <span class="cm"># probably seen</span>
+
+
+<span class="cm"># ── 2. URL Canonicaliser ──────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">UrlCanonicaliser</span>:
+    <span class="str">"""Normalise URLs for consistent deduplication."""</span>
+
+    <span class="cm"># Query parameters to strip (tracking, session)</span>
+    STRIP_PARAMS = {<span class="str">'utm_source'</span>, <span class="str">'utm_medium'</span>, <span class="str">'utm_campaign'</span>,
+                    <span class="str">'sessionid'</span>, <span class="str">'PHPSESSID'</span>, <span class="str">'sid'</span>, <span class="str">'fbclid'</span>, <span class="str">'gclid'</span>}
+
+    <span class="kw">def</span> <span class="fn2">canonicalise</span>(self, url: str, base_url: str = <span class="kw">None</span>) -> Optional[str]:
+        <span class="kw">try</span>:
+            <span class="cm"># Resolve relative URLs</span>
+            <span class="kw">if</span> base_url: url = urljoin(base_url, url)
+
+            parsed = urlparse(url.strip().lower())
+
+            <span class="cm"># Only crawl HTTP/HTTPS</span>
+            <span class="kw">if</span> parsed.scheme <span class="kw">not in</span> (<span class="str">'http'</span>, <span class="str">'https'</span>):
+                <span class="kw">return None</span>
+
+            <span class="cm"># Strip fragment (#section = client-side only, same page)</span>
+            <span class="cm"># Clean query params (remove tracking, sessions)</span>
+            params = parse_qs(parsed.query, keep_blank_values=<span class="kw">True</span>)
+            clean  = {k: v <span class="kw">for</span> k, v <span class="kw">in</span> params.items()
+                       <span class="kw">if</span> k <span class="kw">not in</span> self.STRIP_PARAMS}
+            query  = urlencode(sorted(clean.items()))  <span class="cm"># sort for consistency</span>
+
+            path = parsed.path.rstrip(<span class="str">'/'</span>) <span class="kw">or</span> <span class="str">'/'</span>
+            <span class="kw">return</span> f<span class="str">"{parsed.scheme}://{parsed.netloc}{path}"</span> + (
+                f<span class="str">"?{query}"</span> <span class="kw">if</span> query <span class="kw">else</span> <span class="str">""</span>)
+        <span class="kw">except Exception</span>:
+            <span class="kw">return None</span>
+
+
+<span class="cm"># ── 3. Async Crawler Worker ───────────────────────────</span>
+<span class="kw">class</span> <span class="cls">CrawlerWorker</span>:
+    <span class="str">"""
+    Async crawler: 10 concurrent HTTP connections per worker.
+    At 500ms avg latency → 20 pages/sec per worker.
+    1,000 workers → 20,000 pages/sec > our target of 11,574.
+    """</span>
+    MAX_CONCURRENT = <span class="num">10</span>
+    USER_AGENT     = <span class="str">"MyCrawler/1.0 (+https://example.com/bot)"</span>
+    TIMEOUT_SEC    = <span class="num">30</span>
+    MAX_DEPTH      = <span class="num">10</span>  <span class="cm"># trap prevention</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, worker_id: str, frontier, robots_parser,
+                  content_store, bloom_filter, canonicaliser):
+        self.worker_id     = worker_id
+        self.frontier      = frontier
+        self.robots        = robots_parser
+        self.content_store = content_store
+        self.bloom         = bloom_filter
+        self.canonicaliser = canonicaliser
+        self.dns_cache     = {}  <span class="cm"># simple TTL dict</span>
+        self.semaphore     = asyncio.Semaphore(self.MAX_CONCURRENT)
+
+    <span class="kw">async def</span> <span class="fn2">run</span>(self):
+        <span class="str">"""Main crawl loop"""</span>
+        async <span class="kw">with</span> aiohttp.ClientSession(
+            headers={<span class="str">"User-Agent"</span>: self.USER_AGENT},
+            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT_SEC)
+        ) <span class="kw">as</span> session:
+            self.session = session
+            <span class="kw">while True</span>:
+                tasks = <span class="kw">await</span> self.frontier.next_batch(self.worker_id, count=<span class="num">10</span>)
+                <span class="kw">if not</span> tasks:
+                    <span class="kw">await</span> asyncio.sleep(<span class="num">1</span>)
+                    <span class="kw">continue</span>
+                <span class="cm"># Process all 10 tasks concurrently</span>
+                <span class="kw">await</span> asyncio.gather(*[self._process(t) <span class="kw">for</span> t <span class="kw">in</span> tasks],
+                                      return_exceptions=<span class="kw">True</span>)
+
+    <span class="kw">async def</span> <span class="fn2">_process</span>(self, task: dict):
+        url    = task[<span class="str">"url"</span>]
+        domain = urlparse(url).netloc
+
+        <span class="cm"># 1. Politeness: check robots.txt</span>
+        <span class="kw">if not await</span> self.robots.is_allowed(url, self.USER_AGENT):
+            <span class="kw">await</span> self.frontier.complete(task[<span class="str">"task_id"</span>], <span class="str">"ROBOTS_DISALLOWED"</span>)
+            <span class="kw">return</span>
+
+        <span class="cm"># 2. Depth trap prevention</span>
+        depth = url.count(<span class="str">'/'</span>) - <span class="num">2</span>
+        <span class="kw">if</span> depth > self.MAX_DEPTH:
+            <span class="kw">await</span> self.frontier.complete(task[<span class="str">"task_id"</span>], <span class="str">"DEPTH_EXCEEDED"</span>)
+            <span class="kw">return</span>
+
+        async <span class="kw">with</span> self.semaphore:
+            <span class="kw">try</span>:
+                async <span class="kw">with</span> self.session.get(url,
+                        allow_redirects=<span class="kw">True</span>, max_redirects=<span class="num">5</span>) <span class="kw">as</span> resp:
+
+                    <span class="kw">if</span> resp.status == <span class="num">200</span>:
+                        html         = <span class="kw">await</span> resp.text(errors=<span class="str">'ignore'</span>)
+                        content_hash = hashlib.md5(html.encode()).hexdigest()
+
+                        <span class="cm"># 3. Content dedup</span>
+                        <span class="kw">if not</span> <span class="kw">await</span> self.content_store.is_seen(content_hash):
+                            s3_path = <span class="kw">await</span> self.content_store.store(
+                                url, html, content_hash)
+
+                            <span class="cm"># 4. Extract + queue new links</span>
+                            links = self._extract_links(html, url)
+                            new_links = [
+                                l <span class="kw">for</span> l <span class="kw">in</span> links
+                                <span class="kw">if not</span> self.bloom.might_contain(l)
+                            ]
+                            <span class="kw">for</span> link <span class="kw">in</span> new_links:
+                                self.bloom.add(link)
+
+                            <span class="kw">await</span> self.frontier.complete(
+                                task[<span class="str">"task_id"</span>], <span class="str">"SUCCESS"</span>,
+                                extracted_urls=new_links,
+                                content_hash=content_hash,
+                                storage_path=s3_path)
+                        <span class="kw">else</span>:
+                            <span class="kw">await</span> self.frontier.complete(
+                                task[<span class="str">"task_id"</span>], <span class="str">"DUPLICATE_CONTENT"</span>)
+
+                    <span class="kw">elif</span> resp.status == <span class="num">429</span>:
+                        <span class="cm"># Rate limited: back off this domain</span>
+                        <span class="kw">await</span> self.frontier.backoff_domain(domain, factor=<span class="num">2</span>)
+                        <span class="kw">await</span> self.frontier.requeue(task)
+
+                    <span class="kw">else</span>:
+                        <span class="kw">await</span> self.frontier.complete(
+                            task[<span class="str">"task_id"</span>], f<span class="str">"ERROR_{resp.status}"</span>)
+
+            <span class="kw">except asyncio.TimeoutError</span>:
+                <span class="kw">await</span> self.frontier.complete(task[<span class="str">"task_id"</span>], <span class="str">"TIMEOUT"</span>)
+
+    <span class="kw">def</span> <span class="fn2">_extract_links</span>(self, html: str, base_url: str) -> List[str]:
+        <span class="str">"""Extract and canonicalise all links from HTML."""</span>
+        soup  = <span class="cls">BeautifulSoup</span>(html, <span class="str">'html.parser'</span>)
+        links = set()
+        <span class="kw">for</span> tag <span class="kw">in</span> soup.find_all(<span class="str">'a'</span>, href=<span class="kw">True</span>):
+            canonical = self.canonicaliser.canonicalise(tag[<span class="str">'href'</span>], base_url)
+            <span class="kw">if</span> canonical:
+                links.add(canonical)
+        <span class="kw">return</span> list(links)
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRADEOFFS ══ -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Design Tradeoffs</div>
+    <div class="sec-body"><div class="warn-box"><strong>Crawlers make inherently tension-filled tradeoffs</strong> between completeness (crawl everything), politeness (don't hurt web servers), and freshness (keep content current).</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔍 URL Deduplication: Bloom Filter vs HashSet vs DB</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Bloom Filter</div><p>1.2 GB for 1B URLs at 1% FPR. No false negatives (never misses a seen URL). 1% false positives (skips ~1% of genuinely new URLs). 80× more memory-efficient than a HashSet. Industry standard for web crawlers (Google, Common Crawl).</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ In-Memory HashSet</div><p>Zero false positives. But 100 GB for 1B URLs — doesn't fit in RAM on a single machine. Would need Redis cluster, adding 1ms latency per URL check. At 11,574 URLs/sec extracted, that's 11,574 Redis lookups/sec. Expensive.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ Database (Cassandra)</div><p>Persistent, can handle any scale. But ~5ms per lookup at 11,574 checks/sec = 57 seconds of DB time per second of crawling — the DB becomes a bottleneck. Use DB for recrawl scheduling (infrequent), not for hot-path URL dedup.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📋 Crawl Ordering: BFS vs DFS vs Priority Queue</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Priority Queue (best-first)</div><p>Pages ranked by importance (PageRank estimate, link count). High-quality pages crawled first. If crawl is interrupted, the important web has been indexed. The two-tier frontier (priority + politeness queues) is this approach.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Breadth-First Search (BFS)</div><p>Start from seeds, explore level by level. Naturally discovers "hub" pages first (popular pages get many links → found early). Simple. But doesn't prioritise by quality — wastes time on low-value pages in early rounds.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Depth-First Search (DFS)</div><p>Goes deep into one site before moving to others. Terrible for a general crawler: gets stuck crawling all 60M Wikipedia articles before moving to other domains. Also very impolite (hammers one server). Never use for general-purpose crawling.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">⏱ Recrawl Strategy: Fixed Interval vs Adaptive vs On-Demand</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Adaptive (change frequency-based)</div><p>Track how often each page changes between crawls. High-change pages (news) get shorter recrawl intervals. Low-change pages (Wikipedia stable articles) get longer intervals. Maximises freshness per unit crawl bandwidth. Google uses this.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Fixed Interval</div><p>Every page recrawled every N hours regardless. Simple. But wastes resources on static pages that never change, while potentially missing rapid changes on news sites. Only sensible for small focused crawlers.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Sitemap-based recrawl</div><p>Many sites publish XML sitemaps with <code>&lt;lastmod&gt;</code> and <code>&lt;changefreq&gt;</code> hints. Excellent signal for recrawl scheduling — the site tells you directly when it was last modified. Use sitemap data to seed recrawl scheduler instead of guessing from crawl diffs.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🚀 Fetch Concurrency: Async I/O vs Threads vs Processes</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Async I/O (aiohttp / Netty)</div><p>Single thread, thousands of concurrent HTTP connections. 99% of crawler time is waiting for network — async I/O perfectly matches this pattern. 10 concurrent connections × 1,000 workers = 10,000 concurrent HTTP requests with minimal CPU overhead.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Thread Pool</div><p>1 thread per connection. With 500ms avg latency and 1,000 req/sec target per machine, you need 500 threads per machine. Context switching overhead. Memory overhead (~1MB stack per thread). Works but less efficient than async I/O.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Process per URL</div><p>Fork a new process per URL. Maximum isolation but catastrophic overhead — process creation is 10,000× more expensive than async context switch. Fork overhead alone would dominate crawl time. Never for high-throughput crawlers.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

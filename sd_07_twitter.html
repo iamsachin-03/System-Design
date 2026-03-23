@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #7 — Twitter / Tweet Feed</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;
+  --accent:#38bdf8;--a2:#0ea5e9;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#a78bfa;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#7dd3fc;--code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#070c14 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;
+  background:radial-gradient(circle,rgba(56,189,248,0.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(56,189,248,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#bae6fd 0%,#38bdf8 50%,#0284c7 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(56,189,248,.07);color:#bae6fd;border:1px solid rgba(56,189,248,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 10px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(56,189,248,.1);color:var(--ecolor);border:1.5px solid rgba(56,189,248,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(56,189,248,.08);color:var(--accent);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--a4)}
+.info-box{background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bae6fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-box{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.rq-box h4{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
+.rq-box.fn h4{color:var(--a3)}.rq-box.nf h4{color:var(--a4)}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(56,189,248,.1);color:var(--accent);border:1.5px solid rgba(56,189,248,.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}.math-block .result{color:#38bdf8;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(56,189,248,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-del{background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:160px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+.srow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.sc{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;min-width:50px}
+.s200{color:#34d399}.s201{color:#34d399}.s400{color:#fbbf24}.s404{color:#f87171}
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.class-grid{grid-template-columns:1fr}}
+.cb{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cb-name{background:rgba(56,189,248,.08);padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.cb-fields{padding:12px 18px;border-bottom:1px solid var(--border)}.cb-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .cft{color:#a78bfa}.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(56,189,248,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* Snowflake ID visualisation */
+.sf-box{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:20px;margin:14px 0}
+.sf-bits{display:flex;gap:2px;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto}
+.sf-seg{border-radius:4px;padding:8px 6px;text-align:center;flex-shrink:0}
+.sf-seg-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;margin-bottom:4px}
+.sf-seg-bits{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted2)}
+.sf-ts{background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);width:180px}
+.sf-ts .sf-seg-label{color:var(--accent)}
+.sf-dc{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);width:60px}
+.sf-dc .sf-seg-label{color:var(--a3)}
+.sf-w{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);width:60px}
+.sf-w .sf-seg-label{color:var(--a4)}
+.sf-seq{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);width:80px}
+.sf-seq .sf-seg-label{color:var(--a6)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Social / Feed › <span>07 / Twitter</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🐦</div>
+    <div>
+      <div class="h-title">Twitter / Tweet Feed</div>
+      <div class="h-desc">Design a global microblogging platform — Snowflake ID generation, tweet storage, home timeline with hybrid fanout, trending topics, search, and handling celebrities with 100M+ followers at 500M tweets/day.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Snowflake ID</span>
+        <span class="badge b-tag">Fanout on Write</span>
+        <span class="badge b-tag">Timeline Cache</span>
+        <span class="badge b-tag">Trending Topics</span>
+        <span class="badge b-tag">Redis ZSet</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══ REQUIREMENTS ══ -->
+<div id="req" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🎯 Clarify Scope</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Twitter is the classic feed design interview.</strong> It has a notorious celebrity problem (Obama, Cristiano Ronaldo have 100M+ followers), the fanout write storm, and the home timeline generation — all in one system.</div><br>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Tweet only (text), or also media?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Reverse-chronological timeline, or algorithmic ranking?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Retweets / quote tweets?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Expected scale — DAU, tweets/day?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Trending topics?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Search?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Text tweets up to 280 chars. Media (images) as optional attachment.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Reverse-chronological first (algorithmic = extended)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — retweets and likes (no quote tweets for simplicity)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>300M DAU, 500M tweets/day</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — trending topics in real-time</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Basic full-text search on tweets</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">✅ Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:12px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Post Tweet:</strong> User posts text (≤280 chars) + optional media. Tweet is immediately visible on their profile and propagates to followers' timelines.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Home Timeline:</strong> User sees reverse-chronological feed of tweets from people they follow. Paginated with cursor. Load in &lt;200ms.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>User Timeline:</strong> All tweets by a specific user, reverse-chronological. Used for profile view.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Follow / Unfollow:</strong> User A follows User B. A's home timeline now includes B's new tweets.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Like / Unlike:</strong> Like a tweet. Like count displayed. One like per user per tweet.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Retweet:</strong> Share another user's tweet to your followers. Original tweet metadata preserved.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">EXTENDED</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Trending Topics:</strong> Real-time top hashtags/phrases globally and per region, updated every 5 minutes</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Search:</strong> Full-text search across tweets. Results ranked by recency and engagement.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Notifications:</strong> Alert user when someone likes/retweets/follows them</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Delete Tweet:</strong> Remove tweet from own profile and all followers' cached timelines</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:.08em;margin-bottom:12px">OUT OF SCOPE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--muted)"></div><div>Twitter Spaces · Moments · Ads · Verified checkmarks · Algorithmic timeline · DMs (covered in WhatsApp design)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">PERFORMANCE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Home timeline load: <strong>p99 &lt; 200ms</strong></div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Tweet post → visible in home timeline: <strong>&lt; 5 seconds</strong></div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Trending topics: refreshed every <strong>5 minutes</strong></div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">RELIABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>99.99% availability for timeline reads</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Tweet IDs must be globally unique and time-sortable (Snowflake)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Eventual consistency: timeline may lag by a few seconds</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SCALE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>500M tweets/day → ~5,787 writes/sec</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>28B timeline reads/day (~323K reads/sec) — 100:1 read ratio</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Celebrity problem: accounts with 100M+ followers</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a6);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SPECIAL</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Tweet IDs are Snowflake — 64-bit, time-sortable, no central coordinator bottleneck</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Home timeline is precomputed for most users (push model)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Hybrid fanout — push for normal users, pull for celebrities</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Q&A ══ -->
+<div id="qa" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🎙 Phase 1 — Snowflake ID Generation</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · ID GENERATION</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Let's start with something foundational — how do you generate tweet IDs? Why can't you just use auto-increment in MySQL?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Three problems with auto-increment in MySQL at Twitter scale:<br>
+        <b>1. Single point of failure:</b> One MySQL instance controls the counter. If it's down, you can't post tweets.<br>
+        <b>2. Not shardable:</b> If you shard tweets across databases, each DB generates IDs independently — duplicates guaranteed.<br>
+        <b>3. Not time-sortable:</b> Auto-increment IDs tell you nothing about when the tweet was created. You'd need a separate timestamp column to sort by recency.<br><br>
+        <b>Twitter's solution: Snowflake IDs</b> — a 64-bit integer with the structure:
+        <ul>
+          <li><b>1 bit</b>: Sign bit (always 0)</li>
+          <li><b>41 bits</b>: Milliseconds since Twitter epoch (Nov 4, 2010). Gives ~69 years before overflow.</li>
+          <li><b>10 bits</b>: Machine/datacenter ID (up to 1,024 unique workers)</li>
+          <li><b>12 bits</b>: Sequence number per millisecond (up to 4,096 IDs per ms per machine)</li>
+        </ul>
+        <b>Key properties:</b><br>
+        <ul>
+          <li>Time-sortable: higher IDs = newer tweets. No need for separate timestamp sort.</li>
+          <li>Globally unique: no coordination needed between machines</li>
+          <li>4,096 IDs × 1,024 machines = <em>4.19 million IDs per millisecond</em> — vastly more than Twitter needs</li>
+          <li>Decentralized: each machine generates its own IDs</li>
+        </ul>
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What happens if the server clock goes backwards (NTP adjustment)?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Clock skew backward is the most dangerous Snowflake failure mode. If the timestamp goes backward, you'd generate IDs smaller than previously generated ones — breaking the monotonicity guarantee and potentially causing duplicates.<br><br>
+        The standard solution: <b>detect backward clock and refuse to generate IDs until the clock catches up.</b><br>
+        <code>if (currentMs &lt; lastTimestamp) {
+  long wait = lastTimestamp - currentMs;
+  Thread.sleep(wait);  // wait for clock to catch up
+}</code><br><br>
+        In practice, NTP adjustments are typically &lt;1ms. Waiting a few milliseconds is acceptable. For larger corrections (server restart after maintenance), the machine ID in the ID structure provides some insurance — same timestamp but different machine ID → no conflict.
+      </div></div>
+      <div class="tip-box"><strong>💡 Snowflake is a frequently asked standalone interview question</strong> at companies like Airbnb, Uber, Twitter. Know the 41/10/12 bit breakdown and clock skew handling by heart. The time-sortability property is what makes it uniquely valuable for Twitter feeds.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📰 Phase 2 — Home Timeline: The Fanout Problem</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · TIMELINE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design the home timeline. This is the core hard problem — walk me through it in depth.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The home timeline shows you tweets from people you follow, in reverse chronological order. Two fundamental approaches:<br><br>
+        <b>Approach A — Fanout on Write (Push):</b><br>
+        When @alice tweets, immediately write her tweet_id to the home timeline of every one of her followers.<br>
+        <em>Pro:</em> Timeline reads are O(1) — just read from a pre-built sorted list in Redis.<br>
+        <em>Problem:</em> @cristiano has 160M followers. His tweet creates 160M Redis writes in seconds. That's a write storm that can saturate the entire fanout worker fleet.<br><br>
+        <b>Approach B — Fanout on Read (Pull):</b><br>
+        When a user requests their timeline, fetch their followee list, query each person's recent tweets, merge and sort.<br>
+        <em>Pro:</em> No fanout writes needed.<br>
+        <em>Problem:</em> If you follow 5,000 people, each timeline load requires 5,000 DB queries, then merge-sort of potentially millions of tweets. 300M × 10 opens/day = 3B timeline loads/day → at 5,000 queries each = 15 trillion DB queries/day. Impossible.<br><br>
+        <b>Twitter's actual solution: Hybrid</b><br>
+        <ul>
+          <li>Normal users (&lt;10K followers): <b>Fanout on Write</b>. Their tweets push to all followers' Redis timeline caches. Fast reads.</li>
+          <li>Celebrities (≥10K followers): <b>Fanout on Read</b>. Their tweets are NOT pushed to followers' caches. Instead, when a user requests their timeline, we fetch recent tweets from any celebrities they follow separately, then merge with the pre-built cache.</li>
+          <li>The merge at read time: <code>timeline = precomputed_cache + celebrity_tweets</code>, sorted by Snowflake ID (which is already time-sorted).</li>
+        </ul>
+        <b>Storage:</b> Redis Sorted Set per user: <code>key = home_timeline:{user_id}</code>, members = tweet_ids, score = tweet Snowflake ID (time-sortable). ZREVRANGE gives most recent tweets in O(log N).
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>10K followers is the celebrity threshold? How do you update that classification dynamically?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Good question. The threshold is configurable and stored as a flag on the user record: <code>is_celebrity = true</code>. The User Service updates this flag when follower count crosses the threshold (either way — account can lose celebrity status if followers drop).<br><br>
+        When an account <em>gains</em> celebrity status, we need to handle the transition carefully:
+        <ul>
+          <li>Stop pushing new tweets to followers' caches (prevent future write storms)</li>
+          <li>No need to retroactively remove already-pushed tweets from caches — they naturally expire (TTL-based)</li>
+          <li>Mark the account as celebrity in Redis: <code>SADD celebrities {user_id}</code></li>
+          <li>Fanout workers check this set before deciding push vs skip</li>
+        </ul>
+        When an account <em>loses</em> celebrity status (rare), we can re-enable push for new tweets going forward. Existing followers' caches will backfill through normal activity.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📈 Phase 3 — Trending Topics</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · TRENDING</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you compute trending topics in real-time?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Trending is about detecting <em>velocity</em> — topics rising quickly in the last hour, not just topics with the highest absolute count.<br><br>
+        <b>Step 1 — Extract topics from tweets:</b><br>
+        When a tweet is posted, a background service (Kafka consumer) parses the text, extracts:<br>
+        - <code>#hashtags</code><br>
+        - Named entities (e.g., "Elon Musk", "World Cup") using NLP/regex<br><br>
+        <b>Step 2 — Count with sliding window (Redis):</b><br>
+        For each extracted topic, use a sliding time bucket:<br>
+        <code>ZINCRBY trending:{region}:{5min_bucket} 1 "{hashtag}"</code><br><br>
+        Bucket key rotates every 5 minutes. Keep last 12 buckets = 1 hour. TTL on old buckets for auto-cleanup.<br><br>
+        <b>Step 3 — Compute velocity (batch every 5 min):</b><br>
+        A scheduled job reads the last 12 buckets, computes:<br>
+        - Raw count of each topic in the last hour<br>
+        - Velocity = count in last 5min / count in prev 5min (ratio)<br>
+        - Score = count × velocity (boost rapidly rising topics)<br>
+        - Write final ranking to <code>trending_final:{region}</code> Redis Sorted Set<br><br>
+        <b>Deduplication:</b> "World Cup" and "#WorldCup" and "#worldcup" should count together. Lowercase + normalize before counting.<br><br>
+        <b>Spam prevention:</b> Ignore users who have tweeted the same hashtag more than 5 times in 5 minutes (bot behavior). Their counts are discarded.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Trending topics at 500M tweets/day means 5,787 tweets/sec. Counting every hashtag in Redis at this rate — won't that kill Redis?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Good concern. If every tweet goes directly to Redis ZINCRBY, we have 5,787 ops/sec to trending counters. Redis handles 1M ops/sec, so this is fine.<br><br>
+        But the key insight: we don't need exact counts for trending. We can use <b>probabilistic counting</b>. Two options:<br>
+        <b>1. Count-Min Sketch:</b> A probabilistic data structure that uses O(constant) memory and gives approximate counts with tunable error. Error rate &lt;1% with just 1MB of memory — drastically cheaper than exact counting.<br>
+        <b>2. Approximate counting with sampling:</b> Count only 10% of tweets (random sample), multiply by 10 for estimated total. Trending topics emerge with 1% accuracy — more than sufficient.<br><br>
+        For a system design interview, mentioning Count-Min Sketch shows algorithmic depth beyond Redis ZINCRBY.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔍 Phase 4 — Search & User Timeline</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · SEARCH + USER TIMELINE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you implement full-text tweet search?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Tweet search is a real-time full-text search problem. The requirements are different from web search:<br>
+        - Very high write rate (5,787 tweets/sec indexed)<br>
+        - Freshness critical — new tweets should be searchable within seconds<br>
+        - Query types: keyword, hashtag, @mention, from:user<br><br>
+        <b>Architecture: Elasticsearch</b><br>
+        Tweets flow into Elasticsearch via Kafka (async, non-blocking for the post API). Each tweet is indexed with fields: content, user_id, created_at, hashtags[], mentioned_users[].<br><br>
+        <b>Index sharding:</b> Shard by tweet creation time (time-based indices). Today's tweets in <code>tweets-2026-03-22</code>, yesterday's in <code>tweets-2026-03-21</code>, etc. Queries for recent tweets only touch the current index — much faster than scanning all time.<br><br>
+        <b>Ranking:</b> By default, recent tweets first (Snowflake ID descending = time descending). For "Top" tab, factor in like_count + retweet_count in the relevance score.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What about user timeline — all tweets from a specific user?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        User timeline is simpler than home timeline — it's just all tweets by one person, sorted by Snowflake ID descending.<br><br>
+        <b>Storage:</b> Cassandra table partitioned by user_id, clustered by tweet_id DESC:<br>
+        <code>user_timeline(user_id, tweet_id, created_at, PRIMARY KEY (user_id, tweet_id))</code><br><br>
+        <b>Read:</b> <code>SELECT tweet_id FROM user_timeline WHERE user_id = ? ORDER BY tweet_id DESC LIMIT 20</code><br><br>
+        Since tweet IDs are time-sortable (Snowflake), sorting by tweet_id DESC gives reverse-chronological order without a separate timestamp column — clean and efficient.<br><br>
+        <b>Write:</b> When a tweet is posted, write to two places atomically (or via Kafka):<br>
+        1. <code>tweets</code> table (the actual tweet content)<br>
+        2. <code>user_timeline</code> table (the index of tweet IDs per user)<br><br>
+        The user_timeline table is effectively a sorted index — it contains only tweet_ids (pointers), not the full tweet content. This makes it memory-efficient and fast to paginate.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔥 Phase 5 — Scale, Delete, and Edge Cases</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · EDGE CASES</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A user deletes a tweet. How do you remove it from all 150 followers' cached timelines?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Tweet deletion is handled lazily for cached timelines — not eagerly:<br>
+        <ol>
+          <li>Mark tweet as <code>deleted = true</code> in the tweets table (soft delete)</li>
+          <li>Remove from author's <code>user_timeline</code> Cassandra table immediately</li>
+          <li>Remove from author's own home timeline Redis cache</li>
+          <li>Publish a <code>tweet_deleted</code> event to Kafka</li>
+          <li><b>For follower caches:</b> We do NOT immediately purge from all 150 followers' Redis sorted sets — that would require 150 Redis ZREM operations asynchronously, adding complexity for a rare operation</li>
+          <li>Instead: when a user's timeline is fetched, we <b>hydrate</b> the tweet_ids from the cache by batch-fetching their content from the tweets table. Deleted tweets return null → filter them out at hydration time</li>
+        </ol>
+        This lazy deletion approach means a deleted tweet may appear in caches for a few minutes, but practically nobody will see it (it won't be in the visible viewport). Within one TTL cycle (24 hours), all cached references are gone.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What if a user's home timeline cache is cold — they haven't opened Twitter in a week?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Redis home timeline caches have a <b>TTL of 24 hours</b> (inactive users' caches expire). When the user opens Twitter after a week, their cache is empty.<br><br>
+        <b>Cache miss flow:</b>
+        <ol>
+          <li>Timeline Service detects empty cache for user</li>
+          <li>Fetches their followee list (Graph Service)</li>
+          <li>Queries user_timeline table for each followee's recent tweets (batch Cassandra queries)</li>
+          <li>For celebrity followees: fetches their recent tweets from celebrity timelines</li>
+          <li>Merges all tweets sorted by Snowflake ID, takes top 800</li>
+          <li>Writes to Redis: <code>ZADD home_timeline:{user_id} {tweet_id} {tweet_id}</code> with TTL reset</li>
+          <li>Returns first page to user</li>
+        </ol>
+        This rebuild is expensive (~100ms+) but happens rarely — only when a user is truly inactive. Active users' caches are continuously refreshed by the fanout worker as new tweets arrive.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPACITY ══ -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Twitter is read-heavy (100:1).</strong> 500M tweets/day is modest — the hard problem is 28B+ timeline reads/day. Optimize relentlessly for read throughput.</div></div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">1</div><div><div class="step-title">Tweet Write Rate</div><div class="step-sub">Tweets posted per second</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Given: 500 million tweets/day</span>
+
+<span class="label">Average write TPS:</span>
+  <span class="label">500M ÷ 86,400                    = </span><span class="val">5,787 tweets/sec</span>
+
+<span class="label">Peak TPS (breaking news, events, 3× avg):</span>
+  <span class="label">5,787 × 3                        = </span><span class="val">~17,000 tweets/sec</span>
+
+<span class="label">Fanout writes (avg 200 followers/user, 70% normal users):</span>
+  <span class="label">5,787 × 200                      = </span><span class="val">~1.16M Redis writes/sec</span>
+  <span class="label">(only for non-celebrity tweets)</span>
+
+<span class="label">Snowflake ID generation: trivially handled per-machine</span>
+<span class="label">Each machine: 4,096 IDs/ms → 4M/sec → needs only 1 machine for avg load</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">2</div><div><div class="step-title">Home Timeline Read Rate</div><div class="step-sub">The dominant traffic — far exceeds writes</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">300M DAU, each opens Twitter ~10 times/day, each load fetches 20 tweets</span>
+
+<span class="label">Timeline load requests/day:</span>
+  <span class="label">300M × 10                        = </span><span class="val">3 Billion timeline loads/day</span>
+
+<span class="label">Average timeline read TPS:</span>
+  <span class="label">3B ÷ 86,400                      = </span><span class="val">~34,722 reads/sec</span>
+
+<span class="label">Peak (morning spike, 3× avg):</span>
+  <span class="label">                                 = </span><span class="val">~104,000 reads/sec</span>
+
+<span class="label">Read:Write ratio                 = </span><span class="val">34,722 ÷ 5,787 ≈ 6:1</span>
+<span class="label">(lighter than expected — the 100:1 ratio accounts for all API calls including scroll)</span>
+
+<span class="label">With cache hit rate ~95% (Redis Sorted Set per user):</span>
+  <span class="label">Redis reads/sec                  = </span><span class="val">~34,722 × 95% = 33K Redis ZRANGE/sec</span>
+  <span class="label">DB reads/sec (cache miss)        = </span><span class="val">~1,736/sec</span>  <span class="label">(Cassandra fallback)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">3</div><div><div class="step-title">Tweet Storage</div><div class="step-sub">Cassandra sizing for tweet content</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Per tweet record size:</span>
+  <span class="label">tweet_id (8B) + user_id (8B) + content (280 chars avg = 280B)</span>
+  <span class="label">+ timestamps (16B) + media_url (100B) + like_count(8B) + metadata (80B)</span>
+  <span class="label">Total per tweet                  ≈ </span><span class="val">500 bytes</span>
+
+<span class="label">Daily storage:</span>
+  <span class="label">500M × 500B                      = </span><span class="val">250 GB/day</span>
+
+<span class="label">Yearly storage:</span>
+  <span class="label">250 GB × 365                     = </span><span class="val">~91 TB/year</span>
+
+<span class="label">With Cassandra 3× replication:</span>
+  <span class="label">91 TB × 3                        = </span><span class="val">~273 TB/year</span>
+  <span class="label">Cassandra nodes (4 TB usable/node)= 273 ÷ 4 = </span><span class="val">~70 nodes/year</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">4</div><div><div class="step-title">Home Timeline Cache — Redis</div><div class="step-sub">Memory for pre-computed timeline caches</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Store last 800 tweet IDs per user's home timeline cache</span>
+<span class="label">Each entry in Redis Sorted Set: tweet_id (8B score) + tweet_id (8B member) = 16 bytes</span>
+<span class="label">Per user cache: 800 × 16B        = </span><span class="val">12,800 bytes ≈ 13 KB</span>
+
+<span class="label">Total for all active DAU (300M × 24hr TTL):</span>
+  <span class="label">But not all 300M users are in cache simultaneously</span>
+  <span class="label">Active at any time ~10%: 30M users</span>
+  <span class="label">30M × 13 KB                      = </span><span class="val">390 GB</span>
+
+<span class="label">Redis Cluster (32GB nodes):</span>
+  <span class="label">390 GB ÷ 32 GB                   = </span><span class="val">~12 Redis nodes</span>  <span class="label">for home timeline cache</span>
+  <span class="label">With 3× replication              = </span><span class="val">36 nodes</span>
+
+<span class="label">User timeline index (Cassandra — all users, all time):</span>
+  <span class="label">Per entry: tweet_id only (8B)</span>
+  <span class="label">500M tweets/day × 8B             = </span><span class="val">4 GB/day index entries</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">5</div><div><div class="step-title">Fanout Worker Throughput</div><div class="step-sub">How many fanout workers to handle 1.16M Redis writes/sec?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Fanout writes = 1.16M Redis ZADD/sec (after celebrity exclusion)</span>
+
+<span class="label">Each fanout worker thread can do ~10K Redis ops/sec (pipelining):</span>
+  <span class="label">Workers needed                   = 1.16M ÷ 10K = </span><span class="val">116 worker threads</span>
+
+<span class="label">On modern servers (64 cores): ~64 workers/server</span>
+  <span class="label">Fanout servers needed            = 116 ÷ 64 = </span><span class="val">~2 servers</span>  <span class="label">min, 5-10 with headroom</span>
+
+<span class="label">Breaking news event (17K tweets/sec, all normal users):</span>
+  <span class="label">17K × 200 avg followers          = </span><span class="val">3.4M Redis writes/sec</span>
+  <span class="label">Workers needed                   = 3.4M ÷ 10K = </span><span class="val">340 workers</span>
+  <span class="label">→ Auto-scale fanout worker pool via Kafka consumer group scaling</span>
+  <span class="result">→ Fanout is the write amplification problem: 1 tweet → 200 Redis writes</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Tweet write TPS (avg/peak)</td><td class="hi">5,787 / 17,000</td><td>500M/day</td></tr>
+        <tr><td>Timeline read TPS (avg/peak)</td><td class="hi">34,722 / 104,000</td><td>3B loads/day</td></tr>
+        <tr><td>Fanout Redis writes/sec</td><td class="hi">~1.16M avg / 3.4M peak</td><td>200 avg followers</td></tr>
+        <tr><td>Tweet storage/year (3× rep)</td><td class="hi">~273 TB</td><td>~70 Cassandra nodes/year</td></tr>
+        <tr><td>Home timeline cache (Redis)</td><td class="hi">~390 GB active</td><td>36 Redis nodes (3× rep)</td></tr>
+        <tr><td>Cache hit rate</td><td class="hi">~95%</td><td>Active users stay cached</td></tr>
+        <tr><td>Fanout worker servers</td><td class="hi">5-10 (auto-scale)</td><td>Kafka-driven scaling</td></tr>
+        <tr><td>Celebrity threshold</td><td class="hi">10,000 followers</td><td>Configurable flag on user record</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ API ══ -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 API Design</div>
+    <div class="sec-body"><div class="info-box"><strong>Key insight:</strong> Tweet IDs are Snowflake-based, so timeline pagination uses tweet_id as cursor rather than offset/page — stable even as new tweets arrive.</div></div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/tweets</span><span class="api-desc">Post a new tweet</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">content</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Tweet text. Max 280 characters. Supports #hashtags, @mentions, URLs.</span></div>
+        <div class="frow"><span class="fn">media_ids</span><span class="ft">string[]</span><span class="fo">optional</span><span class="fd">Pre-uploaded media IDs (upload media separately first, then reference here). Max 4 images or 1 video.</span></div>
+        <div class="frow"><span class="fn">reply_to_tweet_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Snowflake ID of the tweet being replied to. Creates a thread.</span></div>
+        <div class="frow"><span class="fn">retweet_of_tweet_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Snowflake ID of tweet to retweet. If set, content is optional (pure retweet). Mutually exclusive with reply_to_tweet_id.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 201</div>
+        <div class="frow"><span class="fn">tweet_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Snowflake ID. Time-sortable. Use this as pagination cursor.</span></div>
+        <div class="frow"><span class="fn">created_at</span><span class="ft">datetime</span><span class="fo"></span><span class="fd">ISO 8601 timestamp extracted from Snowflake ID.</span></div>
+        <div class="frow"><span class="fn">url</span><span class="ft">string</span><span class="fo"></span><span class="fd">Permalink to this tweet: <code>https://twitter.com/{username}/status/{tweet_id}</code></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/timelines/home</span><span class="api-desc">Get home timeline (tweets from followees)</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Query Parameters</div>
+        <div class="frow"><span class="fn">count</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Tweets to return. Default 20, max 200.</span></div>
+        <div class="frow"><span class="fn">max_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Cursor: return tweets older than this Snowflake ID. <em>For pagination back in time.</em> Use <code>last_tweet_id - 1</code> from previous response to avoid overlap.</span></div>
+        <div class="frow"><span class="fn">since_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Return only tweets newer than this ID. Used for polling for new tweets.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">tweets</span><span class="ft">Tweet[]</span><span class="fo"></span><span class="fd">Reverse-chronological array. Each Tweet: <code>{tweet_id, user: {id, name, username, avatar_url}, content, created_at, like_count, retweet_count, is_liked_by_me, media_urls[]}</code></span></div>
+        <div class="frow"><span class="fn">newest_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Snowflake ID of newest tweet in response. Use as <code>since_id</code> to poll for new tweets.</span></div>
+        <div class="frow"><span class="fn">oldest_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Snowflake ID of oldest tweet in response. Use as <code>max_id - 1</code> to load older tweets.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/users/{user_id}/tweets</span><span class="api-desc">Get user timeline (profile view)</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Query Parameters</div>
+        <div class="frow"><span class="fn">count</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Default 20, max 200</span></div>
+        <div class="frow"><span class="fn">max_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Cursor for older tweets. Stable pagination even as new tweets are posted.</span></div>
+        <div class="frow"><span class="fn">exclude_replies</span><span class="ft">boolean</span><span class="fo">optional</span><span class="fd">Default false. If true, hides reply tweets from the user's profile view.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">tweets</span><span class="ft">Tweet[]</span><span class="fo"></span><span class="fd">All tweets by the user, newest first.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/trends</span><span class="api-desc">Get trending topics</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Query Parameters</div>
+        <div class="frow"><span class="fn">woeid</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Where On Earth ID for location-specific trends. Default: global. E.g., 23424977 = United States</span></div>
+        <div class="frow"><span class="fn">count</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Number of trends to return. Default 10.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">trends</span><span class="ft">Trend[]</span><span class="fo"></span><span class="fd"><code>[{"name": "#WorldCup", "tweet_volume": 1250000, "url": "https://twitter.com/search?q=%23WorldCup"}, ...]</code>. Refreshed every 5 minutes (cached response).</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/search/tweets</span><span class="api-desc">Full-text tweet search</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Query Parameters</div>
+        <div class="frow"><span class="fn">q</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Search query. Supports: keywords, <code>#hashtag</code>, <code>@username</code>, <code>from:user</code>, <code>since:2026-01-01</code>, <code>until:2026-03-21</code>.</span></div>
+        <div class="frow"><span class="fn">result_type</span><span class="ft">enum</span><span class="fo">optional</span><span class="fd"><code>recent</code> (newest first) | <code>top</code> (most engaged). Default: <code>recent</code>.</span></div>
+        <div class="frow"><span class="fn">max_id, since_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Pagination cursors (Snowflake IDs)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HLD ══ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🔬 Snowflake ID — Structure Deep Dive</div>
+    <div class="sec-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">A 64-bit integer encoding time, machine identity, and sequence. No coordination needed between machines.</p>
+      <div class="sf-box">
+        <div class="sf-bits">
+          <div class="sf-seg" style="background:rgba(100,116,139,.1);border:1px solid #334155;width:30px">
+            <div class="sf-seg-label" style="color:#4e6070;font-size:9px">sign</div>
+            <div class="sf-seg-bits">1 bit</div>
+          </div>
+          <div class="sf-seg sf-ts">
+            <div class="sf-seg-label">TIMESTAMP</div>
+            <div class="sf-seg-bits">41 bits = ms since epoch (~69 years)</div>
+          </div>
+          <div class="sf-seg sf-dc">
+            <div class="sf-seg-label">DATACTR</div>
+            <div class="sf-seg-bits">5 bits = 32 DCs</div>
+          </div>
+          <div class="sf-seg sf-w">
+            <div class="sf-seg-label">WORKER</div>
+            <div class="sf-seg-bits">5 bits = 32 workers/DC</div>
+          </div>
+          <div class="sf-seg sf-seq">
+            <div class="sf-seg-label">SEQUENCE</div>
+            <div class="sf-seg-bits">12 bits = 4096/ms/machine</div>
+          </div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8;line-height:1.8">
+          <div>Capacity: <span style="color:#38bdf8">4,096 IDs/ms × 1,024 machines = 4.19 billion IDs/sec</span> (Twitter needs only ~17,000)</div>
+          <div>Time range: 41-bit ms timestamp → <span style="color:#10b981">69 years from Nov 4, 2010</span> → expires ~2079</div>
+          <div>Sort order: <span style="color:#fbbf24">Larger Snowflake ID = newer tweet — no timestamp sort column needed</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">👥 Actors</div>
+    <div class="sec-body">
+      <div class="actor-grid">
+        <div class="actor-card"><div class="actor-icon">👤</div><div class="actor-name">Tweeter</div><div class="actor-role">Posts tweets, follows users. Normal user or celebrity (different fanout treatment).</div></div>
+        <div class="actor-card"><div class="actor-icon">📰</div><div class="actor-name">Reader</div><div class="actor-role">Reads home timeline, user timelines, searches tweets, views trending topics.</div></div>
+        <div class="actor-card"><div class="actor-icon">⚡</div><div class="actor-name">Fanout Worker</div><div class="actor-role">Kafka consumer. For each new tweet, fans out tweet_id to followers' Redis timeline caches. Skips celebrities.</div></div>
+        <div class="actor-card"><div class="actor-icon">📈</div><div class="actor-name">Trending Service</div><div class="actor-role">Kafka consumer + scheduled job. Extracts hashtags, counts with sliding window, computes trending every 5 min.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔍</div><div class="actor-name">Search Indexer</div><div class="actor-role">Kafka consumer. Indexes new tweets into Elasticsearch within seconds of posting.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔔</div><div class="actor-name">Notification Svc</div><div class="actor-role">Sends push notifications for likes, retweets, new followers. Async via Kafka.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 980 580" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:580px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+            <marker id="arc" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+            <marker id="arp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+          </defs>
+
+          <!-- Zones -->
+          <rect x="8" y="8" width="120" height="564" rx="10" fill="rgba(167,139,250,.02)" stroke="rgba(167,139,250,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="68" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7c3aed">CLIENTS</text>
+          <rect x="138" y="8" width="250" height="564" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="263" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">SERVICES</text>
+          <rect x="398" y="8" width="230" height="564" rx="10" fill="rgba(245,158,11,.02)" stroke="rgba(245,158,11,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="513" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">PROCESSING</text>
+          <rect x="638" y="8" width="334" height="564" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="805" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">DATA</text>
+
+          <!-- Clients -->
+          <rect x="18" y="50" width="100" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="68" y="67" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📱 Twitter App</text>
+          <text x="68" y="81" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">reader + writer</text>
+
+          <!-- API Gateway -->
+          <rect x="150" y="60" width="120" height="42" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+          <text x="210" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">⚖️ API Gateway</text>
+          <text x="210" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Auth + LB</text>
+
+          <!-- Tweet Service -->
+          <rect x="150" y="130" width="120" height="52" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="210" y="149" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🐦 Tweet Service</text>
+          <text x="210" y="163" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">post tweet</text>
+          <text x="210" y="175" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Snowflake ID gen</text>
+
+          <!-- Timeline Service -->
+          <rect x="150" y="210" width="120" height="52" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="210" y="229" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📰 Timeline Svc</text>
+          <text x="210" y="243" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">home + user timeline</text>
+          <text x="210" y="255" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">hybrid push+pull</text>
+
+          <!-- Graph Service -->
+          <rect x="150" y="290" width="120" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="210" y="308" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">👥 Graph Service</text>
+          <text x="210" y="322" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">follow/unfollow</text>
+
+          <!-- Search Service -->
+          <rect x="150" y="360" width="120" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="210" y="378" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🔍 Search Svc</text>
+          <text x="210" y="392" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Elasticsearch proxy</text>
+
+          <!-- Trending Service -->
+          <rect x="150" y="430" width="120" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="210" y="448" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📈 Trending Svc</text>
+          <text x="210" y="462" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">5-min refresh</text>
+
+          <!-- PROCESSING: Kafka -->
+          <rect x="410" y="50" width="120" height="52" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="470" y="69" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 Kafka</text>
+          <text x="470" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">tweets topic</text>
+          <text x="470" y="95" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">fanout-queue</text>
+
+          <!-- Fanout Workers -->
+          <rect x="410" y="140" width="120" height="52" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="470" y="159" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">⚡ Fanout Workers</text>
+          <text x="470" y="173" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Kafka consumer</text>
+          <text x="470" y="185" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">skip celebrities</text>
+
+          <!-- Search Indexer -->
+          <rect x="410" y="230" width="120" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="470" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📦 Search Indexer</text>
+          <text x="470" y="262" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Kafka → Elasticsearch</text>
+
+          <!-- Trending Calculator -->
+          <rect x="410" y="310" width="120" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="470" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📊 Trend Calculator</text>
+          <text x="470" y="342" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">hashtag velocity</text>
+
+          <!-- DATA: Redis Home Timeline -->
+          <rect x="652" y="40" width="140" height="62" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="722" y="59" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Redis Timeline</text>
+          <text x="722" y="73" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">home_timeline:{uid}</text>
+          <text x="722" y="87" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ZSet, 800 tweet_ids</text>
+          <text x="722" y="99" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">390 GB / 36 nodes</text>
+
+          <!-- DATA: Cassandra Tweets -->
+          <rect x="652" y="150" width="140" height="52" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="722" y="169" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Cassandra</text>
+          <text x="722" y="183" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">tweets table</text>
+          <text x="722" y="197" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">user_timeline index</text>
+
+          <!-- DATA: Elasticsearch -->
+          <rect x="652" y="250" width="140" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="722" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🔍 Elasticsearch</text>
+          <text x="722" y="282" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">tweet search index</text>
+
+          <!-- DATA: Redis Trending -->
+          <rect x="652" y="350" width="140" height="42" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1"/>
+          <text x="722" y="368" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Redis Trending</text>
+          <text x="722" y="382" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">trending_final:{region}</text>
+
+          <!-- DATA: Graph (Cassandra) -->
+          <rect x="652" y="440" width="140" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="722" y="458" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🗄 Cassandra Graph</text>
+          <text x="722" y="472" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">followees/followers</text>
+
+          <!-- ARROWS -->
+          <line x1="118" y1="68" x2="148" y2="78" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="270" y1="150" x2="408" y2="75" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <line x1="270" y1="150" x2="650" y2="180" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <line x1="530" y1="168" x2="650" y2="78" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="530" y1="250" x2="650" y2="270" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ary)"/>
+          <line x1="530" y1="328" x2="650" y2="368" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+          <line x1="210" y1="235" x2="650" y2="78" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+          <line x1="210" y1="260" x2="650" y2="175" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ary)"/>
+          <line x1="210" y1="308" x2="650" y2="460" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arp)"/>
+          <line x1="470" y1="102" x2="470" y2="138" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arc)"/>
+
+          <!-- Labels -->
+          <text x="280" y="130" font-family="JetBrains Mono" font-size="8" fill="#10b981">→ Kafka</text>
+          <text x="280" y="140" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">→ Cassandra</text>
+          <text x="540" y="160" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">fanout tweet_ids</text>
+          <text x="540" y="172" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">to Redis ZSets</text>
+
+          <!-- Legend -->
+          <rect x="652" y="510" width="300" height="40" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+          <text x="662" y="526" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">── sync</text>
+          <text x="662" y="540" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">- - async</text>
+          <text x="780" y="526" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">red = Redis</text>
+          <text x="780" y="540" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">yellow = Cassandra/ES</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔄 Key Flows</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#7dd3fc">🐦 TWEET POST FLOW</div>
+          <div class="fs"><div class="fnum">1</div><div>User posts tweet → <code>POST /api/v1/tweets</code></div></div>
+          <div class="fs"><div class="fnum">2</div><div>Tweet Service generates <b>Snowflake ID</b> (local, no coordination)</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Write tweet to <b>Cassandra</b> (tweets table)</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Write tweet_id to author's <b>user_timeline</b> (Cassandra)</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Add tweet_id to author's own home timeline Redis cache</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Publish to <b>Kafka</b> (topic: tweets)</div></div>
+          <div class="fs"><div class="fnum">7</div><div>Return 201 to user — <b>tweet visible immediately on their profile</b></div></div>
+          <div class="fs"><div class="fnum">8</div><div><b>Async:</b> Fanout Worker consumes Kafka → ZADD tweet_id to each follower's Redis ZSet (skip celebrities). ~5s for all followers.</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">📰 HOME TIMELINE LOAD FLOW</div>
+          <div class="fs"><div class="fnum">1</div><div>User opens app → <code>GET /api/v1/timelines/home</code></div></div>
+          <div class="fs"><div class="fnum">2</div><div>Timeline Service: <code>ZREVRANGE home_timeline:{user_id} 0 19</code> from Redis (20 tweet IDs)</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Cache miss (inactive user): rebuild from Cassandra user_timeline tables (expensive, rare)</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Check celebrity followees: <code>SINTER celeb_followees:{user_id} celebrities</code></div></div>
+          <div class="fs"><div class="fnum">5</div><div>Fetch recent celebrity tweets (pull): <code>ZREVRANGE user_timeline:{celeb_id} 0 9</code> per celeb</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Merge pushed + pulled tweet IDs (sort by Snowflake ID descending = time order)</div></div>
+          <div class="fs"><div class="fnum">7</div><div>Batch fetch tweet content from Cassandra (one multi-GET for all tweet IDs)</div></div>
+          <div class="fs"><div class="fnum">8</div><div>Filter out deleted tweets (null content), return enriched timeline</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LLD ══ -->
+<div id="lld" class="panel">
+  <div class="sec">
+    <div class="sec-head">📦 Core Classes</div>
+    <div class="sec-body">
+      <div class="class-grid">
+        <div class="cb">
+          <div class="cb-name">SnowflakeIdGenerator</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">datacenterId: <span class="cft">long</span></div>
+            <div class="cf">workerId: <span class="cft">long</span></div>
+            <div class="cf">sequence: <span class="cft">long</span> = 0</div>
+            <div class="cf">lastTimestamp: <span class="cft">long</span> = -1</div>
+            <div class="cf">TWITTER_EPOCH: <span class="cft">long</span> = 1288834974657L</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">nextId(): long (synchronized)</div>
+            <div class="cm2">tilNextMillis(lastTs): long</div>
+            <div class="cm2">getTimestamp(id): Instant</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">TimelineService</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">redis: <span class="cft">RedisClient</span></div>
+            <div class="cf">tweetRepo: <span class="cft">TweetRepository</span></div>
+            <div class="cf">graphRepo: <span class="cft">GraphRepository</span></div>
+            <div class="cf">MAX_TIMELINE: <span class="cft">int</span> = 800</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">getHomeTimeline(userId, maxId, count): List&lt;Tweet&gt;</div>
+            <div class="cm2">getUserTimeline(userId, maxId, count): List&lt;Tweet&gt;</div>
+            <div class="cm2">rebuildFromCassandra(userId): void</div>
+            <div class="cm2">mergeSortBySnowflake(pushed, pulled): List&lt;Long&gt;</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">FanoutWorker</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">redis: <span class="cft">RedisClient</span></div>
+            <div class="cf">graphRepo: <span class="cft">GraphRepository</span></div>
+            <div class="cf">CELEBRITY_THRESHOLD: <span class="cft">int</span> = 10_000</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">onTweet(tweetEvent: TweetEvent): void</div>
+            <div class="cm2">fanoutToFollowers(tweetId, authorId): void</div>
+            <div class="cm2">isCelebrity(userId): boolean</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">Tweet (Data Model)</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">tweetId: <span class="cft">long</span> — Snowflake ID</div>
+            <div class="cf">userId: <span class="cft">long</span></div>
+            <div class="cf">content: <span class="cft">String</span> max 280 chars</div>
+            <div class="cf">mediaUrls: <span class="cft">List&lt;String&gt;</span></div>
+            <div class="cf">retweetOfId: <span class="cft">Long</span> (nullable)</div>
+            <div class="cf">replyToId: <span class="cft">Long</span> (nullable)</div>
+            <div class="cf">likeCount: <span class="cft">int</span></div>
+            <div class="cf">retweetCount: <span class="cft">int</span></div>
+            <div class="cf">isDeleted: <span class="cft">boolean</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">getCreatedAt(): Instant — from Snowflake</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🗄 Database Schema</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:440px">
+<pre><code><span class="cm">-- ── Cassandra: Tweets (primary content store) ────────
+-- Partition by tweet_id → uniform distribution
+-- tweet_id is Snowflake (time-sortable) so no separate created_at needed</span>
+<span class="kw">CREATE TABLE</span> tweets (
+    tweet_id        <span class="cls">BIGINT</span>    <span class="kw">PRIMARY KEY</span>,  <span class="cm">-- Snowflake ID</span>
+    user_id         <span class="cls">BIGINT</span>,
+    content         <span class="cls">TEXT</span>,
+    media_urls      <span class="cls">LIST</span>&lt;<span class="cls">TEXT</span>&gt;,
+    hashtags        <span class="cls">LIST</span>&lt;<span class="cls">TEXT</span>&gt;,
+    retweet_of_id   <span class="cls">BIGINT</span>,               <span class="cm">-- NULL for original tweets</span>
+    reply_to_id     <span class="cls">BIGINT</span>,               <span class="cm">-- NULL for non-replies</span>
+    like_count      <span class="cls">COUNTER</span>,
+    retweet_count   <span class="cls">COUNTER</span>,
+    is_deleted      <span class="cls">BOOLEAN</span>  <span class="kw">DEFAULT FALSE</span>
+);
+
+<span class="cm">-- ── Cassandra: User Timeline (pointer table) ─────────
+-- Partition by user_id → fast lookup "all tweets by user X"
+-- Cluster by tweet_id DESC → newest first, sort is free (Snowflake = time order)</span>
+<span class="kw">CREATE TABLE</span> user_timeline (
+    user_id     <span class="cls">BIGINT</span>,
+    tweet_id    <span class="cls">BIGINT</span>,
+    <span class="kw">PRIMARY KEY</span> (user_id, tweet_id)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (tweet_id <span class="kw">DESC</span>);
+
+<span class="cm">-- ── Cassandra: Follow Graph (adjacency list) ─────────</span>
+<span class="kw">CREATE TABLE</span> followees (            <span class="cm">-- "who does user X follow?"</span>
+    follower_id  <span class="cls">BIGINT</span>,
+    followee_id  <span class="cls">BIGINT</span>,
+    created_at   <span class="cls">TIMESTAMP</span>,
+    <span class="kw">PRIMARY KEY</span>  (follower_id, followee_id)
+);
+<span class="kw">CREATE TABLE</span> followers (            <span class="cm">-- "who follows user X?" (for fanout)</span>
+    followee_id  <span class="cls">BIGINT</span>,
+    follower_id  <span class="cls">BIGINT</span>,
+    created_at   <span class="cls">TIMESTAMP</span>,
+    <span class="kw">PRIMARY KEY</span>  (followee_id, follower_id)
+);
+
+<span class="cm">-- ── Redis: Home Timeline Cache ────────────────────────
+-- Sorted Set per user. Score = tweet_id (Snowflake = time sortable!)
+-- Key: home_timeline:{user_id}
+-- ZADD home_timeline:{uid} {tweet_id} {tweet_id}  (score = member = tweet_id)
+-- ZREVRANGE home_timeline:{uid} 0 19 → newest 20 tweet_ids
+-- TTL: 24 hours (inactive users auto-evict)</span>
+
+<span class="cm">-- ── Redis: Celebrity Registry ─────────────────────────
+-- Key: celebrities → SET of user_ids with > 10K followers
+-- Used by Fanout Workers to skip push for celebrity tweets
+-- Used by Timeline Service to know which followees to pull</span>
+
+<span class="cm">-- ── Redis: Trending ──────────────────────────────────
+-- Key: trending:{region}:{5min_bucket} → Sorted Set: {hashtag: count}
+-- Key: trending_final:{region} → Sorted Set: top 50 trending topics
+-- TTL on bucket keys: 1 hour (12 buckets × 5 min)</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CODE ══ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Twitter — Java Implementation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Snowflake ID Generator ─────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">SnowflakeIdGenerator</span> {
+
+    <span class="cm">// Bit allocations (total: 63 usable bits in a signed long)</span>
+    <span class="kw">private static final int</span>  TIMESTAMP_BITS   = <span class="num">41</span>;
+    <span class="kw">private static final int</span>  DATACENTER_BITS  = <span class="num">5</span>;
+    <span class="kw">private static final int</span>  WORKER_BITS      = <span class="num">5</span>;
+    <span class="kw">private static final int</span>  SEQUENCE_BITS    = <span class="num">12</span>;
+
+    <span class="kw">private static final long</span> MAX_SEQUENCE     = ~(-<span class="num">1L</span> &lt;&lt; SEQUENCE_BITS);  <span class="cm">// 4095</span>
+    <span class="kw">private static final long</span> WORKER_SHIFT     = SEQUENCE_BITS;
+    <span class="kw">private static final long</span> DC_SHIFT         = SEQUENCE_BITS + WORKER_BITS;
+    <span class="kw">private static final long</span> TIMESTAMP_SHIFT  = DC_SHIFT + DATACENTER_BITS;
+
+    <span class="cm">// Twitter epoch: Nov 4, 2010, 01:42:54 UTC</span>
+    <span class="kw">private static final long</span> TWITTER_EPOCH    = <span class="num">1288834974657L</span>;
+
+    <span class="kw">private final long</span>  datacenterId;
+    <span class="kw">private final long</span>  workerId;
+    <span class="kw">private long</span>        sequence      = <span class="num">0L</span>;
+    <span class="kw">private long</span>        lastTimestamp = -<span class="num">1L</span>;
+
+    <span class="kw">public</span> <span class="cls">SnowflakeIdGenerator</span>(<span class="kw">long</span> datacenterId, <span class="kw">long</span> workerId) {
+        <span class="kw">this</span>.datacenterId = datacenterId;
+        <span class="kw">this</span>.workerId     = workerId;
+    }
+
+    <span class="kw">public synchronized long</span> <span class="fn2">nextId</span>() {
+        <span class="kw">long</span> timestamp = <span class="cls">System</span>.currentTimeMillis();
+
+        <span class="cm">// Clock went backwards — wait for it to catch up</span>
+        <span class="kw">if</span> (timestamp &lt; lastTimestamp) {
+            <span class="kw">long</span> wait = lastTimestamp - timestamp;
+            <span class="kw">if</span> (wait &lt;= <span class="num">5</span>) { <span class="cm">// Tolerate up to 5ms clock skew</span>
+                timestamp = <span class="fn2">tilNextMillis</span>(lastTimestamp);
+            } <span class="kw">else</span> {
+                <span class="kw">throw new</span> <span class="cls">RuntimeException</span>(
+                    <span class="str">"Clock moved backwards by "</span> + wait + <span class="str">"ms"</span>);
+            }
+        }
+
+        <span class="kw">if</span> (timestamp == lastTimestamp) {
+            <span class="cm">// Same millisecond — use sequence number</span>
+            sequence = (sequence + <span class="num">1</span>) & MAX_SEQUENCE;
+            <span class="kw">if</span> (sequence == <span class="num">0</span>) {
+                <span class="cm">// Sequence overflow — wait for next millisecond</span>
+                timestamp = <span class="fn2">tilNextMillis</span>(lastTimestamp);
+            }
+        } <span class="kw">else</span> {
+            sequence = <span class="num">0L</span>; <span class="cm">// New millisecond — reset sequence</span>
+        }
+
+        lastTimestamp = timestamp;
+
+        <span class="kw">return</span> ((timestamp - TWITTER_EPOCH) &lt;&lt; TIMESTAMP_SHIFT)
+             | (datacenterId               &lt;&lt; DC_SHIFT)
+             | (workerId                   &lt;&lt; WORKER_SHIFT)
+             | sequence;
+    }
+
+    <span class="kw">private long</span> <span class="fn2">tilNextMillis</span>(<span class="kw">long</span> lastTs) {
+        <span class="kw">long</span> ts = <span class="cls">System</span>.currentTimeMillis();
+        <span class="kw">while</span> (ts &lt;= lastTs) ts = <span class="cls">System</span>.currentTimeMillis();
+        <span class="kw">return</span> ts;
+    }
+
+    <span class="cm">/** Extract creation time from Snowflake ID */</span>
+    <span class="kw">public</span> <span class="cls">Instant</span> <span class="fn2">getTimestamp</span>(<span class="kw">long</span> snowflakeId) {
+        <span class="kw">long</span> ts = (snowflakeId >> TIMESTAMP_SHIFT) + TWITTER_EPOCH;
+        <span class="kw">return</span> <span class="cls">Instant</span>.ofEpochMilli(ts);
+    }
+}
+
+<span class="cm">// ── 2. Timeline Service (Hybrid Push + Pull) ──────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">TimelineService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt;   redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">TweetRepository</span>               tweetRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">GraphRepository</span>               graphRepo;
+
+    <span class="kw">private static final int</span>  MAX_TIMELINE_SIZE = <span class="num">800</span>;
+    <span class="kw">private static final int</span>  TIMELINE_TTL_SECS = <span class="num">86400</span>; <span class="cm">// 24h</span>
+
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">Tweet</span>&gt; <span class="fn2">getHomeTimeline</span>(<span class="kw">long</span> userId,
+                                           <span class="cls">Long</span>  maxId,
+                                           <span class="kw">int</span>   count) {
+        <span class="cls">String</span> cacheKey = <span class="str">"home_timeline:"</span> + userId;
+        <span class="kw">double</span> maxScore  = maxId != <span class="kw">null</span>
+            ? (<span class="kw">double</span>) (maxId - <span class="num">1</span>) : <span class="cls">Double</span>.MAX_VALUE;
+
+        <span class="cm">// Step 1: Get pushed tweet IDs from Redis ZSet</span>
+        <span class="cls">Set</span>&lt;<span class="cls">Long</span>&gt; pushedIds = redis.opsForZSet()
+            .reverseRangeByScore(cacheKey, <span class="num">0</span>, maxScore, <span class="num">0</span>, count * <span class="num">2</span>);
+
+        <span class="cm">// Step 2: Check if cache is cold → rebuild</span>
+        <span class="kw">if</span> (pushedIds == <span class="kw">null</span> || pushedIds.isEmpty()) {
+            <span class="fn2">rebuildFromCassandra</span>(userId);
+            pushedIds = redis.opsForZSet()
+                .reverseRangeByScore(cacheKey, <span class="num">0</span>, maxScore, <span class="num">0</span>, count * <span class="num">2</span>);
+        }
+
+        <span class="cm">// Step 3: Get celebrity followees → pull their tweets</span>
+        <span class="cls">Set</span>&lt;<span class="cls">Long</span>&gt; celebFollowees = graphRepo.getCelebFollowees(userId);
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; pulledIds = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+
+        <span class="kw">for</span> (<span class="kw">long</span> celebId : celebFollowees) {
+            <span class="cm">// Each celeb's user_timeline is also a Redis ZSet</span>
+            <span class="cls">Set</span>&lt;<span class="cls">Long</span>&gt; celebTweets = redis.opsForZSet()
+                .reverseRangeByScore(<span class="str">"user_timeline:"</span> + celebId,
+                                     <span class="num">0</span>, maxScore, <span class="num">0</span>, <span class="num">10</span>);
+            <span class="kw">if</span> (celebTweets != <span class="kw">null</span>) pulledIds.addAll(celebTweets);
+        }
+
+        <span class="cm">// Step 4: Merge and sort by Snowflake ID descending (= time order)</span>
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; allIds = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;(pushedIds);
+        allIds.addAll(pulledIds);
+        allIds.sort(<span class="cls">Collections</span>.reverseOrder()); <span class="cm">// Snowflake = time sort!</span>
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; pageIds = allIds.stream()
+            .distinct().limit(count).collect(<span class="cls">Collectors</span>.toList());
+
+        <span class="cm">// Step 5: Batch fetch tweet content from Cassandra</span>
+        <span class="cls">List</span>&lt;<span class="cls">Tweet</span>&gt; tweets = tweetRepo.findAllById(pageIds);
+
+        <span class="cm">// Step 6: Filter deleted tweets (lazy delete)</span>
+        <span class="kw">return</span> tweets.stream()
+            .filter(t -> !t.isDeleted())
+            .sorted((<span class="cls">Comparator</span>.comparingLong(<span class="cls">Tweet</span>::getTweetId).reversed()))
+            .collect(<span class="cls">Collectors</span>.toList());
+    }
+
+    <span class="kw">private void</span> <span class="fn2">rebuildFromCassandra</span>(<span class="kw">long</span> userId) {
+        <span class="cls">String</span> cacheKey = <span class="str">"home_timeline:"</span> + userId;
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; followees = graphRepo.getFollowees(userId);
+
+        <span class="cm">// Fetch recent tweets from each followee</span>
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; tweetIds = followees.stream()
+            .filter(id -> !graphRepo.isCelebrity(id)) <span class="cm">// skip celebrities</span>
+            .flatMap(fid -> tweetRepo
+                .getUserTimelineIds(fid, <span class="num">20</span>).stream())
+            .sorted(<span class="cls">Collections</span>.reverseOrder())
+            .limit(MAX_TIMELINE_SIZE)
+            .collect(<span class="cls">Collectors</span>.toList());
+
+        <span class="cm">// Write to Redis ZSet (tweet_id is both score and member)</span>
+        tweetIds.forEach(id ->
+            redis.opsForZSet().add(cacheKey, id, (<span class="kw">double</span>) id));
+        redis.opsForZSet().removeRange(cacheKey, <span class="num">0</span>, -(MAX_TIMELINE_SIZE + <span class="num">1</span>));
+        redis.expire(cacheKey, <span class="cls">Duration</span>.ofSeconds(TIMELINE_TTL_SECS));
+    }
+}
+
+<span class="cm">// ── 3. Fanout Worker ──────────────────────────────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">FanoutWorker</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">GraphRepository</span>              graphRepo;
+    <span class="kw">private static final int</span> MAX_TIMELINE = <span class="num">800</span>;
+
+    <span class="ann">@KafkaListener</span>(topics = <span class="str">"tweets"</span>, groupId = <span class="str">"fanout-workers"</span>)
+    <span class="kw">public void</span> <span class="fn2">onTweet</span>(<span class="cls">TweetEvent</span> event) {
+        <span class="kw">long</span> tweetId  = event.getTweetId();
+        <span class="kw">long</span> authorId = event.getAuthorId();
+
+        <span class="cm">// Skip fanout for celebrities — readers pull their tweets</span>
+        <span class="kw">if</span> (graphRepo.isCelebrity(authorId)) {
+            <span class="cm">// Still add to author's own user_timeline Redis cache</span>
+            redis.opsForZSet().add(<span class="str">"user_timeline:"</span> + authorId,
+                tweetId, (<span class="kw">double</span>) tweetId);
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// Get all followers (could be 0–9,999 for non-celebrities)</span>
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; followers = graphRepo.getFollowers(authorId);
+
+        <span class="cm">// Fan out in batches with Redis pipeline (reduces round trips)</span>
+        <span class="cls">Lists</span>.partition(followers, <span class="num">1000</span>).forEach(batch ->
+            redis.executePipelined(conn -> {
+                batch.forEach(followerId -> {
+                    <span class="cls">String</span> key = <span class="str">"home_timeline:"</span> + followerId;
+                    conn.zAdd(key.getBytes(),
+                              (<span class="kw">double</span>) tweetId,
+                              <span class="fn2">longToBytes</span>(tweetId));
+                    conn.zRemRange(key.getBytes(),
+                                   <span class="num">0</span>, -(MAX_TIMELINE + <span class="num">1</span>));
+                });
+                <span class="kw">return null</span>;
+            }));
+
+        <span class="cm">// Also update author's user_timeline</span>
+        redis.opsForZSet().add(<span class="str">"user_timeline:"</span> + authorId,
+            tweetId, (<span class="kw">double</span>) tweetId);
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Twitter — Python Implementation
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, threading, logging
+<span class="kw">from</span> typing <span class="kw">import</span> List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+<span class="cm"># ── 1. Snowflake ID Generator ─────────────────────────</span>
+<span class="kw">class</span> <span class="cls">SnowflakeIdGenerator</span>:
+    <span class="str">"""
+    Generates globally unique, time-sortable 64-bit IDs.
+    No coordination needed between instances.
+    Twitter epoch: Nov 4, 2010, 01:42:54 UTC
+    """</span>
+    TWITTER_EPOCH   = <span class="num">1288834974657</span>  <span class="cm"># ms</span>
+    TIMESTAMP_BITS  = <span class="num">41</span>
+    DC_BITS         = <span class="num">5</span>
+    WORKER_BITS     = <span class="num">5</span>
+    SEQUENCE_BITS   = <span class="num">12</span>
+
+    MAX_SEQUENCE    = (<span class="num">1</span> &lt;&lt; SEQUENCE_BITS) - <span class="num">1</span>   <span class="cm"># 4095</span>
+    WORKER_SHIFT    = SEQUENCE_BITS
+    DC_SHIFT        = SEQUENCE_BITS + WORKER_BITS
+    TIMESTAMP_SHIFT = SEQUENCE_BITS + WORKER_BITS + DC_BITS
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, datacenter_id: int, worker_id: int):
+        self.datacenter_id  = datacenter_id
+        self.worker_id      = worker_id
+        self.sequence       = <span class="num">0</span>
+        self.last_timestamp = -<span class="num">1</span>
+        self._lock          = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">next_id</span>(self) -> int:
+        <span class="str">"""Thread-safe Snowflake ID generation"""</span>
+        <span class="kw">with</span> self._lock:
+            ts = self._current_ms()
+
+            <span class="kw">if</span> ts &lt; self.last_timestamp:
+                wait_ms = self.last_timestamp - ts
+                <span class="kw">if</span> wait_ms &lt;= <span class="num">5</span>:
+                    ts = self._wait_next_ms(self.last_timestamp)
+                <span class="kw">else</span>:
+                    <span class="kw">raise</span> <span class="cls">RuntimeError</span>(
+                        f<span class="str">"Clock moved backwards by {wait_ms}ms"</span>)
+
+            <span class="kw">if</span> ts == self.last_timestamp:
+                self.sequence = (self.sequence + <span class="num">1</span>) & self.MAX_SEQUENCE
+                <span class="kw">if</span> self.sequence == <span class="num">0</span>:
+                    ts = self._wait_next_ms(self.last_timestamp)
+            <span class="kw">else</span>:
+                self.sequence = <span class="num">0</span>
+
+            self.last_timestamp = ts
+
+            <span class="kw">return</span> (
+                ((ts - self.TWITTER_EPOCH) &lt;&lt; self.TIMESTAMP_SHIFT)
+                | (self.datacenter_id &lt;&lt; self.DC_SHIFT)
+                | (self.worker_id     &lt;&lt; self.WORKER_SHIFT)
+                | self.sequence
+            )
+
+    <span class="kw">def</span> <span class="fn2">get_timestamp_ms</span>(self, snowflake_id: int) -> int:
+        <span class="str">"""Extract creation time (ms) from a Snowflake ID"""</span>
+        <span class="kw">return</span> (snowflake_id >> self.TIMESTAMP_SHIFT) + self.TWITTER_EPOCH
+
+    <span class="kw">def</span> <span class="fn2">_current_ms</span>(self) -> int:
+        <span class="kw">return</span> int(time.time() * <span class="num">1000</span>)
+
+    <span class="kw">def</span> <span class="fn2">_wait_next_ms</span>(self, last_ts: int) -> int:
+        ts = self._current_ms()
+        <span class="kw">while</span> ts &lt;= last_ts:
+            ts = self._current_ms()
+        <span class="kw">return</span> ts
+
+
+<span class="cm"># ── 2. Timeline Service ───────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">TimelineService</span>:
+    <span class="str">"""
+    Hybrid push (pre-computed Redis ZSet) + pull (celebrity tweets at read time).
+    Snowflake IDs act as both member and score in ZSet — sort by ID = sort by time.
+    """</span>
+    MAX_TIMELINE_SIZE = <span class="num">800</span>
+    TIMELINE_TTL      = <span class="num">86400</span>  <span class="cm"># 24 hours</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, redis_client, tweet_repo, graph_repo):
+        self.redis  = redis_client
+        self.tweets = tweet_repo
+        self.graph  = graph_repo
+
+    <span class="kw">def</span> <span class="fn2">get_home_timeline</span>(self, user_id: int,
+                            max_id: Optional[int] = <span class="kw">None</span>,
+                            count: int = <span class="num">20</span>) -> List[dict]:
+        cache_key = f<span class="str">"home_timeline:{user_id}"</span>
+        max_score = (max_id - <span class="num">1</span>) <span class="kw">if</span> max_id <span class="kw">else</span> float(<span class="str">'+inf'</span>)
+
+        <span class="cm"># Step 1: Get pushed tweet IDs from Redis ZSet</span>
+        pushed_ids = self.redis.zrevrangebyscore(
+            cache_key, max_score, <span class="num">0</span>,
+            start=<span class="num">0</span>, num=count * <span class="num">2</span>)
+
+        <span class="cm"># Step 2: Cold cache → rebuild from Cassandra</span>
+        <span class="kw">if not</span> pushed_ids:
+            self._rebuild_from_cassandra(user_id)
+            pushed_ids = self.redis.zrevrangebyscore(
+                cache_key, max_score, <span class="num">0</span>, start=<span class="num">0</span>, num=count * <span class="num">2</span>)
+
+        pushed_ids = [int(x) <span class="kw">for</span> x <span class="kw">in</span> (pushed_ids <span class="kw">or</span> [])]
+
+        <span class="cm"># Step 3: Pull celebrity tweets at read time</span>
+        celeb_followees = self.graph.get_celeb_followees(user_id)
+        pulled_ids = []
+        <span class="kw">for</span> celeb_id <span class="kw">in</span> celeb_followees:
+            celeb_tweets = self.redis.zrevrangebyscore(
+                f<span class="str">"user_timeline:{celeb_id}"</span>,
+                max_score, <span class="num">0</span>, start=<span class="num">0</span>, num=<span class="num">10</span>)
+            pulled_ids.extend([int(x) <span class="kw">for</span> x <span class="kw">in</span> (celeb_tweets <span class="kw">or</span> [])])
+
+        <span class="cm"># Step 4: Merge + sort by Snowflake ID desc (= reverse-chronological)</span>
+        all_ids = sorted(set(pushed_ids + pulled_ids), reverse=<span class="kw">True</span>)[:count]
+
+        <span class="cm"># Step 5: Batch fetch tweet content</span>
+        tweets = self.tweets.get_many(all_ids)
+
+        <span class="cm"># Step 6: Filter deleted (lazy delete pattern)</span>
+        <span class="kw">return</span> [t <span class="kw">for</span> t <span class="kw">in</span> tweets <span class="kw">if</span> t <span class="kw">and not</span> t.get(<span class="str">'is_deleted'</span>)]
+
+    <span class="kw">def</span> <span class="fn2">_rebuild_from_cassandra</span>(self, user_id: int):
+        <span class="str">"""Called when a user's cache is cold (inactive > 24h)"""</span>
+        followees  = self.graph.get_followees(user_id)
+        tweet_ids  = []
+
+        <span class="kw">for</span> fid <span class="kw">in</span> followees:
+            <span class="kw">if not</span> self.graph.is_celebrity(fid):
+                ids = self.tweets.get_user_timeline_ids(fid, limit=<span class="num">20</span>)
+                tweet_ids.extend(ids)
+
+        tweet_ids = sorted(set(tweet_ids), reverse=<span class="kw">True</span>)[:self.MAX_TIMELINE_SIZE]
+
+        <span class="cm"># Write to Redis ZSet: score=tweet_id (Snowflake = time sort!)</span>
+        <span class="kw">if</span> tweet_ids:
+            cache_key = f<span class="str">"home_timeline:{user_id}"</span>
+            mapping   = {str(tid): float(tid) <span class="kw">for</span> tid <span class="kw">in</span> tweet_ids}
+            pipe = self.redis.pipeline()
+            pipe.zadd(cache_key, mapping)
+            pipe.zremrangebyrank(cache_key, <span class="num">0</span>, -(self.MAX_TIMELINE_SIZE + <span class="num">1</span>))
+            pipe.expire(cache_key, self.TIMELINE_TTL)
+            pipe.execute()
+
+
+<span class="cm"># ── 3. Fanout Worker ──────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">FanoutWorker</span>:
+    <span class="str">"""
+    Kafka consumer: for each new tweet, push tweet_id to followers' Redis ZSets.
+    Skip celebrities — their followers pull tweets at read time.
+    """</span>
+    MAX_TIMELINE = <span class="num">800</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, redis_client, graph_repo):
+        self.redis = redis_client
+        self.graph = graph_repo
+
+    <span class="kw">def</span> <span class="fn2">on_tweet</span>(self, tweet_id: int, author_id: int):
+        <span class="str">"""Called by Kafka consumer for each new tweet event"""</span>
+        <span class="cm"># Always update the author's own user_timeline</span>
+        self.redis.zadd(f<span class="str">"user_timeline:{author_id}"</span>,
+                        {str(tweet_id): float(tweet_id)})
+
+        <span class="cm"># Skip push fanout for celebrities</span>
+        <span class="kw">if</span> self.graph.is_celebrity(author_id):
+            <span class="kw">return</span>
+
+        followers = self.graph.get_followers(author_id)
+
+        <span class="cm"># Fan out in batches of 1000 using Redis pipeline</span>
+        batch_size = <span class="num">1000</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(<span class="num">0</span>, len(followers), batch_size):
+            batch = followers[i:i + batch_size]
+            pipe  = self.redis.pipeline()
+            <span class="kw">for</span> follower_id <span class="kw">in</span> batch:
+                key = f<span class="str">"home_timeline:{follower_id}"</span>
+                pipe.zadd(key, {str(tweet_id): float(tweet_id)})
+                pipe.zremrangebyrank(key, <span class="num">0</span>, -(self.MAX_TIMELINE + <span class="num">1</span>))
+            pipe.execute()
+        logger.info(
+            f<span class="str">"Fanned out tweet {tweet_id} to {len(followers)} followers"</span>)
+
+
+<span class="cm"># ── 4. Trending Service ───────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">TrendingService</span>:
+    <span class="str">"""
+    Counts hashtag occurrences in sliding 5-minute buckets.
+    Computes velocity-weighted trending score every 5 minutes.
+    """</span>
+    BUCKET_SIZE_SEC = <span class="num">300</span>   <span class="cm"># 5 minutes</span>
+    WINDOW_BUCKETS  = <span class="num">12</span>    <span class="cm"># 1 hour</span>
+    BUCKET_TTL      = <span class="num">3600</span>  <span class="cm"># 1 hour</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, redis_client):
+        self.redis = redis_client
+
+    <span class="kw">def</span> <span class="fn2">record_tweet</span>(self, hashtags: List[str], region: str = <span class="str">"global"</span>):
+        <span class="str">"""Called for each tweet. Increments hashtag counters in current bucket."""</span>
+        now_bucket = int(time.time()) // self.BUCKET_SIZE_SEC
+        key = f<span class="str">"trending:{region}:{now_bucket}"</span>
+
+        pipe = self.redis.pipeline()
+        <span class="kw">for</span> tag <span class="kw">in</span> hashtags:
+            normalized = tag.lower().lstrip(<span class="str">'#'</span>)
+            pipe.zincrby(key, <span class="num">1</span>, normalized)
+        pipe.expire(key, self.BUCKET_TTL)
+        pipe.execute()
+
+    <span class="kw">def</span> <span class="fn2">compute_trending</span>(self, region: str = <span class="str">"global"</span>) -> List[dict]:
+        <span class="str">"""Run every 5 min: aggregate counts + velocity score"""</span>
+        now_bucket = int(time.time()) // self.BUCKET_SIZE_SEC
+        counts = {}
+
+        <span class="cm"># Aggregate counts from the last WINDOW_BUCKETS buckets</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(self.WINDOW_BUCKETS):
+            key = f<span class="str">"trending:{region}:{now_bucket - i}"</span>
+            bucket_data = self.redis.zrevrangebyscore(
+                key, <span class="str">'+inf'</span>, <span class="num">0</span>, withscores=<span class="kw">True</span>, start=<span class="num">0</span>, num=<span class="num">1000</span>)
+            recency_weight = <span class="num">1.0</span> - (i / self.WINDOW_BUCKETS)
+            <span class="kw">for</span> tag, count <span class="kw">in</span> (bucket_data <span class="kw">or</span> []):
+                tag = tag.decode() <span class="kw">if</span> isinstance(tag, bytes) <span class="kw">else</span> tag
+                counts[tag] = counts.get(tag, <span class="num">0</span>) + count * recency_weight
+
+        <span class="cm"># Write final ranking to Redis (for serving API)</span>
+        final_key = f<span class="str">"trending_final:{region}"</span>
+        <span class="kw">if</span> counts:
+            self.redis.delete(final_key)
+            self.redis.zadd(final_key, counts)
+            self.redis.expire(final_key, <span class="num">600</span>)  <span class="cm"># 10 min TTL</span>
+
+        <span class="cm"># Return top 10 trending topics</span>
+        top = self.redis.zrevrangebyscore(
+            final_key, <span class="str">'+inf'</span>, <span class="num">0</span>, withscores=<span class="kw">True</span>, start=<span class="num">0</span>, num=<span class="num">10</span>)
+        <span class="kw">return</span> [
+            {<span class="str">"name"</span>: f<span class="str">"#{t.decode()}"</span>, <span class="str">"score"</span>: round(s)}
+            <span class="kw">for</span> t, s <span class="kw">in</span> (top <span class="kw">or</span> [])
+        ]
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRADEOFFS ══ -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Design Tradeoffs & Decisions</div>
+    <div class="sec-body"><div class="warn-box"><strong>Twitter's defining tradeoff</strong> is optimizing for read (timeline) over write (tweet). Every design decision flows from this — pre-compute at write time, serve from cache at read time.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🆔 ID Generation: Snowflake vs UUID vs Auto-Increment</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Snowflake</div><p>Time-sortable (no separate timestamp sort), globally unique without coordination, decentralized generation, 64-bit (smaller than UUID). Enables sort-by-ID = sort-by-time — a huge simplification for timeline queries.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ UUID v4</div><p>Globally unique without coordination. But: random — not time-sortable. Can't use as timeline sort key. 128-bit (2× storage vs Snowflake). Index fragmentation in B-trees due to random insertion order.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Auto-Increment</div><p>Simple but: single point of failure (one DB owns the counter), not shardable (each shard generates duplicates), no time-sortability benefit. Cannot scale to Twitter's write rate.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📰 Timeline Generation: Push vs Pull vs Hybrid</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Hybrid (push normal, pull celebrities)</div><p>Best of both worlds. Normal users get O(1) timeline reads (pre-computed). Celebrity write storms (100M followers) avoided. Merge at read time is cheap — only a handful of celebrity followees per user.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Pure Push</div><p>Works for normal users. Breaks catastrophically for celebrities: @Cristiano with 160M followers → 160M Redis writes per tweet. At peak, this saturates the entire fanout fleet for minutes. Timeline may lag hours.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Pure Pull</div><p>No fanout writes. But: generating timeline requires fetching from thousands of followees and merge-sorting. 300M × 10 opens/day × 5,000 followees = 15 trillion DB queries/day. Impossible at scale.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">💾 Tweet Storage: Cassandra vs MySQL vs DynamoDB</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Cassandra</div><p>Built for massive time-series append-only writes. Tweets partition naturally by user_id. Snowflake IDs cluster perfectly by time. No complex joins needed. Write throughput: millions/sec. Twitter and Discord use it.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ MySQL (sharded)</div><p>Works at smaller scale. ACID, familiar tooling, complex queries possible. But: manual sharding needed above ~100M rows/table. JOINs across shards are impossible. Snowflake IDs don't help B-tree index locality at this write rate.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Why NOT store full tweets in Redis</div><p>Tweets are immutable after posting — not frequently updated. Redis is RAM-based, expensive at 273TB/year scale. Use Cassandra for persistent storage, Redis only for the timeline index (tweet_ids, not content). Never store full tweet content in Redis.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📈 Trending: Redis ZSet vs Kafka Streams vs Count-Min Sketch</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Redis ZSet (sliding buckets)</div><p>Simple, fast, accurate enough for trending. ZINCRBY is atomic. Bucket rotation handles sliding window automatically. No stream processing infrastructure needed. Refresh every 5 minutes is fine for trending — users don't notice 5-min lag.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Kafka Streams / Flink</div><p>More accurate real-time stream processing. Can compute exact counts with sub-second latency. But: significant operational complexity (Kafka Streams job, state stores, checkpointing). Overkill if 5-minute refresh is acceptable.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Count-Min Sketch</div><p>Probabilistic data structure for approximate frequency counting. O(1) update, O(1) query, fixed memory (~1MB for 1% error). Better than Redis ZSet for very high cardinality (millions of unique hashtags). Mention it to show algorithmic depth beyond naive ZINCRBY.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🗑 Delete Tweet: Eager vs Lazy Removal from Caches</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Lazy deletion (filter at hydration)</div><p>Soft-delete the tweet (is_deleted=true). Don't purge from follower caches. When timeline is served, batch-fetch tweet content — null/deleted tweets are filtered. No O(followers) fan-out needed for deletes.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Eager cache purge</div><p>For each delete, find all followers, ZREM tweet_id from each Redis ZSet. For a user with 9,999 followers, that's 9,999 Redis ZREM operations asynchronously. For celebrities who didn't push, not needed anyway. Complex, slow, rarely important.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Exception: sensitive content</div><p>For legal takedowns or content violations (CSAM, court orders), eager purge from all caches is required — can't wait for lazy expiry. These are handled by a dedicated trust & safety pipeline with different SLAs, not the normal delete API.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

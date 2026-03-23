@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 2 — Databases</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--purple:#7c3aed;--green:#22c55e;
+  --amber:#f59e0b;--red:#ef4444;--pink:#ec4899;--text:#e2e8f0;
+  --muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+.hb-pk{color:var(--pink);border-color:var(--pink);background:rgba(236,72,153,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-pk{border-top:2px solid var(--pink)}
+
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+/* DEMO styles */
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{background:rgba(0,229,255,.08);border:1px solid var(--accent);color:var(--accent);padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s}
+.dbtn:hover{background:rgba(0,229,255,.15)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;margin-top:14px}
+
+/* ws demo */
+.ws-msg{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 8px;border-radius:4px;margin:3px 0;animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.ws-server{background:rgba(0,229,255,.07);border-left:2px solid var(--accent);color:#7dd3fc}
+.ws-client{background:rgba(34,197,94,.07);border-left:2px solid var(--green);color:#86efac;text-align:right}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 2 · Databases — All 7 Topics</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">SQL</span>
+    <span class="hbadge hb-g">NoSQL</span>
+    <span class="hbadge hb-p">Locking</span>
+    <span class="hbadge hb-a">Scaling</span>
+    <span class="hbadge hb-pk">WebSockets</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>Pessimistic Locking</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>SQL-backed KV Store</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>Scaling Relational DBs</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>NoSQL &amp; Trade-offs</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Graph Databases</div>
+  <div class="ttab"        data-topic="t6"><span class="tnum">06</span>Slack Realtime Text</div>
+  <div class="ttab"        data-topic="t7"><span class="tnum">07</span>Scaling WebSockets</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════════════════════════════════════
+     T1 — PESSIMISTIC LOCKING
+══════════════════════════════════════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap"><div class="stab active" data-s="t1a">Overview</div><div class="stab" data-s="t1b">Pessimistic vs Optimistic</div><div class="stab" data-s="t1c">Deadlocks</div><div class="stab" data-s="t1d">Code</div><div class="stab" data-s="t1e">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">Pessimistic <em>Locking on Relational DBs</em></div>
+    <p class="psub">When multiple transactions compete for the same rows, locking determines who wins and how the others wait. Getting this wrong causes deadlocks, poor throughput, or data corruption.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">SELECT</div><div class="slbl">FOR UPDATE locks row</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">NOWAIT</div><div class="slbl">Fail fast, don't queue</div></div>
+      <div class="card ct-r" style="text-align:center"><div class="snum">Deadlock</div><div class="slbl">Circular lock dependency</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">SKIP LOCKED</div><div class="slbl">Job queue pattern</div></div>
+    </div>
+    <h3>Why Pessimistic Locking Exists</h3>
+    <p>Imagine two users booking the last seat on a flight simultaneously. Without locking, both read "1 seat available," both decrement to 0, and you've sold one seat twice. Pessimistic locking prevents this by holding a row-level lock from read through commit.</p>
+    <div class="call cw"><strong>Lost Update Problem:</strong> T1 reads value X, T2 reads value X, T1 writes X+1, T2 writes X+1. Result: one increment is lost. This is the classic race condition that locks are designed to prevent.</div>
+    <h3>Isolation Levels</h3>
+    <table>
+      <tr><th>Level</th><th>Dirty Read</th><th>Non-repeatable Read</th><th>Phantom Read</th><th>Throughput</th></tr>
+      <tr><td>READ UNCOMMITTED</td><td>✅ Possible</td><td>✅ Possible</td><td>✅ Possible</td><td>Highest</td></tr>
+      <tr><td>READ COMMITTED</td><td>❌ Prevented</td><td>✅ Possible</td><td>✅ Possible</td><td>High</td></tr>
+      <tr><td>REPEATABLE READ</td><td>❌</td><td>❌ Prevented</td><td>✅ Possible</td><td>Medium</td></tr>
+      <tr><td>SERIALIZABLE</td><td>❌</td><td>❌</td><td>❌ Prevented</td><td>Lowest</td></tr>
+    </table>
+    <div class="call ci">MySQL InnoDB default = REPEATABLE READ. PostgreSQL default = READ COMMITTED. Most applications never need SERIALIZABLE — it's 10–100× slower and causes frequent serialization failures.</div>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle">Pessimistic vs <em>Optimistic Locking</em></div>
+    <div class="tdp">
+      <div class="tdc pro">
+        <h4>Pessimistic Locking</h4>
+        <ul>
+          <li>Lock row at read time with <code>SELECT … FOR UPDATE</code></li>
+          <li>Other transactions block until lock released</li>
+          <li>Guarantees no lost updates</li>
+          <li>Risk: deadlocks, reduced throughput under contention</li>
+          <li><strong>Best for:</strong> high contention, short transactions, seat booking, inventory decrement</li>
+        </ul>
+      </div>
+      <div class="tdc con">
+        <h4>Optimistic Locking</h4>
+        <ul>
+          <li>No lock at read; compare-and-swap at write using version column</li>
+          <li><code>UPDATE … WHERE id=? AND version=?</code></li>
+          <li>If rowcount=0, conflict — retry the transaction</li>
+          <li>Risk: retry storms under high contention</li>
+          <li><strong>Best for:</strong> low contention, long reads, user profile updates</li>
+        </ul>
+      </div>
+    </div>
+    <h3>SQL Patterns</h3>
+    <div class="cwrap"><div class="ctop"><span>Pessimistic locking patterns</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="cmt">-- 1. Standard pessimistic lock — blocks waiting transactions</span>
+<span class="kw">BEGIN</span>;
+<span class="kw">SELECT</span> seats_available <span class="kw">FROM</span> flights <span class="kw">WHERE</span> id = <span class="num">42</span> <span class="kw">FOR UPDATE</span>;
+<span class="kw">UPDATE</span> flights <span class="kw">SET</span> seats_available = seats_available - <span class="num">1</span> <span class="kw">WHERE</span> id = <span class="num">42</span>;
+<span class="kw">COMMIT</span>;
+
+<span class="cmt">-- 2. NOWAIT — fail immediately if row is locked (no queuing)</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> seats <span class="kw">WHERE</span> id = <span class="num">5</span> <span class="kw">FOR UPDATE NOWAIT</span>;
+<span class="cmt">-- Raises: ERROR 3572 (HY000): Statement aborted because lock(s) could not be acquired</span>
+
+<span class="cmt">-- 3. SKIP LOCKED — job queue pattern: grab unclaimed work</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> jobs <span class="kw">WHERE</span> status = <span class="str">'pending'</span>
+<span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">FOR UPDATE SKIP LOCKED</span>;
+<span class="cmt">-- Each worker grabs different rows — no contention, no queuing</span>
+
+<span class="cmt">-- 4. Optimistic locking with version column</span>
+<span class="kw">UPDATE</span> accounts
+<span class="kw">SET</span> balance = balance - <span class="num">100</span>, version = version + <span class="num">1</span>
+<span class="kw">WHERE</span> id = <span class="num">7</span> <span class="kw">AND</span> version = <span class="num">3</span>;    <span class="cmt">-- only succeeds if nobody else updated</span>
+<span class="cmt">-- If rowcount = 0 → conflict detected → retry with fresh read</span></pre></div>
+
+    <h3>When Locking Kills Throughput</h3>
+    <div class="call cr">A single long-running transaction holding a lock on a hot row (e.g., inventory count for a popular product) causes all other transactions to queue. 1000 RPS × 50ms lock hold = queue depth of 50 waiting transactions. Each holds a connection. Pool exhaustion follows.</div>
+    <div class="call cg"><strong>Fix:</strong> Minimize time inside the transaction. Move all non-DB logic (validation, API calls) outside the transaction. Lock for milliseconds, not seconds.</div>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle"><em>Deadlocks</em> — Detection &amp; Prevention</div>
+    <p class="psub">A deadlock occurs when T1 holds lock A and waits for lock B, while T2 holds lock B and waits for lock A. Neither can proceed.</p>
+    <div class="diag">
+<svg viewBox="0 0 500 130" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#ef4444" opacity=".8"/></marker>
+  <marker id="ag" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#22c55e" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="496" height="126" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="20" y="30" width="100" height="70" rx="5" fill="#131a2a" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="70" y="54" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="700">Transaction 1</text>
+  <text x="70" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">HOLDS: Row A</text>
+  <text x="70" y="86" text-anchor="middle" fill="#5a6a85" font-size="8">WANTS: Row B</text>
+  <rect x="380" y="30" width="100" height="70" rx="5" fill="#131a2a" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="430" y="54" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="700">Transaction 2</text>
+  <text x="430" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">HOLDS: Row B</text>
+  <text x="430" y="86" text-anchor="middle" fill="#5a6a85" font-size="8">WANTS: Row A</text>
+  <rect x="200" y="40" width="100" height="50" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="250" y="62" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="700">DEADLOCK</text>
+  <text x="250" y="78" text-anchor="middle" fill="#5a6a85" font-size="8">Circular wait</text>
+  <line x1="120" y1="65" x2="198" y2="65" stroke="#ef4444" stroke-width="1.5" marker-end="url(#a)" opacity=".7"/>
+  <line x1="302" y1="65" x2="378" y2="65" stroke="#ef4444" stroke-width="1.5" marker-end="url(#a)" opacity=".7"/>
+  <text x="250" y="118" text-anchor="middle" fill="#3a4a60" font-size="8.5">DB detects cycle → kills victim transaction → retry</text>
+</svg>
+    </div>
+    <h3>Prevention Rules</h3>
+    <div class="g g2">
+      <div class="card ct-g"><h4>Rule 1 — Consistent Lock Order</h4><p>Always acquire locks in the same order across all transactions. If all code locks Row A before Row B, a circular wait is impossible by construction.</p><div class="call cg" style="font-size:12px;padding:7px 10px">Sort IDs before locking: <code>ORDER BY id ASC FOR UPDATE</code></div></div>
+      <div class="card ct-c"><h4>Rule 2 — Keep Transactions Short</h4><p>The window for deadlock is the transaction duration. Sub-millisecond transactions have near-zero deadlock probability. Long transactions with user interaction are deadlock-prone.</p></div>
+      <div class="card ct-a"><h4>Rule 3 — Use NOWAIT + Retry</h4><p>Instead of waiting indefinitely, use <code>NOWAIT</code> to fail fast, then retry with exponential backoff. Converts potential deadlock into a controlled retry.</p></div>
+      <div class="card ct-p"><h4>Rule 4 — Let the DB Handle It</h4><p>MySQL/PostgreSQL auto-detect deadlocks and kill one transaction. Your code must handle the <code>ER_LOCK_DEADLOCK</code> error and retry. Always build deadlock-safe retry logic.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle">Code — <em>Locking Patterns</em></div>
+    <div class="ltabs"><div class="ltab on" data-l="L1py">🐍 Python</div><div class="ltab" data-l="L1java">☕ Java</div></div>
+    <div class="lpanel on" id="L1py">
+      <div class="cwrap"><div class="ctop"><span>pessimistic_lock.py — SQLAlchemy async</span><span class="ltag lpy">Python</span></div>
+      <pre><span class="kw">from</span> sqlalchemy <span class="kw">import</span> text
+<span class="kw">import</span> asyncio
+
+<span class="kw">async def</span> <span class="fn">book_seat</span>(db, flight_id: int, user_id: int) -> bool:
+    <span class="str">"""Pessimistic lock: SELECT FOR UPDATE then decrement."""</span>
+    max_retries, backoff = <span class="num">3</span>, <span class="num">0.05</span>
+
+    <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(max_retries):
+        <span class="kw">try</span>:
+            <span class="kw">async with</span> db.<span class="fn">begin</span>():   <span class="cmt"># transaction auto-commits or rolls back</span>
+                <span class="cmt"># Lock the row — all other writers block here</span>
+                row = (<span class="kw">await</span> db.<span class="fn">execute</span>(
+                    <span class="fn">text</span>(<span class="str">"SELECT seats_available FROM flights WHERE id=:id FOR UPDATE"</span>),
+                    {<span class="str">"id"</span>: flight_id}
+                )).<span class="fn">fetchone</span>()
+
+                <span class="kw">if not</span> row <span class="kw">or</span> row.seats_available <= <span class="num">0</span>:
+                    <span class="kw">return False</span>   <span class="cmt"># no seats — no need to lock further</span>
+
+                <span class="kw">await</span> db.<span class="fn">execute</span>(
+                    <span class="fn">text</span>(<span class="str">"UPDATE flights SET seats_available=seats_available-1 WHERE id=:id"</span>),
+                    {<span class="str">"id"</span>: flight_id}
+                )
+                <span class="kw">await</span> db.<span class="fn">execute</span>(
+                    <span class="fn">text</span>(<span class="str">"INSERT INTO bookings(flight_id,user_id) VALUES(:f,:u)"</span>),
+                    {<span class="str">"f"</span>: flight_id, <span class="str">"u"</span>: user_id}
+                )
+            <span class="kw">return True</span>   <span class="cmt"># commit on exit from async with</span>
+
+        <span class="kw">except Exception as</span> e:
+            <span class="kw">if</span> <span class="str">"deadlock"</span> <span class="kw">in</span> <span class="fn">str</span>(e).<span class="fn">lower</span>():
+                <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(backoff * (<span class="num">2</span> ** attempt))   <span class="cmt"># exp backoff</span>
+                <span class="kw">continue</span>
+            <span class="kw">raise</span>
+    <span class="kw">return False</span>   <span class="cmt"># exhausted retries</span>
+
+
+<span class="kw">async def</span> <span class="fn">dequeue_job</span>(db):
+    <span class="str">"""SKIP LOCKED — safe for concurrent workers, no contention."""</span>
+    <span class="kw">async with</span> db.<span class="fn">begin</span>():
+        rows = (<span class="kw">await</span> db.<span class="fn">execute</span>(
+            <span class="fn">text</span>(<span class="str">"SELECT id,payload FROM jobs WHERE status='pending' LIMIT 10 FOR UPDATE SKIP LOCKED"</span>)
+        )).<span class="fn">fetchall</span>()
+        ids = [r.id <span class="kw">for</span> r <span class="kw">in</span> rows]
+        <span class="kw">if</span> ids:
+            <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="fn">text</span>(<span class="str">f"UPDATE jobs SET status='processing' WHERE id IN ({','.join(map(str,ids))})"</span>))
+        <span class="kw">return</span> rows</pre></div>
+    </div>
+    <div class="lpanel" id="L1java">
+      <div class="cwrap"><div class="ctop"><span>BookingService.java — Spring + JPA pessimistic lock</span><span class="ltag ljv">Java</span></div>
+      <pre><span class="dec">@Service</span> <span class="dec">@Transactional</span>
+<span class="kw">public class</span> <span class="cls">BookingService</span> {
+    <span class="kw">private final</span> <span class="cls">FlightRepository</span> flights;
+    <span class="kw">private final</span> <span class="cls">BookingRepository</span> bookings;
+
+    <span class="kw">public boolean</span> <span class="fn">bookSeat</span>(<span class="kw">long</span> flightId, <span class="kw">long</span> userId) {
+        <span class="cmt">// @Lock(PESSIMISTIC_WRITE) triggers SELECT … FOR UPDATE</span>
+        <span class="cls">Flight</span> flight = flights.<span class="fn">findByIdForUpdate</span>(flightId)
+            .<span class="fn">orElseThrow</span>();
+
+        <span class="kw">if</span> (flight.<span class="fn">getSeatsAvailable</span>() <= <span class="num">0</span>) <span class="kw">return false</span>;
+
+        flight.<span class="fn">setSeatsAvailable</span>(flight.<span class="fn">getSeatsAvailable</span>() - <span class="num">1</span>);
+        flights.<span class="fn">save</span>(flight);
+        bookings.<span class="fn">save</span>(<span class="kw">new</span> <span class="cls">Booking</span>(flightId, userId));
+        <span class="kw">return true</span>;
+    }
+}
+
+<span class="cmt">// Repository</span>
+<span class="kw">public interface</span> <span class="cls">FlightRepository</span> <span class="kw">extends</span> <span class="cls">JpaRepository</span>&lt;<span class="cls">Flight</span>,<span class="cls">Long</span>&gt; {
+    <span class="dec">@Lock</span>(<span class="cls">LockModeType</span>.PESSIMISTIC_WRITE)
+    <span class="dec">@Query</span>(<span class="str">"SELECT f FROM Flight f WHERE f.id = :id"</span>)
+    <span class="cls">Optional</span>&lt;<span class="cls">Flight</span>&gt; <span class="fn">findByIdForUpdate</span>(<span class="dec">@Param</span>(<span class="str">"id"</span>) <span class="kw">long</span> id);
+}</pre></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>SELECT FOR UPDATE is the foundation</strong> — it's the primitive that prevents lost updates, double-bookings, and overselling. Every ticket/inventory system uses it.</li>
+      <li><strong>SKIP LOCKED enables parallel job queues</strong> — multiple workers can safely dequeue without blocking each other. The DB-backed job queue pattern is simpler than adding Kafka for many use cases.</li>
+      <li><strong>Consistent lock ordering prevents deadlocks by construction</strong> — if every transaction acquires locks in the same order (sort IDs ascending), a circular wait cannot form.</li>
+      <li><strong>Keep transactions tight</strong> — lock hold time = throughput killer. Move validation, external API calls, and computation outside the transaction. Lock → read → write → unlock in milliseconds.</li>
+      <li><strong>Always retry on deadlock</strong> — the DB will detect and kill the victim transaction. Your application must catch the error and retry. Implement exponential backoff to avoid retry storms.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     T2 — SQL-BACKED KV STORE
+══════════════════════════════════════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap"><div class="stab active" data-s="t2a">Problem</div><div class="stab" data-s="t2b">Schema Design</div><div class="stab" data-s="t2c">Architecture</div><div class="stab" data-s="t2d">Code</div><div class="stab" data-s="t2e">Tradeoffs</div><div class="stab" data-s="t2f">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">Design a Scalable <em>SQL-backed KV Store</em></div>
+    <p class="psub">Build a key-value store backed by a relational database — like a lightweight Redis alternative when you need SQL's durability and ACID guarantees but also KV-style access patterns.</p>
+    <h3>Problem Statement</h3>
+    <p>Design a KV store that supports: <code>GET(key)</code>, <code>SET(key, value, ttl?)</code>, <code>DELETE(key)</code>, <code>EXISTS(key)</code>, and eventually consistent expiry of TTL keys. The system must handle 100K read ops/sec and 10K write ops/sec with sub-10ms p99.</p>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Core Requirements</h4><ul class="rl"><li><strong>GET/SET/DEL</strong> operations at high throughput</li><li>Optional <strong>TTL</strong> per key (auto-expire)</li><li><strong>Namespace</strong> support (logical isolation)</li><li>Atomic <strong>compare-and-set</strong> (CAS)</li></ul></div>
+      <div class="card ct-g"><h4>High-Level Requirements</h4><ul class="rl"><li><strong>Durable</strong> — survives restarts (SQL WAL)</li><li><strong>Consistent</strong> — ACID transactions</li><li>Support <strong>range queries</strong> on keys (unlike Redis)</li><li>Serve as persistent layer beneath a cache</li></ul></div>
+      <div class="card ct-a"><h4>Micro Requirements</h4><ul class="rl"><li>Throughput not affected by locking</li><li>Expired keys lazily deleted + background cleanup</li><li>No hotspot on single row / single index page</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle">Schema <em>Design</em></div>
+    <h3>Core Table Design</h3>
+    <div class="cwrap"><div class="ctop"><span>kv_store schema — MySQL / PostgreSQL</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="kw">CREATE TABLE</span> kv_store (
+    namespace   <span class="cls">VARCHAR</span>(<span class="num">64</span>)   <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> <span class="str">'default'</span>,
+    key_name    <span class="cls">VARCHAR</span>(<span class="num">512</span>)  <span class="kw">NOT NULL</span>,
+    value       <span class="cls">MEDIUMBLOB</span>   <span class="kw">NOT NULL</span>,   <span class="cmt">-- up to 16MB, binary safe</span>
+    version     <span class="cls">BIGINT</span>        <span class="kw">NOT NULL</span> <span class="kw">DEFAULT</span> <span class="num">1</span>,  <span class="cmt">-- for CAS / optimistic lock</span>
+    expires_at  <span class="cls">BIGINT</span>        <span class="kw">DEFAULT</span> <span class="kw">NULL</span>,   <span class="cmt">-- epoch ms; NULL = no expiry</span>
+    created_at  <span class="cls">BIGINT</span>        <span class="kw">NOT NULL</span>,
+    updated_at  <span class="cls">BIGINT</span>        <span class="kw">NOT NULL</span>,
+
+    <span class="kw">PRIMARY KEY</span> (namespace, key_name),   <span class="cmt">-- composite PK = O(1) lookup</span>
+
+    <span class="cmt">-- Index for TTL expiry background job</span>
+    <span class="kw">INDEX</span> idx_expires (expires_at)
+);
+
+<span class="cmt">-- GET: exact PK lookup — B-tree traversal, O(log N)</span>
+<span class="kw">SELECT</span> value, expires_at <span class="kw">FROM</span> kv_store
+<span class="kw">WHERE</span> namespace=<span class="str">'app'</span> <span class="kw">AND</span> key_name=<span class="str">'user:42'</span>
+  <span class="kw">AND</span> (expires_at <span class="kw">IS NULL OR</span> expires_at > <span class="fn">UNIX_TIMESTAMP</span>()*<span class="num">1000</span>);
+
+<span class="cmt">-- SET (upsert): one statement, no SELECT + INSERT race</span>
+<span class="kw">INSERT INTO</span> kv_store (namespace, key_name, value, expires_at, version, created_at, updated_at)
+<span class="kw">VALUES</span> (<span class="str">'app'</span>, <span class="str">'user:42'</span>, :val, :exp, <span class="num">1</span>, :now, :now)
+<span class="kw">ON DUPLICATE KEY UPDATE</span>
+    value=<span class="kw">VALUES</span>(value), expires_at=<span class="kw">VALUES</span>(expires_at),
+    version=version+<span class="num">1</span>, updated_at=<span class="kw">VALUES</span>(updated_at);
+
+<span class="cmt">-- CAS (compare-and-set): only update if version matches</span>
+<span class="kw">UPDATE</span> kv_store <span class="kw">SET</span> value=:new_val, version=version+<span class="num">1</span>
+<span class="kw">WHERE</span> namespace=:ns <span class="kw">AND</span> key_name=:key <span class="kw">AND</span> version=:expected_version;
+<span class="cmt">-- rowcount=0 → CAS failed (someone else updated first)</span>
+
+<span class="cmt">-- Background TTL cleanup — run every 60s</span>
+<span class="kw">DELETE FROM</span> kv_store
+<span class="kw">WHERE</span> expires_at <span class="kw">IS NOT NULL AND</span> expires_at < <span class="fn">UNIX_TIMESTAMP</span>()*<span class="num">1000</span>
+<span class="kw">LIMIT</span> <span class="num">1000</span>;   <span class="cmt">-- chunk deletes to avoid long lock holds</span></pre></div>
+
+    <h3>Why Composite Primary Key?</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Clustering benefit</h4><p>InnoDB clusters rows by PK. With composite PK (namespace, key_name), all keys in the same namespace are physically co-located on disk. Range scans over a namespace become sequential I/O.</p></div>
+      <div class="card ct-a"><h4>Hot page problem</h4><p>If using a single auto-increment PK, all writes go to the last B-tree page ("right-hand insert"). Under high write load, this page becomes a mutex hotspot. Composite keys distribute writes across the tree.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">Architecture &amp; <em>Scaling</em></div>
+    <h3>System Architecture</h3>
+    <div class="diag">
+<svg viewBox="0 0 700 140" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="ak" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker>
+  <marker id="ak2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#22c55e" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="136" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="14" y="20" width="100" height="100" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="64" y="44" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">KV API</text>
+  <text x="64" y="60" text-anchor="middle" fill="#5a6a85" font-size="8">GET/SET/DEL/CAS</text>
+  <text x="64" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">FastAPI / Spring</text>
+  <text x="64" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">Stateless × N</text>
+  <rect x="172" y="20" width="110" height="100" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="227" y="44" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Redis Cache</text>
+  <text x="227" y="60" text-anchor="middle" fill="#5a6a85" font-size="8">Read-through cache</text>
+  <text x="227" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">TTL = min(kv_ttl, 60s)</text>
+  <text x="227" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">90%+ hit rate target</text>
+  <rect x="340" y="20" width="120" height="100" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="400" y="44" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">MySQL Primary</text>
+  <text x="400" y="60" text-anchor="middle" fill="#5a6a85" font-size="8">kv_store table</text>
+  <text x="400" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">Writes + strong reads</text>
+  <text x="400" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">ProxySQL in front</text>
+  <rect x="520" y="20" width="120" height="100" rx="5" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="580" y="44" text-anchor="middle" fill="#8a9bb5" font-size="10">MySQL Replica</text>
+  <text x="580" y="60" text-anchor="middle" fill="#5a6a85" font-size="8">Eventually consistent</text>
+  <text x="580" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">reads only</text>
+  <text x="580" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">lag ~50ms</text>
+  <line x1="116" y1="70" x2="170" y2="70" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ak)" opacity=".8"/>
+  <line x1="284" y1="70" x2="338" y2="70" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#ak)" opacity=".8"/>
+  <line x1="462" y1="60" x2="518" y2="60" stroke="#22c55e" stroke-width="1" marker-end="url(#ak2)" opacity=".6" stroke-dasharray="3,2"/>
+  <text x="490" y="52" text-anchor="middle" fill="#22c55e" font-size="7.5">replication</text>
+  <text x="152" y="63" text-anchor="middle" fill="#f59e0b" font-size="7.5">check cache</text>
+  <text x="310" y="63" text-anchor="middle" fill="#00e5ff" font-size="7.5">cache miss</text>
+</svg>
+    </div>
+    <h3>Scaling the Write Path</h3>
+    <div class="g g2">
+      <div class="card ct-a"><h4>Write Bottleneck: InnoDB Row Locks</h4><p>At 10K writes/s all hitting the same table, row-level locks on hot keys become contention points. Solution: partition writes by <code>namespace</code> hash across multiple MySQL shards. No cross-shard transactions needed (KV operations are single-key).</p></div>
+      <div class="card ct-c"><h4>Read Scaling: Cache + Replicas</h4><p>90% of reads served from Redis cache. Remaining 10% hit MySQL read replicas. The primary only receives writes and cache-miss reads for keys requiring strong consistency.</p></div>
+    </div>
+    <h3>Capacity</h3>
+    <table>
+      <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+      <tr><td>Read throughput</td><td>100K ops/s</td><td>~90K from Redis cache, ~10K from MySQL replica</td></tr>
+      <tr><td>Write throughput</td><td>10K ops/s</td><td>MySQL primary; shard by namespace if needed</td></tr>
+      <tr><td>Storage per key</td><td>~600 bytes avg</td><td>512 key + 64 ns + value + metadata</td></tr>
+      <tr><td>100M keys</td><td>~60 GB MySQL</td><td>Fits on single r6g.2xlarge (64 GB)</td></tr>
+      <tr><td>Redis cache (hot keys)</td><td>10–20 GB</td><td>Top 20% of keys cover 80% of reads</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle">Code — <em>KV Store Implementation</em></div>
+    <div class="ltabs"><div class="ltab on" data-l="L2py">🐍 Python</div><div class="ltab" data-l="L2java">☕ Java</div></div>
+    <div class="lpanel on" id="L2py">
+      <div class="cwrap"><div class="ctop"><span>kv_service.py — FastAPI KV store service</span><span class="ltag lpy">Python</span></div>
+      <pre><span class="kw">import</span> time
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, HTTPException
+<span class="kw">from</span> sqlalchemy <span class="kw">import</span> text
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+app   = <span class="fn">FastAPI</span>()
+cache = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>, decode_responses=<span class="kw">True</span>)
+
+<span class="dec">@app.get</span>(<span class="str">"/kv/{namespace}/{key}"</span>)
+<span class="kw">async def</span> <span class="fn">kv_get</span>(namespace: str, key: str):
+    <span class="cmt"># 1. Check Redis cache first</span>
+    cache_key = <span class="str">f"{namespace}:{key}"</span>
+    val = <span class="kw">await</span> cache.<span class="fn">get</span>(cache_key)
+    <span class="kw">if</span> val <span class="kw">is not None</span>:
+        <span class="kw">return</span> {<span class="str">"value"</span>: val, <span class="str">"source"</span>: <span class="str">"cache"</span>}
+
+    <span class="cmt"># 2. Cache miss — hit MySQL</span>
+    now_ms = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    <span class="kw">async with</span> <span class="fn">get_db</span>() <span class="kw">as</span> db:
+        row = (<span class="kw">await</span> db.<span class="fn">execute</span>(
+            <span class="fn">text</span>(<span class="str">"SELECT value, expires_at FROM kv_store WHERE namespace=:ns AND key_name=:k"</span>
+                 <span class="str">" AND (expires_at IS NULL OR expires_at > :now)"</span>),
+            {<span class="str">"ns"</span>: namespace, <span class="str">"k"</span>: key, <span class="str">"now"</span>: now_ms}
+        )).<span class="fn">fetchone</span>()
+
+    <span class="kw">if not</span> row:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="num">404</span>)
+
+    <span class="cmt"># 3. Populate cache with remaining TTL</span>
+    ttl = <span class="fn">max</span>(<span class="num">1</span>, <span class="fn">int</span>((row.expires_at - now_ms) / <span class="num">1000</span>)) <span class="kw">if</span> row.expires_at <span class="kw">else</span> <span class="num">3600</span>
+    <span class="kw">await</span> cache.<span class="fn">setex</span>(cache_key, ttl, row.value)
+    <span class="kw">return</span> {<span class="str">"value"</span>: row.value, <span class="str">"source"</span>: <span class="str">"db"</span>}
+
+<span class="dec">@app.put</span>(<span class="str">"/kv/{namespace}/{key}"</span>)
+<span class="kw">async def</span> <span class="fn">kv_set</span>(namespace: str, key: str, value: str, ttl_seconds: int = <span class="kw">None</span>):
+    now_ms  = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    exp_ms  = now_ms + ttl_seconds * <span class="num">1000</span> <span class="kw">if</span> ttl_seconds <span class="kw">else None</span>
+
+    <span class="kw">async with</span> <span class="fn">get_db</span>() <span class="kw">as</span> db:
+        <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="fn">text</span>(
+            <span class="str">"INSERT INTO kv_store(namespace,key_name,value,expires_at,version,created_at,updated_at)"</span>
+            <span class="str">" VALUES(:ns,:k,:v,:exp,1,:now,:now)"</span>
+            <span class="str">" ON DUPLICATE KEY UPDATE value=VALUES(value),expires_at=VALUES(expires_at),"</span>
+            <span class="str">"version=version+1,updated_at=VALUES(updated_at)"</span>
+        ), {<span class="str">"ns"</span>:namespace,<span class="str">"k"</span>:key,<span class="str">"v"</span>:value,<span class="str">"exp"</span>:exp_ms,<span class="str">"now"</span>:now_ms})
+
+    <span class="cmt"># Invalidate cache after write</span>
+    <span class="kw">await</span> cache.<span class="fn">delete</span>(<span class="str">f"{namespace}:{key}"</span>)
+    <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">True</span>}</pre></div>
+    </div>
+    <div class="lpanel" id="L2java">
+      <div class="cwrap"><div class="ctop"><span>KVService.java — Spring Boot</span><span class="ltag ljv">Java</span></div>
+      <pre><span class="dec">@Service</span>
+<span class="kw">public class</span> <span class="cls">KVService</span> {
+    <span class="kw">private final</span> <span class="cls">JdbcTemplate</span> jdbc;
+    <span class="kw">private final</span> <span class="cls">StringRedisTemplate</span> cache;
+
+    <span class="kw">public</span> <span class="cls">Optional</span>&lt;<span class="cls">String</span>&gt; <span class="fn">get</span>(<span class="cls">String</span> ns, <span class="cls">String</span> key) {
+        <span class="cls">String</span> cacheKey = ns + <span class="str">":"</span> + key;
+        <span class="cls">String</span> cached = cache.<span class="fn">opsForValue</span>().<span class="fn">get</span>(cacheKey);
+        <span class="kw">if</span> (cached != <span class="kw">null</span>) <span class="kw">return</span> <span class="cls">Optional</span>.<span class="fn">of</span>(cached);
+
+        <span class="kw">long</span> now = <span class="cls">System</span>.<span class="fn">currentTimeMillis</span>();
+        <span class="kw">return</span> jdbc.<span class="fn">query</span>(
+            <span class="str">"SELECT value, expires_at FROM kv_store WHERE namespace=? AND key_name=?"</span>
+            + <span class="str">" AND (expires_at IS NULL OR expires_at > ?)"</span>,
+            rs -> {
+                <span class="kw">if</span> (!rs.<span class="fn">next</span>()) <span class="kw">return</span> <span class="cls">Optional</span>.<span class="fn">empty</span>();
+                <span class="cls">String</span> val = rs.<span class="fn">getString</span>(<span class="str">"value"</span>);
+                <span class="kw">long</span> exp = rs.<span class="fn">getLong</span>(<span class="str">"expires_at"</span>);
+                <span class="kw">long</span> ttlSecs = exp > <span class="num">0</span> ? (<span class="kw">long</span>)<span class="cls">Math</span>.<span class="fn">max</span>(<span class="num">1</span>,(exp-now)/<span class="num">1000</span>) : <span class="num">3600L</span>;
+                cache.<span class="fn">opsForValue</span>().<span class="fn">set</span>(cacheKey, val, ttlSecs, <span class="cls">TimeUnit</span>.SECONDS);
+                <span class="kw">return</span> <span class="cls">Optional</span>.<span class="fn">of</span>(val);
+            }, ns, key, now);
+    }
+
+    <span class="kw">public void</span> <span class="fn">set</span>(<span class="cls">String</span> ns, <span class="cls">String</span> key, <span class="cls">String</span> value, <span class="cls">Long</span> ttlSecs) {
+        <span class="kw">long</span> now = <span class="cls">System</span>.<span class="fn">currentTimeMillis</span>();
+        <span class="cls">Long</span> exp = ttlSecs != <span class="kw">null</span> ? now + ttlSecs * <span class="num">1000L</span> : <span class="kw">null</span>;
+        jdbc.<span class="fn">update</span>(
+            <span class="str">"INSERT INTO kv_store(namespace,key_name,value,expires_at,version,created_at,updated_at)"</span>
+            + <span class="str">" VALUES(?,?,?,?,1,?,?) ON DUPLICATE KEY UPDATE"</span>
+            + <span class="str">" value=VALUES(value),expires_at=VALUES(expires_at),version=version+1,updated_at=?"</span>,
+            ns, key, value, exp, now, now, now);
+        cache.<span class="fn">delete</span>(ns + <span class="str">":"</span> + key);   <span class="cmt">// invalidate cache</span>
+    }
+}</pre></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Trade<em>offs</em></div>
+    <div class="tdp">
+      <div class="tdc pro"><h4>✅ SQL KV Store Pros</h4><ul><li>Full ACID durability — survives any crash without data loss</li><li>Range queries on keys — impossible with Redis</li><li>CAS atomically via UPDATE WHERE version=N</li><li>SQL joins — can query KV data alongside relational data</li><li>Replication, backup, PITR all come for free with MySQL</li></ul></div>
+      <div class="tdc con"><h4>❌ SQL KV Store Cons</h4><ul><li>Higher latency than Redis (disk I/O vs in-memory)</li><li>Write throughput ceiling ~10-50K/s per node vs Redis 1M/s</li><li>TTL expiry is eventual (background job) not precise</li><li>Schema migrations require careful planning at scale</li><li>Not suitable for sub-millisecond requirements</li></ul></div>
+    </div>
+    <h3>When to Use SQL KV vs Redis</h3>
+    <table>
+      <tr><th>Requirement</th><th>SQL KV</th><th>Redis</th></tr>
+      <tr><td>Durability required</td><td>✅ Yes — WAL-based</td><td>⚠️ RDB/AOF needed</td></tr>
+      <tr><td>Sub-ms latency</td><td>❌</td><td>✅</td></tr>
+      <tr><td>Range queries on keys</td><td>✅</td><td>❌</td></tr>
+      <tr><td>>100K writes/s</td><td>❌ Needs sharding</td><td>✅</td></tr>
+      <tr><td>Complex data types (sorted sets)</td><td>❌</td><td>✅</td></tr>
+      <tr><td>Strong CAS semantics</td><td>✅</td><td>✅ (Lua scripts)</td></tr>
+      <tr><td>Joins with relational data</td><td>✅</td><td>❌</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t2f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Composite PK (namespace, key) distributes writes</strong> — avoids the right-hand insert hotspot of auto-increment PKs. InnoDB's clustered index co-locates namespace data for efficient range scans.</li>
+      <li><strong>UPSERT (INSERT ON DUPLICATE KEY) is atomic</strong> — no separate SELECT + conditional INSERT race. One statement handles both create and update correctly.</li>
+      <li><strong>CAS via version column</strong> — <code>UPDATE WHERE version=N</code> is an atomic check-and-set. rowcount=0 means conflict detected. Enables optimistic locking without SELECT FOR UPDATE.</li>
+      <li><strong>Lazy TTL expiry + background cleanup</strong> — check <code>expires_at &gt; now</code> in every GET query (lazy expiry). Background job deletes expired rows in small chunks to avoid long lock holds.</li>
+      <li><strong>Redis cache in front reduces MySQL load by 90%</strong> — the SQL KV becomes a durable backing store; Redis handles the hot read path. This is the read-through cache pattern in practice.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     T3 — SCALING RELATIONAL DBs
+══════════════════════════════════════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap"><div class="stab active" data-s="t3a">Overview</div><div class="stab" data-s="t3b">Read Scaling</div><div class="stab" data-s="t3c">Write Scaling</div><div class="stab" data-s="t3d">Sharding</div><div class="stab" data-s="t3e">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">Scaling <em>Relational Databases</em></div>
+    <p class="psub">A single MySQL node handles ~10K writes/s and ~50K reads/s before becoming the bottleneck. Scaling beyond that requires a deliberate strategy at each axis.</p>
+    <h3>The Scaling Ladder</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Vertical scaling — bigger machine</div><div class="fd">Upgrade CPU, RAM, NVMe. Cheapest first step. Ceiling: largest available instance (~96 vCPU, 768 GB). Diminishing returns after 32 cores for OLTP.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Read replicas — horizontal read scaling</div><div class="fd">Add 1–5 MySQL replicas. Route SELECTs to replicas via ProxySQL. Primary handles only writes. Works until writes saturate the primary.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Connection pooling + query optimization</div><div class="fd">ProxySQL, slow query log analysis, proper indexes, EXPLAIN plans. Often doubles effective throughput before infrastructure changes.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Caching layer — reduce DB load</div><div class="fd">Redis for hot reads. Application-level query result caching. Can reduce DB read load by 80–95% for read-heavy workloads.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Functional decomposition — split by domain</div><div class="fd">Split monolith DB into: users DB, orders DB, products DB. Each independently scalable. Cross-DB joins become API calls (denormalization trade-off).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">6</div><div class="fline"></div></div><div class="fb"><div class="ft">Sharding — horizontal write scaling</div><div class="fd">Split rows across N databases by shard key (user_id % N). Each shard handles 1/N of writes. Last resort — extreme operational complexity.</div></div></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle">Read <em>Scaling</em></div>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Read Replicas</h4><p>MySQL primary streams binary log to replicas asynchronously. Replicas apply changes with ~50ms lag (semi-sync can reduce to ~5ms). ProxySQL routes reads to replicas, writes to primary.</p><div class="call cw" style="font-size:12px;padding:7px">Replication lag means reads from replica may be stale. Use primary for reads requiring strong consistency (e.g., "read your own writes").</div></div>
+      <div class="card ct-g"><h4>Index Optimization</h4><p>Wrong: full table scan on 100M rows. Right: covering index = query resolved entirely from index, no row fetch. An index that reduces query time from 5s → 5ms is worth more than any hardware upgrade.</p>
+      <div class="cwrap" style="margin-top:8px"><div class="ctop"><span>Covering index example</span><span class="ltag lsq">SQL</span></div><pre style="font-size:11px;padding:10px"><span class="cmt">-- Without index: full scan</span>
+<span class="kw">SELECT</span> user_id, created_at <span class="kw">FROM</span> orders <span class="kw">WHERE</span> status=<span class="str">'pending'</span>;
+
+<span class="cmt">-- Covering index: no row fetch needed</span>
+<span class="kw">CREATE INDEX</span> idx_status_covering
+<span class="kw">ON</span> orders (status, user_id, created_at);</pre></div></div>
+    </div>
+    <h3>Query Optimization Checklist</h3>
+    <table>
+      <tr><th>Issue</th><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>Missing index</td><td>EXPLAIN shows "ALL" (full scan)</td><td>Add B-tree index on WHERE/ORDER columns</td></tr>
+      <tr><td>SELECT *</td><td>Fetches unnecessary columns, can't use covering index</td><td>Select only needed columns</td></tr>
+      <tr><td>N+1 queries</td><td>1 query per row in a loop</td><td>JOIN or batch fetch (SELECT … WHERE id IN (…))</td></tr>
+      <tr><td>Non-sargable WHERE</td><td>WHERE YEAR(created_at)=2024 can't use index on created_at</td><td>WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31'</td></tr>
+      <tr><td>Too many indexes</td><td>Slow INSERT/UPDATE — index maintenance overhead</td><td>Remove unused indexes (check information_schema)</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">Write <em>Scaling</em></div>
+    <h3>Write Scaling Techniques</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Batch Writes</h4><p>Instead of 1000 INSERT statements, use one <code>INSERT INTO … VALUES (…),(…),(…)</code>. Reduces transaction overhead, index maintenance calls, and lock acquisitions by 100×.</p>
+      <div class="cwrap" style="margin-top:8px"><div class="ctop"><span>Batch insert</span><span class="ltag lsq">SQL</span></div><pre style="font-size:11px;padding:10px"><span class="cmt">-- Bad: 1000 roundtrips</span>
+<span class="kw">INSERT INTO</span> events (uid, ts) <span class="kw">VALUES</span> (<span class="num">1</span>, <span class="num">100</span>);
+<span class="kw">INSERT INTO</span> events (uid, ts) <span class="kw">VALUES</span> (<span class="num">2</span>, <span class="num">101</span>);
+<span class="cmt">-- Good: 1 roundtrip</span>
+<span class="kw">INSERT INTO</span> events (uid, ts)
+<span class="kw">VALUES</span> (<span class="num">1</span>,<span class="num">100</span>),(<span class="num">2</span>,<span class="num">101</span>),(<span class="num">3</span>,<span class="num">102</span>); <span class="cmt">-- up to 10K rows</span></pre></div></div>
+      <div class="card ct-g"><h4>Write-ahead with Queue</h4><p>Decouple write volume from DB throughput. App writes to Kafka/Redis queue. Worker batches and bulk-inserts. DB sees 1 bulk insert per second instead of 10K individual writes per second.</p></div>
+      <div class="card ct-p"><h4>Partitioning (within one DB)</h4><p>MySQL RANGE/LIST/HASH partitioning splits a table into physical sub-tables. Queries with partition key in WHERE clause only scan the relevant partition. Best for time-series data (partition by month).</p></div>
+      <div class="card ct-a"><h4>Archival / Tiered Storage</h4><p>Move data older than N months to a cold table or archive DB. Active table stays small → all queries stay fast. Restore archived data only when needed (rare cold path).</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle"><em>Sharding</em> — Last Resort</div>
+    <p class="psub">Sharding splits rows across N independent databases. Each shard holds 1/N of the data and handles 1/N of writes. Extremely powerful — and extremely painful.</p>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Hash Sharding</h4><p><code>shard = user_id % N</code>. Even distribution. Cannot easily rebalance — changing N rehashes all keys. Use consistent hashing to mitigate. Good for: user data, orders.</p></div>
+      <div class="card ct-g"><h4>Range Sharding</h4><p><code>shard = created_at range</code>. Shard 0: Jan–Mar, Shard 1: Apr–Jun. Easy range queries within a shard. Risk: temporal hotspot (current shard gets all writes). Good for: time-series, logs.</p></div>
+    </div>
+    <h3>Sharding Costs</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>What You Lose</h4><ul class="rl"><li>Cross-shard JOINs require application-level aggregation</li><li>Global ORDER BY requires merge sort across shards</li><li>ACID transactions only within a shard — distributed transactions are complex</li><li>Schema migrations must be applied to all N shards</li><li>Re-sharding (changing N) requires data migration — weeks of work</li></ul></div>
+      <div class="card ct-a"><h4>Mitigations</h4><ul class="rl"><li>Denormalize: embed data you'd JOIN into the primary row</li><li>Vitess / Citus: middleware that handles cross-shard queries automatically</li><li>Two-phase commit for cross-shard transactions (complex, avoid if possible)</li><li>Consistent hashing: add virtual nodes to allow gradual rebalancing</li></ul></div>
+    </div>
+    <div class="call cr"><strong>Rule:</strong> Don't shard until you've exhausted: vertical scaling → read replicas → caching → query optimization → functional decomposition → partitioning. Sharding is the last resort — it introduces irreversible complexity.</div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>The scaling ladder</strong> — exhaust vertical scaling, replicas, caching, and query optimization before sharding. Most systems never need sharding; those that do regret it without proper planning.</li>
+      <li><strong>Read replicas + ProxySQL</strong> — route reads to replicas, writes to primary. Standard for 10×–50× read scaling. Replication lag is the trade-off; design your reads accordingly.</li>
+      <li><strong>Covering indexes are the highest-ROI optimization</strong> — an index that allows the DB to answer a query without touching the row reduces I/O by orders of magnitude. Always EXPLAIN your slow queries.</li>
+      <li><strong>Batch writes reduce DB overhead by 100×</strong> — one INSERT … VALUES (1000 rows) is dramatically more efficient than 1000 individual INSERTs. Standard for event ingestion.</li>
+      <li><strong>Sharding is irreversible complexity</strong> — no cross-shard JOINs, no global ORDER BY, schema migrations across N nodes. Use Vitess/Citus to hide this complexity if sharding is unavoidable.</li>
+    </ul>
+  </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     T4 — NOSQL & TRADE-OFFS
+══════════════════════════════════════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap"><div class="stab active" data-s="t4a">Overview</div><div class="stab" data-s="t4b">Types</div><div class="stab" data-s="t4c">CAP & Trade-offs</div><div class="stab" data-s="t4d">When to Use</div><div class="stab" data-s="t4e">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="ptitle">NoSQL Databases &amp; their <em>Trade-offs</em></div>
+    <p class="psub">NoSQL is not a single technology — it's a family of databases each making different trade-offs. Understanding which trade-off each makes is what lets you choose the right one.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div style="font-size:24px">🗝️</div><h4 style="margin:6px 0">Key-Value</h4><p style="font-size:12px">Redis, DynamoDB<br>O(1) reads/writes</p></div>
+      <div class="card ct-g" style="text-align:center"><div style="font-size:24px">📄</div><h4 style="margin:6px 0">Document</h4><p style="font-size:12px">MongoDB, CouchDB<br>Schema-flexible JSON</p></div>
+      <div class="card ct-p" style="text-align:center"><div style="font-size:24px">📊</div><h4 style="margin:6px 0">Column-Family</h4><p style="font-size:12px">Cassandra, HBase<br>Wide rows, write-heavy</p></div>
+      <div class="card ct-pk" style="text-align:center"><div style="font-size:24px">🕸️</div><h4 style="margin:6px 0">Graph</h4><p style="font-size:12px">Neo4j, Neptune<br>Relationship traversal</p></div>
+    </div>
+    <h3>The Fundamental Question</h3>
+    <div class="call ci"><strong>Not "SQL vs NoSQL" but "What access pattern do I have?"</strong><br>
+    If your primary operation is: lookup by ID → KV store. Complex nested data → Document. Time-series writes → Column. Multi-hop traversal → Graph. Joins + ACID → SQL.</div>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle">NoSQL <em>Types — Deep Dive</em></div>
+    <table>
+      <tr><th>Type</th><th>Data Model</th><th>Query Style</th><th>Scales</th><th>When to Use</th></tr>
+      <tr><td>Key-Value (Redis)</td><td>hash(key) → value</td><td>GET/SET by exact key only</td><td>Horizontal (cluster)</td><td>Caching, sessions, presence, rate-limit counters</td></tr>
+      <tr><td>Document (MongoDB)</td><td>Collections of JSON docs</td><td>Filter on any field, projections, aggregation</td><td>Horizontal (shard by shard key)</td><td>Catalogs, CMS, user profiles, varied schema</td></tr>
+      <tr><td>Column-Family (Cassandra)</td><td>Row key → sorted column map</td><td>Reads by partition key + optional clustering col</td><td>Linear horizontal</td><td>Time-series, IoT events, activity feeds, write-heavy</td></tr>
+      <tr><td>Graph (Neo4j)</td><td>Nodes + edges with properties</td><td>Cypher traversal (MATCH patterns)</td><td>Vertical (sharding hard)</td><td>Social networks, fraud detection, knowledge graphs</td></tr>
+      <tr><td>Search (Elasticsearch)</td><td>Inverted index over documents</td><td>Full-text + faceted + geo search</td><td>Horizontal</td><td>Search, log analytics, autocomplete</td></tr>
+    </table>
+    <h3>Cassandra Data Model</h3>
+    <div class="cwrap"><div class="ctop"><span>Cassandra CQL — time-series design</span><span class="ltag lsq">CQL</span></div>
+    <pre><span class="cmt">-- Partition by user, cluster by time (newest first)</span>
+<span class="kw">CREATE TABLE</span> user_activity (
+    user_id    <span class="cls">UUID</span>,
+    event_time <span class="cls">TIMESTAMP</span>,
+    event_type <span class="cls">TEXT</span>,
+    payload    <span class="cls">TEXT</span>,
+    <span class="kw">PRIMARY KEY</span> (user_id, event_time)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (event_time <span class="kw">DESC</span>);
+
+<span class="cmt">-- Reads only touch one partition (one node):</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> user_activity
+<span class="kw">WHERE</span> user_id = <span class="num">550e8400</span>-e29b-41d4-a716-<span class="num">446655440000</span>
+<span class="kw">LIMIT</span> <span class="num">100</span>;</pre></div>
+    <div class="call cw"><strong>Cassandra rule:</strong> Design tables around queries, not entities. Each query pattern = one table. Denormalize aggressively. Never do joins (they don't exist in Cassandra).</div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">CAP Theorem &amp; <em>Trade-offs</em></div>
+    <p class="psub">In the presence of a network partition, you must choose between Consistency and Availability. This is the fundamental constraint all NoSQL databases navigate.</p>
+    <div class="diag">
+<svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg" font-family="DM Sans" font-size="12">
+  <rect x="2" y="2" width="496" height="176" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Triangle -->
+  <polygon points="250,20 80,160 420,160" fill="none" stroke="#1e2d45" stroke-width="1.5"/>
+  <!-- Vertices -->
+  <circle cx="250" cy="20" r="28" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="250" y="24" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">C</text>
+  <text x="250" y="56" text-anchor="middle" fill="#5a6a85" font-size="9">Consistency</text>
+  <circle cx="80" cy="160" r="28" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="80" y="164" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">A</text>
+  <text x="80" y="152" text-anchor="middle" fill="#5a6a85" font-size="9">Availability</text>
+  <circle cx="420" cy="160" r="28" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="420" y="164" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">P</text>
+  <text x="420" y="152" text-anchor="middle" fill="#5a6a85" font-size="9">Partition Tolerance</text>
+  <!-- Database labels on edges -->
+  <text x="155" y="88" fill="#fcd34d" font-size="9" text-anchor="middle">MySQL, Postgres</text>
+  <text x="155" y="100" fill="#5a6a85" font-size="8" text-anchor="middle">(CA — assumes no partition)</text>
+  <text x="346" y="88" fill="#60a5fa" font-size="9" text-anchor="middle">HBase, Zookeeper</text>
+  <text x="346" y="100" fill="#5a6a85" font-size="8" text-anchor="middle">(CP — consistent, may block)</text>
+  <text x="250" y="148" fill="#86efac" font-size="9" text-anchor="middle">Cassandra, DynamoDB, CouchDB</text>
+  <text x="250" y="162" fill="#5a6a85" font-size="8" text-anchor="middle">(AP — available, eventually consistent)</text>
+</svg>
+    </div>
+    <h3>Practical Trade-off Table</h3>
+    <table>
+      <tr><th>Database</th><th>CAP Choice</th><th>Consistency Model</th><th>Partition Behavior</th></tr>
+      <tr><td>MySQL (single node)</td><td>CA</td><td>Strong (ACID)</td><td>No partition handling — single node</td></tr>
+      <tr><td>MongoDB</td><td>CP (configurable)</td><td>Configurable read/write concern</td><td>Primary unavailable → reads from secondary</td></tr>
+      <tr><td>Cassandra</td><td>AP</td><td>Eventual (tunable via quorum)</td><td>Writes accepted on any replica; read repair later</td></tr>
+      <tr><td>DynamoDB</td><td>AP (default) / CP (strong read)</td><td>Eventual by default; strong = 2× cost</td><td>Continues serving from regional replica</td></tr>
+      <tr><td>Redis Cluster</td><td>AP</td><td>Eventual (async replication)</td><td>May lose last N writes on failover</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">When to Use <em>What</em></div>
+    <table>
+      <tr><th>Use Case</th><th>Best Choice</th><th>Why</th></tr>
+      <tr><td>User sessions / auth tokens</td><td>Redis (KV)</td><td>Sub-ms, TTL, horizontal scale</td></tr>
+      <tr><td>Product catalog (varied schema)</td><td>MongoDB</td><td>Flexible doc structure, rich queries</td></tr>
+      <tr><td>IoT sensor data (write-heavy time-series)</td><td>Cassandra</td><td>Write throughput, time-ordered partitions</td></tr>
+      <tr><td>Social graph (friends-of-friends)</td><td>Neo4j</td><td>Multi-hop traversal is O(1) per hop</td></tr>
+      <tr><td>Financial transactions</td><td>MySQL / Postgres</td><td>ACID mandatory; no eventual consistency</td></tr>
+      <tr><td>Full-text search</td><td>Elasticsearch</td><td>Inverted index, facets, relevance scoring</td></tr>
+      <tr><td>Global scale key-value with SLA</td><td>DynamoDB</td><td>Managed, 99.999% availability, serverless</td></tr>
+      <tr><td>Real-time leaderboard</td><td>Redis (Sorted Set)</td><td>ZADD/ZRANK in O(log N)</td></tr>
+    </table>
+    <div class="call ci"><strong>Rule of thumb:</strong> Start with PostgreSQL. It does KV (JSONB), document (JSONB columns), full-text (tsvector), and geospatial (PostGIS). Only switch to a specialized DB when Postgres becomes a proven bottleneck for a specific access pattern.</div>
+  </div>
+
+  <div class="spanel" id="t4e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>NoSQL ≠ "no schema"</strong> — it means "not only SQL." Every NoSQL DB has a data model and access pattern constraints. Cassandra requires you to know your queries at design time.</li>
+      <li><strong>CAP in practice: choose AP or CP, not CA</strong> — network partitions happen. CA databases (no partition handling) only exist in single-node deployments.</li>
+      <li><strong>Cassandra: design tables for queries</strong> — one table per access pattern. Denormalization is mandatory. Never join. This is the most different mental model from SQL.</li>
+      <li><strong>DynamoDB's hidden cost</strong> — strong consistency reads cost 2× read capacity units vs eventually consistent. Design for eventual consistency and use strong reads sparingly.</li>
+      <li><strong>Start with Postgres, specialize only when proven</strong> — Postgres handles most workloads. A premature switch to a specialized DB trades operational simplicity for marginal performance gains.</li>
+    </ul>
+  </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     T5 — GRAPH DATABASES
+══════════════════════════════════════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap"><div class="stab active" data-s="t5a">Overview</div><div class="stab" data-s="t5b">When to Use</div><div class="stab" data-s="t5c">Graph vs SQL</div><div class="stab" data-s="t5d">Code</div><div class="stab" data-s="t5e">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t5a">
+    <div class="ptitle">Graph Databases — <em>When &amp; Why</em></div>
+    <p class="psub">A graph DB stores data as nodes (entities) and edges (relationships). The killer feature: multi-hop traversals are O(1) per hop — no join penalty regardless of graph depth. SQL joins get exponentially slower with each additional hop.</p>
+    <div class="g g2">
+      <div class="card ct-pk">
+        <h4>Graph Model</h4>
+        <div class="diag" style="padding:10px">
+<svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs><marker id="ag2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#a78bfa" opacity=".8"/></marker></defs>
+  <circle cx="60" cy="60" r="24" fill="#131a2a" stroke="#ec4899" stroke-width="1.5"/>
+  <text x="60" y="56" text-anchor="middle" fill="#fce7f3" font-size="9">User</text>
+  <text x="60" y="68" text-anchor="middle" fill="#ec4899" font-size="8">Alice</text>
+  <circle cx="170" cy="30" r="24" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="170" y="26" text-anchor="middle" fill="#e9d5ff" font-size="9">User</text>
+  <text x="170" y="38" text-anchor="middle" fill="#a78bfa" font-size="8">Bob</text>
+  <circle cx="260" cy="60" r="24" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="260" y="56" text-anchor="middle" fill="#dcfce7" font-size="9">Company</text>
+  <text x="260" y="68" text-anchor="middle" fill="#22c55e" font-size="8">Acme</text>
+  <circle cx="170" cy="95" r="24" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="170" y="91" text-anchor="middle" fill="#fef3c7" font-size="9">User</text>
+  <text x="170" y="103" text-anchor="middle" fill="#f59e0b" font-size="8">Carol</text>
+  <line x1="84" y1="50" x2="146" y2="36" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ag2)"/>
+  <text x="112" y="36" fill="#5a6a85" font-size="8" text-anchor="middle">FOLLOWS</text>
+  <line x1="194" y1="42" x2="238" y2="52" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ag2)"/>
+  <text x="224" y="42" fill="#5a6a85" font-size="8">WORKS_AT</text>
+  <line x1="84" y1="70" x2="146" y2="84" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ag2)"/>
+  <text x="108" y="85" fill="#5a6a85" font-size="8" text-anchor="middle">FOLLOWS</text>
+</svg>
+        </div>
+      </div>
+      <div class="card ct-c"><h4>The Multi-hop Problem</h4><p>SQL: "Find friends of Alice's friends who work at Acme" = 3 JOINs. Each JOIN multiplies intermediate rows. At 1M users with 200 friends each, 3-hop traversal in SQL = minutes. In Neo4j = milliseconds.</p>
+      <div class="call cp" style="font-size:12px;padding:7px 10px">Graph traversal is O(k) where k = number of edges traversed. SQL JOIN is O(N × M) at each hop — exponential blowup.</div></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5b">
+    <div class="ptitle">When to <em>Use Graph DBs</em></div>
+    <div class="g g2">
+      <div class="card ct-g"><h4>✅ Use a Graph DB When</h4><ul class="rl"><li>Relationships are first-class: <strong>friend-of-friend</strong>, <strong>path finding</strong>, <strong>recommendation</strong></li><li>You need multi-hop traversals (2+ hops is common query)</li><li>Graph structure is dynamic and irregular</li><li>Fraud detection: "accounts connected through shared device/IP"</li><li>Knowledge graphs, recommendation engines, supply chain</li></ul></div>
+      <div class="card ct-r"><h4>❌ Don't Use a Graph DB When</h4><ul class="rl"><li>Simple parent-child hierarchy (adjacency list in SQL is fine)</li><li>You need OLAP/aggregations (graph DBs are poor at SUM, GROUP BY)</li><li>Data is highly structured with simple 1-2 relationship hops</li><li>Write-heavy workload (Neo4j scales reads well, writes are harder)</li><li>Need horizontal write scaling (sharding graphs is very hard)</li></ul></div>
+    </div>
+    <h3>Real Use Cases</h3>
+    <table>
+      <tr><th>Company</th><th>Use Case</th><th>Why Graph</th></tr>
+      <tr><td>LinkedIn</td><td>Degrees of connection, "People you may know"</td><td>2nd/3rd degree connections = 2–3 hop traversal</td></tr>
+      <tr><td>Facebook</td><td>Social graph, mutual friends, event recommendations</td><td>Breadth-first search over friend network</td></tr>
+      <tr><td>PayPal</td><td>Fraud detection: shared device/card/IP graphs</td><td>Detect fraud rings by multi-hop account linkage</td></tr>
+      <tr><td>Google Knowledge Graph</td><td>"What movies did Christopher Nolan direct?"</td><td>Entity-relationship traversal at web scale</td></tr>
+      <tr><td>Airbnb</td><td>Trust and safety: host-guest relationship history</td><td>Graph of previous interactions, reviews, connections</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t5c">
+    <div class="ptitle">Graph vs <em>SQL — Head to Head</em></div>
+    <div class="cwrap"><div class="ctop"><span>Friend-of-friend query comparison</span><span class="ltag lsq">SQL vs Cypher</span></div>
+    <pre><span class="cmt">── SQL: 2-hop friend-of-friend ──────────────────────────────</span>
+<span class="kw">SELECT DISTINCT</span> u3.id, u3.name
+<span class="kw">FROM</span> users u1
+<span class="kw">JOIN</span> friendships f1 <span class="kw">ON</span> u1.id = f1.user_id
+<span class="kw">JOIN</span> friendships f2 <span class="kw">ON</span> f1.friend_id = f2.user_id
+<span class="kw">JOIN</span> users u3       <span class="kw">ON</span> f2.friend_id = u3.id
+<span class="kw">WHERE</span> u1.id = <span class="num">42</span>
+  <span class="kw">AND</span> u3.id != <span class="num">42</span>
+  <span class="kw">AND</span> u3.id <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> friend_id <span class="kw">FROM</span> friendships <span class="kw">WHERE</span> user_id=<span class="num">42</span>);
+<span class="cmt">-- O(F²) complexity where F = avg friends. 200 friends = 40,000 row join.</span>
+
+<span class="cmt">── Cypher (Neo4j): equivalent query ─────────────────────────</span>
+<span class="kw">MATCH</span> (u:User {id: <span class="num">42</span>})-[:FRIENDS_WITH*2..2]->(foaf:User)
+<span class="kw">WHERE NOT</span> (u)-[:FRIENDS_WITH]->(foaf) <span class="kw">AND</span> foaf <> u
+<span class="kw">RETURN DISTINCT</span> foaf.id, foaf.name
+<span class="kw">LIMIT</span> <span class="num">50</span>;
+<span class="cmt">-- O(F×depth) — graph traversal follows edges directly (pointer chasing)</span>
+<span class="cmt">-- No materialized intermediate join table</span></pre></div>
+
+    <h3>Performance Comparison</h3>
+    <table>
+      <tr><th>Depth</th><th>SQL (1M users, 200 avg friends)</th><th>Neo4j</th></tr>
+      <tr><td>1-hop</td><td>~1ms (index scan)</td><td>~1ms</td></tr>
+      <tr><td>2-hop (FoF)</td><td>~100ms (40K row join)</td><td>~2ms</td></tr>
+      <tr><td>3-hop</td><td>~10 seconds (8M rows)</td><td>~5ms</td></tr>
+      <tr><td>4-hop</td><td>Minutes / OOM</td><td>~20ms</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t5d">
+    <div class="ptitle">Code — <em>Neo4j Cypher Patterns</em></div>
+    <div class="cwrap"><div class="ctop"><span>cypher_patterns.py — py2neo driver</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> neo4j <span class="kw">import</span> GraphDatabase
+
+driver = <span class="cls">GraphDatabase</span>.<span class="fn">driver</span>(<span class="str">"bolt://neo4j:7687"</span>, auth=(<span class="str">"neo4j"</span>, <span class="str">"pass"</span>))
+
+<span class="kw">def</span> <span class="fn">create_user_and_follow</span>(tx, from_id, to_id):
+    tx.<span class="fn">run</span>(<span class="str">"""
+        MERGE (a:User {id: $from_id})
+        MERGE (b:User {id: $to_id})
+        MERGE (a)-[:FOLLOWS]->(b)
+    """</span>, from_id=from_id, to_id=to_id)
+
+<span class="kw">def</span> <span class="fn">get_recommendations</span>(tx, user_id, limit=<span class="num">10</span>):
+    <span class="str">"""People followed by people I follow (2-hop), that I don't follow."""</span>
+    result = tx.<span class="fn">run</span>(<span class="str">"""
+        MATCH (me:User {id: $uid})-[:FOLLOWS]->(:User)-[:FOLLOWS]->(rec:User)
+        WHERE NOT (me)-[:FOLLOWS]->(rec) AND rec.id <> $uid
+        RETURN rec.id AS id, rec.name AS name, COUNT(*) AS common_connections
+        ORDER BY common_connections DESC
+        LIMIT $limit
+    """</span>, uid=user_id, limit=limit)
+    <span class="kw">return</span> [<span class="fn">dict</span>(row) <span class="kw">for</span> row <span class="kw">in</span> result]
+
+<span class="kw">def</span> <span class="fn">shortest_path</span>(tx, from_id, to_id):
+    <span class="str">"""Degrees of separation between two users."""</span>
+    result = tx.<span class="fn">run</span>(<span class="str">"""
+        MATCH path = shortestPath(
+            (a:User {id: $from})-[:FOLLOWS*]-(b:User {id: $to})
+        )
+        RETURN length(path) AS degrees, [n IN nodes(path) | n.name] AS via
+    """</span>, <span class="fn">from</span>=from_id, to=to_id)
+    <span class="kw">return</span> result.<span class="fn">single</span>()
+
+<span class="cmt"># Usage with session</span>
+<span class="kw">with</span> driver.<span class="fn">session</span>() <span class="kw">as</span> session:
+    recs = session.<span class="fn">execute_read</span>(get_recommendations, user_id=<span class="num">42</span>)</pre></div>
+  </div>
+
+  <div class="spanel" id="t5e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Graph traversal is O(k) per hop</strong> — doesn't depend on total nodes/edges. SQL JOIN is O(N×M) at each hop — exponential. This is the decisive advantage for multi-hop relationship queries.</li>
+      <li><strong>Graph DBs are not general-purpose</strong> — poor at aggregations, harder to scale writes horizontally, no SQL ecosystem. Use them only when relationships are the primary query pattern.</li>
+      <li><strong>Fraud detection = canonical graph use case</strong> — detecting rings of accounts sharing devices/IPs/cards requires multi-hop traversal that's impractical in SQL at production scale.</li>
+      <li><strong>Cypher is declarative like SQL</strong> — <code>MATCH (a)-[:FOLLOWS*2]->(b)</code> is elegant and readable. The pattern-matching syntax is one of Neo4j's strongest UX advantages.</li>
+      <li><strong>Adjacency list in Postgres is often enough</strong> — for 1–2 hop queries and moderate scale, a self-referential table with recursive CTEs handles it without a graph DB. Reserve Neo4j for 3+ hops at scale.</li>
+    </ul>
+  </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     T6 — SLACK REALTIME TEXT
+══════════════════════════════════════ -->
+<div class="topic" id="t6">
+  <div class="subtabwrap"><div class="stab active" data-s="t6a">Problem</div><div class="stab" data-s="t6b">Architecture</div><div class="stab" data-s="t6c">Schema</div><div class="stab" data-s="t6d">Code</div><div class="stab" data-s="t6e">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t6a">
+    <div class="ptitle">Design Slack's <em>Realtime Text Communication</em></div>
+    <p class="psub">Build a system that delivers text messages between users in real-time, persists conversation history, and handles message ordering, delivery receipts, and offline users.</p>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Core Requirements</h4><ul class="rl"><li>Send/receive messages in <strong>real-time</strong> (&lt;200ms)</li><li>Message <strong>persistence</strong> — survives restarts</li><li>Offline users receive messages on reconnect</li><li>Message <strong>ordering</strong> within a channel</li><li>1:1 DMs and group channels</li></ul></div>
+      <div class="card ct-g"><h4>Scale</h4><ul class="rl"><li><strong>10M daily active users</strong></li><li>100K concurrent WebSocket connections per region</li><li><strong>1M messages/day</strong> peak</li><li>Message history retrieval (last 10K messages)</li><li>Multi-region: US, EU, APAC</li></ul></div>
+      <div class="card ct-a"><h4>Non-functional</h4><ul class="rl"><li>Message delivery latency <strong>&lt;200ms p99</strong></li><li>No message loss — <strong>at-least-once delivery</strong></li><li>Messages visible in correct order within channel</li><li>Graceful degradation if chat server crashes</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t6b">
+    <div class="ptitle">Architecture — <em>Realtime Chat</em></div>
+    <div class="diag">
+<svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs>
+    <marker id="am" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="am2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker>
+    <marker id="am3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#f59e0b" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="696" height="196" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Clients -->
+  <rect x="14" y="20" width="90" height="160" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="59" y="36" text-anchor="middle" fill="#3a4a60" font-size="8" letter-spacing="1">CLIENTS</text>
+  <rect x="22" y="44" width="74" height="30" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="59" y="63" text-anchor="middle" fill="#e2e8f0" font-size="9">Alice (WS)</text>
+  <rect x="22" y="82" width="74" height="30" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="59" y="101" text-anchor="middle" fill="#e2e8f0" font-size="9">Bob (WS)</text>
+  <rect x="22" y="120" width="74" height="30" rx="3" fill="#131a2a" stroke="#1e2d45" stroke-dasharray="2,2"/>
+  <text x="59" y="139" text-anchor="middle" fill="#5a6a85" font-size="9">Carol (offline)</text>
+  <!-- Chat Servers -->
+  <rect x="160" y="20" width="120" height="160" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="220" y="36" text-anchor="middle" fill="#3a4a60" font-size="8" letter-spacing="1">CHAT SERVERS</text>
+  <rect x="168" y="44" width="104" height="34" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="220" y="60" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">Server 1</text>
+  <text x="220" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">Alice connected</text>
+  <rect x="168" y="86" width="104" height="34" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="220" y="102" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">Server 2</text>
+  <text x="220" y="114" text-anchor="middle" fill="#5a6a85" font-size="8">Bob connected</text>
+  <text x="220" y="152" text-anchor="middle" fill="#5a6a85" font-size="8">WebSocket handlers</text>
+  <text x="220" y="164" text-anchor="middle" fill="#5a6a85" font-size="7.5">Stateful — sticky LB</text>
+  <!-- Redis Pub/Sub -->
+  <rect x="340" y="20" width="110" height="80" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="395" y="40" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Redis Pub/Sub</text>
+  <text x="395" y="55" text-anchor="middle" fill="#5a6a85" font-size="8">channel:{channel_id}</text>
+  <text x="395" y="68" text-anchor="middle" fill="#5a6a85" font-size="8">fan-out to all servers</text>
+  <text x="395" y="80" text-anchor="middle" fill="#5a6a85" font-size="7.5">subscribed to channel</text>
+  <!-- Message DB -->
+  <rect x="340" y="114" width="110" height="66" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="395" y="134" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Cassandra</text>
+  <text x="395" y="149" text-anchor="middle" fill="#5a6a85" font-size="8">messages table</text>
+  <text x="395" y="163" text-anchor="middle" fill="#5a6a85" font-size="7.5">partition: channel_id</text>
+  <text x="395" y="175" text-anchor="middle" fill="#5a6a85" font-size="7.5">cluster: message_id DESC</text>
+  <!-- Push Service -->
+  <rect x="510" y="60" width="120" height="60" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="570" y="80" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Push Service</text>
+  <text x="570" y="95" text-anchor="middle" fill="#5a6a85" font-size="8">FCM / APNs</text>
+  <text x="570" y="108" text-anchor="middle" fill="#5a6a85" font-size="7.5">for offline users (Carol)</text>
+  <!-- Arrows -->
+  <line x1="98" y1="62" x2="157" y2="62" stroke="#22c55e" stroke-width="1.5" marker-end="url(#am2)" opacity=".8"/>
+  <text x="126" y="56" fill="#22c55e" font-size="7.5" text-anchor="middle">send msg</text>
+  <line x1="284" y1="68" x2="338" y2="60" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#am3)" opacity=".8"/>
+  <text x="308" y="56" fill="#f59e0b" font-size="7.5" text-anchor="middle">PUBLISH</text>
+  <line x1="338" y1="62" x2="286" y2="100" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#am)" opacity=".7" stroke-dasharray="3,2"/>
+  <text x="314" y="95" fill="#00e5ff" font-size="7.5" text-anchor="middle">SUB fan-out</text>
+  <line x1="284" y1="70" x2="338" y2="140" stroke="#22c55e" stroke-width="1" marker-end="url(#am2)" opacity=".5" stroke-dasharray="3,2"/>
+  <text x="295" y="108" fill="#22c55e" font-size="7.5">persist</text>
+  <line x1="452" y1="75" x2="508" y2="85" stroke="#a78bfa" stroke-width="1" marker-end="url(#am)" opacity=".6" stroke-dasharray="3,2"/>
+  <text x="478" y="70" fill="#5a6a85" font-size="7.5">push notification</text>
+</svg>
+    </div>
+    <h3>Why Redis Pub/Sub for Fan-out?</h3>
+    <p>Alice sends a message to Channel #engineering. Bob and 50 others are in the channel, connected to different chat servers. Server 1 (Alice's server) publishes to Redis channel <code>channel:engineering</code>. All chat servers subscribed to that channel receive the message and push it to their connected clients. Without Redis Pub/Sub, Server 1 would need to know which servers Bob is on — stateful and fragile.</p>
+    <h3>Why Cassandra for Messages?</h3>
+    <div class="call ci">Message reads are always: "Give me the last N messages in channel X." Cassandra partitions by <code>channel_id</code> and clusters by <code>message_id DESC</code> — this is exactly a Cassandra scan: one partition, descending time order. Reads are O(N) with no JOINs, no cross-partition queries.</div>
+  </div>
+
+  <div class="spanel" id="t6c">
+    <div class="ptitle">Schema <em>Design</em></div>
+    <div class="cwrap"><div class="ctop"><span>Cassandra messages table</span><span class="ltag lsq">CQL</span></div>
+    <pre><span class="cmt">-- Message storage: partition by channel, time-ordered</span>
+<span class="kw">CREATE TABLE</span> messages (
+    channel_id   <span class="cls">UUID</span>,
+    message_id   <span class="cls">TIMEUUID</span>,    <span class="cmt">-- monotonic, time-sortable</span>
+    sender_id    <span class="cls">UUID</span>,
+    content      <span class="cls">TEXT</span>,
+    msg_type     <span class="cls">TEXT</span>,        <span class="cmt">-- text | image | file | reaction</span>
+    edited_at    <span class="cls">TIMESTAMP</span>,
+    deleted      <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT</span> <span class="kw">false</span>,
+    <span class="kw">PRIMARY KEY</span> (channel_id, message_id)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (message_id <span class="kw">DESC</span>);
+
+<span class="cmt">-- Fetch last 50 messages in a channel — single partition read</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> messages
+<span class="kw">WHERE</span> channel_id = ? <span class="kw">LIMIT</span> <span class="num">50</span>;
+
+<span class="cmt">-- Pagination: fetch before a given message</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> messages
+<span class="kw">WHERE</span> channel_id = ? <span class="kw">AND</span> message_id < ?   <span class="cmt">-- cursor-based</span>
+<span class="kw">LIMIT</span> <span class="num">50</span>;
+
+<span class="cmt">-- Delivery receipts (separate table — high write rate)</span>
+<span class="kw">CREATE TABLE</span> delivery_receipts (
+    message_id   <span class="cls">UUID</span>,
+    user_id      <span class="cls">UUID</span>,
+    status       <span class="cls">TEXT</span>,   <span class="cmt">-- sent | delivered | read</span>
+    updated_at   <span class="cls">TIMESTAMP</span>,
+    <span class="kw">PRIMARY KEY</span> (message_id, user_id)
+);</pre></div>
+
+    <h3>Why TIMEUUID for message_id?</h3>
+    <div class="g g2">
+      <div class="card ct-g"><h4>Monotonic ordering</h4><p>TIMEUUID encodes timestamp + UUID suffix → globally unique, time-sortable without a central ID generator. Two messages created at the same millisecond have different UUIDs. Cassandra can sort them without a separate timestamp column.</p></div>
+      <div class="card ct-a"><h4>No ID generator SPOF</h4><p>Auto-increment IDs require a single sequence generator — a bottleneck in distributed systems. TIMEUUID = each client generates its own message ID independently. Conflicts are statistically impossible (UUID space = 2^122).</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t6d">
+    <div class="ptitle">Code — <em>WebSocket Chat Handler</em></div>
+    <div class="cwrap"><div class="ctop"><span>chat_server.py — FastAPI WebSocket + Redis Pub/Sub</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> uuid, asyncio
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, WebSocket, WebSocketDisconnect
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+<span class="kw">from</span> cassandra.cluster <span class="kw">import</span> Cluster
+
+app    = <span class="fn">FastAPI</span>()
+redis  = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+cass   = <span class="cls">Cluster</span>([<span class="str">"cassandra"</span>]).<span class="fn">connect</span>(<span class="str">"chat"</span>)
+
+<span class="cmt"># Local registry: channel_id → set of active WebSockets on THIS server</span>
+local_subs: <span class="fn">dict</span>[str, <span class="fn">set</span>] = {}
+
+<span class="dec">@app.websocket</span>(<span class="str">"/ws/{user_id}/{channel_id}"</span>)
+<span class="kw">async def</span> <span class="fn">ws_handler</span>(ws: <span class="cls">WebSocket</span>, user_id: str, channel_id: str):
+    <span class="kw">await</span> ws.<span class="fn">accept</span>()
+    local_subs.<span class="fn">setdefault</span>(channel_id, <span class="fn">set</span>()).<span class="fn">add</span>(ws)
+
+    <span class="cmt"># Subscribe to Redis channel for this chat channel</span>
+    pubsub = redis.<span class="fn">pubsub</span>()
+    <span class="kw">await</span> pubsub.<span class="fn">subscribe</span>(<span class="str">f"channel:{channel_id}"</span>)
+    asyncio.<span class="fn">create_task</span>(<span class="fn">_forward_redis_to_ws</span>(pubsub, channel_id))
+
+    <span class="kw">try</span>:
+        <span class="kw">while True</span>:
+            data = <span class="kw">await</span> ws.<span class="fn">receive_json</span>()   <span class="cmt"># {"content": "Hello!"}</span>
+
+            <span class="cmt"># 1. Persist to Cassandra</span>
+            msg_id = uuid.<span class="fn">uuid1</span>()           <span class="cmt"># TIMEUUID</span>
+            cass.<span class="fn">execute</span>(
+                <span class="str">"INSERT INTO messages(channel_id,message_id,sender_id,content) VALUES(%s,%s,%s,%s)"</span>,
+                (channel_id, msg_id, user_id, data[<span class="str">"content"</span>])
+            )
+
+            <span class="cmt"># 2. Publish to Redis — all chat servers get this</span>
+            msg = {<span class="str">"id"</span>: <span class="fn">str</span>(msg_id), <span class="str">"sender"</span>: user_id,
+                   <span class="str">"content"</span>: data[<span class="str">"content"</span>], <span class="str">"channel"</span>: channel_id}
+            <span class="kw">await</span> redis.<span class="fn">publish</span>(<span class="str">f"channel:{channel_id}"</span>, <span class="fn">str</span>(msg))
+
+    <span class="kw">except</span> <span class="cls">WebSocketDisconnect</span>:
+        local_subs[channel_id].<span class="fn">discard</span>(ws)
+
+<span class="kw">async def</span> <span class="fn">_forward_redis_to_ws</span>(pubsub, channel_id: str):
+    <span class="str">"""Forward Redis Pub/Sub messages to all local WebSocket subscribers."""</span>
+    <span class="kw">async for</span> msg <span class="kw">in</span> pubsub.<span class="fn">listen</span>():
+        <span class="kw">if</span> msg[<span class="str">"type"</span>] == <span class="str">"message"</span>:
+            dead = <span class="fn">set</span>()
+            <span class="kw">for</span> ws <span class="kw">in</span> local_subs.<span class="fn">get</span>(channel_id, <span class="fn">set</span>()):
+                <span class="kw">try</span>:
+                    <span class="kw">await</span> ws.<span class="fn">send_text</span>(msg[<span class="str">"data"</span>])
+                <span class="kw">except</span>:
+                    dead.<span class="fn">add</span>(ws)
+            local_subs[channel_id] -= dead   <span class="cmt"># clean up disconnected clients</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t6e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Redis Pub/Sub solves the cross-server fan-out problem</strong> — without it, each chat server would need to know where every user is connected. With it, just publish once; all servers forward to their local connections.</li>
+      <li><strong>Cassandra is the ideal message store</strong> — time-series writes, partition by channel, cluster by time. Every "get last N messages" query is a single-partition scan: fast regardless of total message count.</li>
+      <li><strong>TIMEUUID = distributed ID + time sort in one</strong> — no ID generator service needed. Clients generate their own message IDs. Collision probability is astronomically small.</li>
+      <li><strong>Sticky sessions needed for WebSocket LB</strong> — because WebSocket connections are stateful (Alice's socket exists on Server 1), the load balancer must route all of Alice's traffic to Server 1. ALB supports session stickiness via cookie.</li>
+      <li><strong>Offline delivery via push notifications</strong> — if Carol isn't connected, the message is already persisted in Cassandra. On reconnect, Carol fetches history. Meanwhile, a push notification wakes the mobile app.</li>
+    </ul>
+  </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     T7 — SCALING WEBSOCKETS
+══════════════════════════════════════ -->
+<div class="topic" id="t7">
+  <div class="subtabwrap"><div class="stab active" data-s="t7a">Overview</div><div class="stab" data-s="t7b">Challenges</div><div class="stab" data-s="t7c">Architecture</div><div class="stab" data-s="t7d">Demo</div><div class="stab" data-s="t7e">Outcome</div></div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t7a">
+    <div class="ptitle">Scaling <em>WebSockets</em></div>
+    <p class="psub">WebSockets are persistent, stateful, bidirectional connections. Each connected client holds an open TCP connection. This fundamentally changes how you scale — horizontal scale-out is harder than for stateless REST.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">65K</div><div class="slbl">Max ports per server IP</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">~10K</div><div class="slbl">Practical WS conns per server</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">1 MB</div><div class="slbl">Typical RAM per connection</div></div>
+      <div class="card ct-r" style="text-align:center"><div class="snum">C10K</div><div class="slbl">Classic scaling challenge</div></div>
+    </div>
+    <h3>WebSocket vs REST Scaling Model</h3>
+    <div class="tdp">
+      <div class="tdc pro"><h4>REST (Stateless)</h4><ul><li>Any server can handle any request</li><li>Load balancer distributes freely round-robin</li><li>Server crashes → retry on any other server</li><li>Scale out: add servers, no coordination</li><li>Memory: minimal (request/response only)</li></ul></div>
+      <div class="tdc con"><h4>WebSocket (Stateful)</h4><ul><li>Client is pinned to a specific server for the session</li><li>Load balancer needs sticky sessions (by cookie or IP)</li><li>Server crash → all its clients must reconnect</li><li>Scale out: add servers + re-balance connections</li><li>Memory: 1MB+ per connection × 10K connections = 10GB</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t7b">
+    <div class="ptitle">Scaling <em>Challenges &amp; Solutions</em></div>
+    <h3>Challenge 1 — Message Fan-out Across Servers</h3>
+    <p>Alice (Server 1) sends a message to a channel. Bob and Carol are on Server 2 and Server 3. Server 1 alone cannot deliver to them.</p>
+    <div class="call cg"><strong>Solution:</strong> Redis Pub/Sub or Kafka as message bus. Sending server publishes; all servers subscribe per-channel. Each server delivers to its own locally-connected clients.</div>
+    <h3>Challenge 2 — Sticky Session Load Balancing</h3>
+    <p>Standard round-robin LB breaks WebSocket — client connects to Server 1, next request may hit Server 2 where no connection exists.</p>
+    <div class="call ci"><strong>Solution:</strong> AWS ALB sticky sessions (LB cookie, 1-day duration). Or consistent hashing on user_id to deterministically route to the same server. Or connection-level LB (Layer 4 NLB).</div>
+    <h3>Challenge 3 — Connection Recovery</h3>
+    <p>Server crashes → all its clients disconnect. Naive clients → reconnect storm → new server overwhelmed.</p>
+    <div class="call cw"><strong>Solution:</strong> Exponential backoff with jitter on client reconnect. Stagger reconnect attempts: <code>wait = base * 2^attempt + random(0, 1000ms)</code>. Distributes reconnect load across 30–60 seconds instead of all at once.</div>
+    <h3>Challenge 4 — Horizontal Scaling</h3>
+    <p>10K connections per server × 100 servers = 1M concurrent connections. Need to know which server holds which user's connection for targeted delivery (DMs).</p>
+    <div class="call ci"><strong>Solution:</strong> Redis hash: <code>SET user:{user_id}:server {server_id}</code>. Any server can look up where a user is connected and route the message via Redis Pub/Sub to that server.</div>
+    <h3>Challenge 5 — Memory &amp; File Descriptors</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Memory per connection</h4><p>Each WebSocket conn: ~64KB kernel buffers + app-level buffers = ~1MB. At 10K connections: 10 GB RAM needed per server. Use Node.js or Go for lower per-connection overhead (event loop vs thread-per-connection).</p></div>
+      <div class="card ct-a"><h4>File descriptor limit</h4><p>Linux default: 1024 open file descriptors per process. WebSocket = 1 FD each. Increase: <code>ulimit -n 1000000</code> and <code>/etc/sysctl.conf: net.core.somaxconn = 65535</code>.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t7c">
+    <div class="ptitle">Scaled <em>Architecture</em></div>
+    <div class="diag">
+<svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs>
+    <marker id="aw" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="aw2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#f59e0b" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="696" height="196" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+
+  <!-- Clients -->
+  <rect x="10" y="20" width="80" height="160" rx="4" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="50" y="34" text-anchor="middle" fill="#3a4a60" font-size="8">CLIENTS</text>
+  <rect x="18" y="42" width="64" height="22" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="50" y="57" text-anchor="middle" fill="#e2e8f0" font-size="8">Alice</text>
+  <rect x="18" y="70" width="64" height="22" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="50" y="85" text-anchor="middle" fill="#e2e8f0" font-size="8">Bob</text>
+  <rect x="18" y="98" width="64" height="22" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="50" y="113" text-anchor="middle" fill="#e2e8f0" font-size="8">Carol</text>
+  <rect x="18" y="128" width="64" height="22" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="50" y="143" text-anchor="middle" fill="#e2e8f0" font-size="8">Dan…</text>
+
+  <!-- Sticky LB -->
+  <rect x="108" y="60" width="90" height="80" rx="4" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="153" y="80" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Sticky LB</text>
+  <text x="153" y="95" text-anchor="middle" fill="#5a6a85" font-size="8">AWS ALB</text>
+  <text x="153" y="108" text-anchor="middle" fill="#5a6a85" font-size="8">cookie-based</text>
+  <text x="153" y="122" text-anchor="middle" fill="#5a6a85" font-size="7.5">route to same server</text>
+
+  <!-- WS Servers -->
+  <rect x="216" y="20" width="120" height="160" rx="4" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="276" y="34" text-anchor="middle" fill="#3a4a60" font-size="8" letter-spacing="1">WS SERVERS</text>
+  <rect x="224" y="42" width="104" height="38" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="276" y="57" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">Server 1</text>
+  <text x="276" y="70" text-anchor="middle" fill="#5a6a85" font-size="7.5">Alice, Bob connected</text>
+  <rect x="224" y="88" width="104" height="38" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="276" y="103" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">Server 2</text>
+  <text x="276" y="116" text-anchor="middle" fill="#5a6a85" font-size="7.5">Carol, Dan connected</text>
+  <rect x="224" y="134" width="104" height="32" rx="3" fill="#0e1420" stroke="#1e2d45" stroke-dasharray="2,2"/>
+  <text x="276" y="150" text-anchor="middle" fill="#5a6a85" font-size="8">Server N</text>
+  <text x="276" y="162" text-anchor="middle" fill="#3a4a60" font-size="7">10K conns each</text>
+
+  <!-- Redis -->
+  <rect x="356" y="30" width="110" height="140" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="411" y="50" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Redis</text>
+  <text x="411" y="66" text-anchor="middle" fill="#5a6a85" font-size="8">Pub/Sub fanout</text>
+  <rect x="364" y="76" width="94" height="26" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="411" y="93" text-anchor="middle" fill="#5a6a85" font-size="8">ch:general</text>
+  <rect x="364" y="108" width="94" height="26" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="411" y="125" text-anchor="middle" fill="#5a6a85" font-size="8">ch:engineering</text>
+  <text x="411" y="154" text-anchor="middle" fill="#5a6a85" font-size="8">user:{id}:server</text>
+  <text x="411" y="166" text-anchor="middle" fill="#5a6a85" font-size="7.5">(connection registry)</text>
+
+  <!-- API Server + Cassandra -->
+  <rect x="484" y="30" width="110" height="60" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="539" y="50" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">REST API</text>
+  <text x="539" y="64" text-anchor="middle" fill="#5a6a85" font-size="8">history, channels</text>
+  <text x="539" y="78" text-anchor="middle" fill="#5a6a85" font-size="7.5">stateless × N</text>
+  <rect x="484" y="106" width="110" height="60" rx="4" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="539" y="126" text-anchor="middle" fill="#8a9bb5" font-size="9">Cassandra</text>
+  <text x="539" y="140" text-anchor="middle" fill="#5a6a85" font-size="8">messages store</text>
+  <text x="539" y="154" text-anchor="middle" fill="#5a6a85" font-size="7.5">partition: channel_id</text>
+
+  <!-- Arrows -->
+  <line x1="92" y1="100" x2="106" y2="100" stroke="#22c55e" stroke-width="1.5" marker-end="url(#aw)" opacity=".7"/>
+  <line x1="200" y1="100" x2="214" y2="100" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#aw)" opacity=".7"/>
+  <line x1="338" y1="75" x2="354" y2="90" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#aw2)" opacity=".8"/>
+  <text x="348" y="78" fill="#f59e0b" font-size="7.5">PUBLISH</text>
+  <line x1="354" y1="110" x2="338" y2="110" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#aw)" opacity=".7" stroke-dasharray="3,2"/>
+  <text x="342" y="106" fill="#00e5ff" font-size="7.5">SUB</text>
+  <line x1="338" y1="70" x2="482" y2="52" stroke="#22c55e" stroke-width="1" marker-end="url(#aw)" opacity=".4" stroke-dasharray="2,3"/>
+</svg>
+    </div>
+    <h3>Scaling Rules</h3>
+    <table>
+      <tr><th>Scenario</th><th>Strategy</th><th>Detail</th></tr>
+      <tr><td>100K concurrent users</td><td>10 WS servers × 10K conns</td><td>Redis Pub/Sub fan-out; sticky ALB</td></tr>
+      <tr><td>1M concurrent users</td><td>100 WS servers; Kafka instead of Redis Pub/Sub</td><td>Redis Pub/Sub has ~10K subscriber limit; Kafka scales further</td></tr>
+      <tr><td>Server crash recovery</td><td>Client auto-reconnect w/ exponential backoff</td><td>LB re-assigns to healthy server; history fetched from Cassandra</td></tr>
+      <tr><td>High-frequency messages</td><td>Message batching on server</td><td>Buffer 10ms of messages; send as array to reduce WS frame overhead</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t7d">
+    <div class="ptitle">Interactive <em>WebSocket Demo</em></div>
+    <p class="psub">Simulate a multi-user channel. Alice sends a message; it fans out through "Redis Pub/Sub" to Bob and Carol on a different server.</p>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">#engineering channel — Alice(S1), Bob+Carol(S2)</span>
+        <button class="dbtn" onclick="sendMsg('Alice','Hello from Alice!')" style="margin-left:auto">Alice: Send Msg</button>
+        <button class="dbtn-g dbtn" onclick="sendMsg('Bob','Reply from Bob!')" style="margin-left:6px">Bob: Reply</button>
+        <button class="dbtn-r dbtn" onclick="simulateCrash()" style="margin-left:6px">💥 Crash S1</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Server 1 (Alice)</h4>
+            <div id="s1-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:160px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+          </div>
+          <div>
+            <h4>Server 2 (Bob &amp; Carol)</h4>
+            <div id="s2-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:160px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)" id="redis-log">
+          <span style="color:var(--amber)">Redis Pub/Sub: </span><span id="redis-events">Waiting...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t7e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>WebSockets require sticky sessions</strong> — unlike REST, the LB must route each client to the same server for the connection lifetime. AWS ALB cookie-based stickiness or consistent hashing on user_id achieves this.</li>
+      <li><strong>Redis Pub/Sub solves cross-server fan-out</strong> — the canonical solution for &lt;100K concurrent users. Beyond that, switch to Kafka for higher throughput and durability of the message bus.</li>
+      <li><strong>Connection registry in Redis</strong> — <code>user:{id}:server = server_id</code> lets any server look up where a user is connected for direct message routing without broadcasting to all servers.</li>
+      <li><strong>Exponential backoff is mandatory</strong> — if a server crashes and 10K clients all reconnect simultaneously, the new server is immediately overwhelmed. Jittered backoff distributes the reconnect storm across 30–60 seconds.</li>
+      <li><strong>Go and Node.js for WS servers</strong> — event-loop models handle 10K–100K concurrent connections on one core. Thread-per-connection models (Java blocking I/O, Python sync) cap out at ~1K connections per core. Use async/non-blocking runtimes.</li>
+      <li><strong>File descriptor limits are a real constraint</strong> — always set <code>ulimit -n</code> to at least 1,000,000 on WS servers. Default Linux limit of 1024 will cause mysterious failures at production scale.</li>
+    </ul>
+    <div class="done">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 2 — Databases Complete ✦</div>
+      <p style="font-size:13px;color:var(--muted)">All 7 database topics covered. Next: <strong>Week 3 — Going Distributed</strong> · Load Balancers · Leader Election · Distributed Locks · Distributed ID Generators · Hot-Shard Problem</p>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="hbadge hb-c">Week 2 of 8 Complete</span>
+        <span class="hbadge hb-g">7/7 Topics Done</span>
+        <span class="hbadge hb-p">Week 3 → Distributed Systems</span>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ─── TAB WIRING ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(id).classList.add('active');
+    tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(stab => {
+  stab.addEventListener('click', () => {
+    const sid = stab.dataset.s;
+    stab.closest('.subtabwrap').querySelectorAll('.stab').forEach(s => s.classList.remove('active'));
+    stab.closest('.topic').querySelectorAll('.spanel').forEach(p => p.classList.remove('active'));
+    stab.classList.add('active');
+    document.getElementById(sid).classList.add('active');
+    stab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+
+// ─── CODE LANG TABS ──────────────────────────────────────────────────────────
+document.querySelectorAll('.ltab').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l;
+    if (!l) return;
+    const wrap = lt.closest('.ltabs');
+    wrap.querySelectorAll('.ltab').forEach(x => x.classList.remove('on'));
+    lt.classList.add('on');
+    const container = wrap.parentElement;
+    container.querySelectorAll('.lpanel').forEach(p => {
+      p.classList.toggle('on', p.id === l);
+    });
+  });
+});
+
+// ─── WS DEMO ─────────────────────────────────────────────────────────────────
+let s1Alive = true;
+const colors = {Alice:'#00e5ff', Bob:'#22c55e', Carol:'#a78bfa', SYSTEM:'#f59e0b'};
+
+function logMsg(serverId, sender, text, extra='') {
+  const el = document.getElementById(serverId);
+  if (!el) return;
+  const c = colors[sender] || '#5a6a85';
+  const ts = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += `<div class="ws-${serverId==='s1-log'?'server':'client'}" style="color:${c}">[${ts}] <strong>${sender}</strong>: ${text}${extra}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function redisLog(msg) {
+  const el = document.getElementById('redis-events');
+  if (el) el.textContent = msg;
+}
+
+function sendMsg(user, content) {
+  const fromServer = user === 'Alice' ? 's1-log' : 's2-log';
+  const toServer   = user === 'Alice' ? 's2-log' : 's1-log';
+  const isAliceServer = user === 'Alice';
+
+  if (isAliceServer && !s1Alive) {
+    logMsg('s1-log','SYSTEM','❌ Server 1 is DOWN — reconnecting...');
+    return;
+  }
+
+  // 1. Show send on origin server
+  logMsg(fromServer, user, content, ' [sent → persisted to Cassandra]');
+
+  // 2. Simulate Redis Pub/Sub
+  setTimeout(() => {
+    redisLog(`PUBLISH channel:engineering → "${content}" (from ${user})`);
+  }, 100);
+
+  // 3. Fan-out to other server after ~80ms (Redis latency)
+  setTimeout(() => {
+    if (isAliceServer) {
+      logMsg('s2-log','Bob', `[received via Redis] ${content}`);
+      logMsg('s2-log','Carol', `[received via Redis] ${content}`);
+    } else {
+      if (s1Alive) logMsg('s1-log','Alice', `[received via Redis] ${content}`);
+      else logMsg('s2-log','SYSTEM','⚠️ Server 1 down — message not delivered to Alice');
+    }
+  }, 180);
+}
+
+function simulateCrash() {
+  s1Alive = false;
+  logMsg('s1-log','SYSTEM','💥 SERVER 1 CRASHED — 2 connections dropped');
+  logMsg('s2-log','SYSTEM','⚠️ Alice disconnected. Auto-reconnect in 2s...');
+  setTimeout(() => {
+    s1Alive = true;
+    logMsg('s1-log','SYSTEM','✅ Server 1 restarted');
+    logMsg('s2-log','SYSTEM','✅ Alice reconnected (exp. backoff + jitter: ~2s)');
+    logMsg('s1-log','Alice','[fetching missed messages from Cassandra…]');
+  }, 2000);
+}
+
+// init
+logMsg('s1-log','SYSTEM','✅ Server 1 ready — Alice connected');
+logMsg('s2-log','SYSTEM','✅ Server 2 ready — Bob & Carol connected');
+</script>
+</body>
+</html>

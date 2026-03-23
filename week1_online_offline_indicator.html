@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 — Online/Offline Indicator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #090d15;
+  --surf:   #0e1420;
+  --surf2:  #131a2a;
+  --surf3:  #1a2236;
+  --border: #1e2d45;
+  --accent: #00e5ff;
+  --purple: #7c3aed;
+  --green:  #22c55e;
+  --amber:  #f59e0b;
+  --red:    #ef4444;
+  --text:   #e2e8f0;
+  --muted:  #5a6a85;
+  --codebg: #070b12;
+  --TAB-H:  44px;
+  --HDR-H:  54px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+
+/* HEADER */
+.hdr{height:var(--HDR-H);background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+
+/* TAB BAR */
+.tabbar{height:var(--TAB-H);background:var(--surf2);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 12px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tab{display:flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.tab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.tab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+/* PANELS */
+.panels{flex:1;overflow:hidden;position:relative}
+.panel{display:none;position:absolute;inset:0;overflow-y:auto;padding:26px 30px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.panel::-webkit-scrollbar{width:5px}
+.panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.panel.active{display:block}
+
+/* TYPOGRAPHY */
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;color:#fff;margin-bottom:6px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13.5px;margin-bottom:22px;max-width:700px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:22px 0 10px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+
+/* GRID */
+.g{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(148px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:16px}
+.ct-c{border-top:2px solid var(--accent)}
+.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}
+.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}
+
+/* STAT */
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* LIST */
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+/* CALLOUT */
+.call{border-left:3px solid;padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:8px 11px;text-align:left;border:1px solid var(--border)}
+td{padding:7px 11px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+/* CODE */
+.cw-wrap{margin:8px 0 16px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:6px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}
+.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+/* LANG TABS */
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:6px 13px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}
+.lpanel.on{display:block}
+
+/* FLOW */
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:12px}
+.fc{width:32px;height:32px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--accent);flex-shrink:0}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fline{flex:1;width:2px;background:var(--border);margin:3px auto}
+.fb{padding:5px 0 18px}
+.ft{font-weight:600;color:var(--text);font-size:13.5px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+/* TRADEOFF */
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:14px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}
+.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 8px}
+.con h4{color:var(--red);margin:0 0 8px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:6px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+/* DIAGRAM */
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0}
+
+/* DEMO */
+.dshell{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:12px 0}
+.dbar{background:var(--surf2);padding:8px 13px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.dbody{padding:14px;max-height:360px;overflow-y:auto}
+.ui{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;margin-bottom:5px;background:var(--surf);border:1px solid var(--border);transition:border-color .2s}
+.ui:hover{border-color:var(--accent)}
+.ul{display:flex;align-items:center;gap:9px}
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:#fff;flex-shrink:0}
+.sd{width:8px;height:8px;border-radius:50%;border:2px solid var(--surf);margin-left:-10px;margin-top:16px;flex-shrink:0}
+.sd.on{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sd.off{background:var(--muted)}
+.un{font-size:13px;font-weight:500;color:var(--text)}
+.us{font-size:11px}
+.us.on{color:var(--green)}.us.off{color:var(--muted)}
+.tbtn{background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s}
+.tbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* OUTCOME */
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:10px 13px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+
+/* DONE */
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:20px 24px;text-align:center;margin-top:20px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 1 · Foundation &nbsp;›&nbsp; Design an Online / Offline Indicator</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">5M users</span>
+    <span class="hbadge hb-g">≤10s update</span>
+    <span class="hbadge hb-p">Eventual consistency</span>
+  </div>
+</div>
+
+<div class="tabbar">
+  <div class="tab active" data-t="problem">    <span class="tnum">01</span>Problem Statement</div>
+  <div class="tab"        data-t="req">        <span class="tnum">02</span>Requirements</div>
+  <div class="tab"        data-t="capacity">   <span class="tnum">03</span>Capacity Estimation</div>
+  <div class="tab"        data-t="arch">       <span class="tnum">04</span>Architecture</div>
+  <div class="tab"        data-t="design">     <span class="tnum">05</span>Design Document</div>
+  <div class="tab"        data-t="code">       <span class="tnum">06</span>Code</div>
+  <div class="tab"        data-t="tradeoffs">  <span class="tnum">07</span>Tradeoffs</div>
+  <div class="tab"        data-t="prototype">  <span class="tnum">08</span>Prototype</div>
+  <div class="tab"        data-t="outcome">    <span class="tnum">09</span>Outcome</div>
+</div>
+
+<div class="panels">
+
+<!-- ── 01 PROBLEM ── -->
+<div class="panel active" id="p-problem">
+  <div class="ptitle">Problem <em>Statement</em></div>
+  <p class="psub">Imagine you're building a chat app. Before a user starts a conversation, they want to know who's online. The micro-question: <strong style="color:#e2e8f0">Given a user ID, is that user online or offline right now?</strong></p>
+
+  <h3>Real-world Examples</h3>
+  <div class="g g3">
+    <div class="card ct-c"><h4>WhatsApp</h4><p>Shows "online" when active; "last seen X ago" when not. Leniently marks offline after inactivity. Privacy settings can hide last seen.</p></div>
+    <div class="card ct-g"><h4>Discord</h4><p>Online / Idle / DND / Offline with user override. Presence updates fan out to all mutual server members on change.</p></div>
+    <div class="card ct-p"><h4>Slack</h4><p>Workspace-scoped; auto-Away after 30 min. Green dot in sidebar. Integrates with calendar for auto-DND during meetings.</p></div>
+  </div>
+
+  <h3>Why It's Hard at Scale</h3>
+  <div class="g g2">
+    <div class="card"><h4>Write Amplification</h4><p>5M users × 1 heartbeat / 10 s = <strong style="color:var(--accent)">500,000 writes/sec</strong>. A direct DB write per heartbeat kills any relational database instantly.</p></div>
+    <div class="card"><h4>Read Fan-out</h4><p>Checking a 200-friend list = 200 status reads. 1M users doing this = 200M reads/s. Must batch with Redis MGET — one round-trip for all 200.</p></div>
+    <div class="card"><h4>Offline Detection</h4><p>Users don't always send explicit "logout." Network drops, crashes, app backgrounding — the system must infer offline from <em>absence of signal</em>.</p></div>
+    <div class="card"><h4>Ghost Users & Flapping</h4><p>TTL too long = ghost users online after crash. TTL too short = user appears offline on every network hiccup. Must tune the sweet spot.</p></div>
+  </div>
+
+  <div class="call ci" style="margin-top:18px"><strong>Assignment scope:</strong> Design the full presence system. Show a user list grouped with online users first. Display "last seen X mins ago" for offline users. Status must update within 10 seconds of a user coming online.</div>
+</div>
+
+<!-- ── 02 REQUIREMENTS ── -->
+<div class="panel" id="p-req">
+  <div class="ptitle">Re<em>quirements</em></div>
+  <p class="psub">Structured across three levels — core product constraints, high-level system properties, and low-level micro guarantees.</p>
+
+  <div class="g g3">
+    <div class="card ct-c">
+      <h4>Core Requirements</h4>
+      <ul class="rl">
+        <li>Update online status within <strong>≤ 10 seconds</strong> of user coming online</li>
+        <li>Can be <strong>lenient</strong> marking offline (30–60 s acceptable)</li>
+        <li>Scale for <strong>5 million</strong> concurrent active users</li>
+        <li>Accurate status, <strong>eventually consistent</strong></li>
+        <li>Support batch query — <strong>list of user IDs</strong> at once</li>
+        <li>Show <strong>"last seen X ago"</strong> for offline users</li>
+      </ul>
+    </div>
+    <div class="card ct-p">
+      <h4>High-Level Requirements</h4>
+      <ul class="rl">
+        <li>All components operate with <strong>high availability</strong></li>
+        <li>Data must be <strong>durable</strong> — last_seen survives restarts</li>
+        <li>Define behavior during <strong>scale-up / scale-down</strong></li>
+        <li>System must be <strong>cost-effective</strong> with justification</li>
+        <li><strong>Capacity planning</strong> drives architecture decisions</li>
+        <li>Other services (notifications, chat) can query presence via API</li>
+      </ul>
+    </div>
+    <div class="card ct-a">
+      <h4>Micro Requirements</h4>
+      <ul class="rl">
+        <li>Data must <strong>never go inconsistent</strong></li>
+        <li>System must be <strong>free of deadlocks</strong></li>
+        <li>Throughput must <strong>not be choked by locking</strong></li>
+        <li>Heartbeat from client; silence = offline (TTL-based)</li>
+        <li>Explicit disconnect triggers <strong>immediate</strong> offline</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Non-functional Targets</h3>
+  <table>
+    <tr><th>Property</th><th>Target</th><th>Justification</th></tr>
+    <tr><td>Online detection latency</td><td>&lt; 10 s</td><td>Heartbeat interval = 10 s; visible to others on next heartbeat</td></tr>
+    <tr><td>Offline detection latency</td><td>30–60 s</td><td>TTL = 3× heartbeat; tolerates 2 missed beats on flaky networks</td></tr>
+    <tr><td>Status query latency (p99)</td><td>&lt; 50 ms</td><td>Redis MGET in-memory; single round-trip</td></tr>
+    <tr><td>Heartbeat write throughput</td><td>500K writes/s</td><td>5M users ÷ 10 s interval</td></tr>
+    <tr><td>Availability</td><td>99.99%</td><td>Chat UX degrades without presence; multi-AZ required</td></tr>
+    <tr><td>Consistency model</td><td>Eventual</td><td>Slight staleness acceptable; not financial data</td></tr>
+  </table>
+</div>
+
+<!-- ── 03 CAPACITY ── -->
+<div class="panel" id="p-capacity">
+  <div class="ptitle">Capacity <em>Estimation</em></div>
+  <p class="psub">Numbers first — every architecture decision flows from these. 200 MB Redis footprint vs 200 GB changes everything about how you shard.</p>
+
+  <div class="g g4">
+    <div class="card ct-c" style="text-align:center"><div class="snum">5M</div><div class="slbl">Concurrent active users</div></div>
+    <div class="card ct-c" style="text-align:center"><div class="snum">500K</div><div class="slbl">Heartbeat writes / sec</div></div>
+    <div class="card ct-g" style="text-align:center"><div class="snum">~1M</div><div class="slbl">Status reads / sec (peak)</div></div>
+    <div class="card ct-g" style="text-align:center"><div class="snum">200 MB</div><div class="slbl">Redis in-memory footprint</div></div>
+    <div class="card" style="text-align:center"><div class="snum">10 s</div><div class="slbl">Heartbeat interval</div></div>
+    <div class="card" style="text-align:center"><div class="snum">30 s</div><div class="slbl">Redis TTL / offline timeout</div></div>
+    <div class="card" style="text-align:center"><div class="snum">10</div><div class="slbl">Heartbeat API servers</div></div>
+    <div class="card" style="text-align:center"><div class="snum">3+3</div><div class="slbl">Redis primaries + replicas</div></div>
+  </div>
+
+  <h3>Derivation</h3>
+  <div class="g g2">
+    <div class="card"><h4>Write Rate</h4><p>5,000,000 × (1 / 10s) = <strong style="color:var(--accent)">500,000 writes/s</strong> to Redis. Each write: <code style="font-family:JetBrains Mono;font-size:11px;color:#c3e88d">SET user:&lt;id&gt;:ts &lt;epoch&gt; EX 30</code> ≈ 40 bytes. Redis single node cap ≈ 1M ops/s. 3 shards → ~167K/s each. Comfortable headroom.</p></div>
+    <div class="card"><h4>Memory</h4><p>5M keys × 40 bytes = <strong style="color:var(--accent)">200 MB</strong>. Fits on even a small Redis node (r6g.large = 16 GB). We shard for HA and write throughput, not memory pressure.</p></div>
+    <div class="card"><h4>Read Load</h4><p>Friend list = 200 users → MGET 200 keys = <strong>1 round-trip</strong>. 1M users × 1 MGET / 5s → 200K MGET ops/s. Served from read replicas. Each MGET ≈ 200 key lookups.</p></div>
+    <div class="card"><h4>DB Flush Load</h4><p>Batch UPSERT every 60 s. Worst case: 5M rows / 60 s = ~83K rows/s in 10K-row chunks = ~8 queries/s. <span style="color:var(--green)">Trivial for MySQL.</span> Kafka buffers prevent data loss.</p></div>
+  </div>
+
+  <h3>Infrastructure Sizing</h3>
+  <table>
+    <tr><th>Component</th><th>Instance</th><th>Count</th><th>Why</th></tr>
+    <tr><td>Heartbeat API</td><td>8 vCPU / 16 GB</td><td>10</td><td>500K writes/s ÷ ~50K per server</td></tr>
+    <tr><td>Redis primaries</td><td>r6g.xlarge 32 GB</td><td>3</td><td>3-shard cluster; 167K writes/s per shard</td></tr>
+    <tr><td>Redis replicas</td><td>r6g.xlarge 32 GB</td><td>3</td><td>Read replicas + HA failover</td></tr>
+    <tr><td>Status Query API</td><td>4 vCPU / 8 GB</td><td>5</td><td>MGET-heavy, mostly network bound</td></tr>
+    <tr><td>Kafka</td><td>4 vCPU / 16 GB</td><td>3 brokers</td><td>Buffers heartbeat events for DB flush</td></tr>
+    <tr><td>MySQL</td><td>db.r6g.large</td><td>1 primary + 1 replica</td><td>Async last_seen writes — only 8 queries/s</td></tr>
+  </table>
+</div>
+
+<!-- ── 04 ARCHITECTURE ── -->
+<div class="panel" id="p-arch">
+  <div class="ptitle">Archi<em>tecture</em></div>
+  <p class="psub">Stateless heartbeat servers write to Redis with TTL. Kafka async-flushes last_seen to MySQL. Status queries use MGET on read replicas.</p>
+
+  <div class="diag">
+<svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs>
+    <marker id="a1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="a2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#22c55e" opacity=".8"/></marker>
+    <marker id="a3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#a78bfa" opacity=".8"/></marker>
+    <marker id="a4" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#f59e0b" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="856" height="396" rx="7" fill="#0e1420" stroke="#1e2d45" stroke-width="1"/>
+  <!-- CLIENTS -->
+  <rect x="16" y="18" width="126" height="230" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="79" y="34" text-anchor="middle" fill="#3a4a60" font-size="9" letter-spacing="1.5">CLIENTS</text>
+  <rect x="26" y="42" width="106" height="42" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1"/>
+  <circle cx="79" cy="55" r="6" fill="#22c55e"/><text x="79" y="73" text-anchor="middle" fill="#e2e8f0" font-size="10">User A — online</text>
+  <rect x="26" y="94" width="106" height="42" rx="4" fill="#131a2a" stroke="#1e2d45"/>
+  <circle cx="79" cy="107" r="6" fill="#475569"/><text x="79" y="125" text-anchor="middle" fill="#8a9bb5" font-size="10">User B — offline</text>
+  <rect x="26" y="146" width="106" height="28" rx="4" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="79" y="165" text-anchor="middle" fill="#3a4a60" font-size="9">… 5M users</text>
+  <rect x="26" y="184" width="106" height="42" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="79" y="201" text-anchor="middle" fill="#5a6a85" font-size="9">Status viewer</text>
+  <text x="79" y="215" text-anchor="middle" fill="#5a6a85" font-size="8">GET /status?ids</text>
+  <!-- LOAD BALANCER -->
+  <rect x="196" y="72" width="110" height="46" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="251" y="92" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Load Balancer</text>
+  <text x="251" y="107" text-anchor="middle" fill="#3a4a60" font-size="8">ALB / Round-robin</text>
+  <!-- HEARTBEAT SERVERS -->
+  <rect x="362" y="22" width="148" height="110" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="436" y="38" text-anchor="middle" fill="#3a4a60" font-size="9" letter-spacing="1">HEARTBEAT API</text>
+  <rect x="372" y="46" width="128" height="32" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1"/>
+  <text x="436" y="66" text-anchor="middle" fill="#e2e8f0" font-size="10">Servers 1…N (10x)</text>
+  <rect x="372" y="86" width="128" height="34" rx="4" fill="#131a2a" stroke="#1e2d45" stroke-dasharray="2,2"/>
+  <text x="436" y="101" text-anchor="middle" fill="#5a6a85" font-size="8.5">POST /heartbeat</text>
+  <text x="436" y="114" text-anchor="middle" fill="#5a6a85" font-size="8">DELETE /offline</text>
+  <!-- REDIS CLUSTER -->
+  <rect x="572" y="14" width="268" height="196" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="706" y="30" text-anchor="middle" fill="#3a4a60" font-size="9" letter-spacing="1">REDIS CLUSTER</text>
+  <rect x="582" y="40" width="106" height="44" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="635" y="58" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Shard 1</text>
+  <text x="635" y="72" text-anchor="middle" fill="#3a4a60" font-size="8">Primary</text>
+  <rect x="724" y="40" width="106" height="44" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="777" y="58" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Shard 2</text>
+  <text x="777" y="72" text-anchor="middle" fill="#3a4a60" font-size="8">Primary</text>
+  <rect x="582" y="96" width="106" height="38" rx="4" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="635" y="112" text-anchor="middle" fill="#3a4a60" font-size="9">Replica 1</text>
+  <text x="635" y="124" text-anchor="middle" fill="#3a4a60" font-size="7.5">Read replica</text>
+  <rect x="724" y="96" width="106" height="38" rx="4" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="777" y="112" text-anchor="middle" fill="#3a4a60" font-size="9">Replica 2</text>
+  <text x="777" y="124" text-anchor="middle" fill="#3a4a60" font-size="7.5">Read replica</text>
+  <text x="706" y="160" text-anchor="middle" fill="#3a4a60" font-size="8.5">SET user:&lt;id&gt;:ts &lt;ms&gt; EX 30</text>
+  <text x="706" y="174" text-anchor="middle" fill="#3a4a60" font-size="8">MGET user:A:ts user:B:ts …</text>
+  <text x="706" y="186" text-anchor="middle" fill="#3a4a60" font-size="8">Key absent = offline (TTL expired)</text>
+  <!-- STATUS QUERY -->
+  <rect x="362" y="192" width="148" height="76" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="436" y="212" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Status Query API</text>
+  <text x="436" y="228" text-anchor="middle" fill="#3a4a60" font-size="8.5">GET /status?ids=A,B,C</text>
+  <text x="436" y="242" text-anchor="middle" fill="#3a4a60" font-size="8.5">MGET pipeline → O(1) latency</text>
+  <text x="436" y="256" text-anchor="middle" fill="#3a4a60" font-size="8">compare value.ts vs now−30s</text>
+  <!-- KAFKA -->
+  <rect x="192" y="296" width="132" height="56" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="258" y="318" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Kafka</text>
+  <text x="258" y="333" text-anchor="middle" fill="#3a4a60" font-size="8.5">presence.heartbeats topic</text>
+  <text x="258" y="345" text-anchor="middle" fill="#3a4a60" font-size="7.5">buffer + replay on crash</text>
+  <!-- FLUSH WORKER -->
+  <rect x="382" y="302" width="128" height="46" rx="5" fill="#131a2a" stroke="#3a4a60"/>
+  <text x="446" y="322" text-anchor="middle" fill="#8a9bb5" font-size="10">Flush Worker</text>
+  <text x="446" y="336" text-anchor="middle" fill="#3a4a60" font-size="8">batch UPSERT every 60 s</text>
+  <!-- MYSQL -->
+  <rect x="574" y="296" width="130" height="56" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="639" y="318" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">MySQL</text>
+  <text x="639" y="334" text-anchor="middle" fill="#3a4a60" font-size="8.5">users.last_seen (durable)</text>
+  <text x="639" y="346" text-anchor="middle" fill="#3a4a60" font-size="7.5">ProxySQL in front</text>
+  <!-- ARROWS -->
+  <line x1="144" y1="76" x2="194" y2="94" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a1)" opacity=".7"/>
+  <text x="168" y="73" text-anchor="middle" fill="#00e5ff" font-size="7.5" opacity=".7">heartbeat</text>
+  <line x1="306" y1="94" x2="360" y2="78" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a1)" opacity=".7"/>
+  <line x1="510" y1="74" x2="570" y2="64" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a4)" opacity=".8"/>
+  <text x="538" y="60" text-anchor="middle" fill="#f59e0b" font-size="7.5">SET EX 30</text>
+  <line x1="144" y1="205" x2="360" y2="236" stroke="#22c55e" stroke-width="1" marker-end="url(#a2)" opacity=".5" stroke-dasharray="4,2"/>
+  <text x="254" y="206" text-anchor="middle" fill="#22c55e" font-size="7.5" opacity=".6">GET /status</text>
+  <line x1="510" y1="232" x2="570" y2="126" stroke="#22c55e" stroke-width="1.5" marker-end="url(#a2)" opacity=".7"/>
+  <text x="562" y="188" text-anchor="middle" fill="#22c55e" font-size="7.5">MGET</text>
+  <line x1="436" y1="132" x2="296" y2="294" stroke="#f59e0b" stroke-width="1" marker-end="url(#a4)" opacity=".4" stroke-dasharray="3,3"/>
+  <text x="360" y="214" text-anchor="middle" fill="#f59e0b" font-size="7.5" opacity=".5">publish event</text>
+  <line x1="324" y1="324" x2="380" y2="324" stroke="#8a9bb5" stroke-width="1.5" marker-end="url(#a1)" opacity=".6"/>
+  <line x1="510" y1="325" x2="572" y2="325" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#a3)" opacity=".8"/>
+  <text x="540" y="318" text-anchor="middle" fill="#a78bfa" font-size="7.5">bulk UPSERT</text>
+  <!-- LEGEND -->
+  <line x1="16" y1="380" x2="36" y2="380" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a1)"/>
+  <text x="40" y="384" fill="#3a4a60" font-size="8.5">Heartbeat</text>
+  <line x1="110" y1="380" x2="130" y2="380" stroke="#22c55e" stroke-width="1.5" marker-end="url(#a2)" stroke-dasharray="4,2"/>
+  <text x="134" y="384" fill="#3a4a60" font-size="8.5">Status query</text>
+  <line x1="220" y1="380" x2="240" y2="380" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a4)" stroke-dasharray="3,3"/>
+  <text x="244" y="384" fill="#3a4a60" font-size="8.5">Async Kafka</text>
+  <line x1="330" y1="380" x2="350" y2="380" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="354" y="384" fill="#3a4a60" font-size="8.5">DB flush</text>
+</svg>
+  </div>
+
+  <h3>Step-by-Step Flow</h3>
+  <div class="flow">
+    <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Client sends heartbeat every 10 s</div><div class="fd"><code style="color:#c3e88d;font-size:11px">POST /heartbeat {user_id:42}</code> — signals "I'm alive." Sent on foreground activity and on app open.</div></div></div>
+    <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Server writes to Redis with TTL=30</div><div class="fd"><code style="color:#c3e88d;font-size:11px">SET user:42:ts 1711180000000 EX 30</code> — key auto-expires if no refresh. No explicit logout needed.</div></div></div>
+    <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Event published to Kafka (async)</div><div class="fd"><code style="color:#c3e88d;font-size:11px">{user_id, timestamp}</code> → <code style="color:#c3e88d;font-size:11px">presence.heartbeats</code> topic. Fire-and-forget; doesn't block the HTTP response.</div></div></div>
+    <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Status query uses Redis MGET</div><div class="fd"><code style="color:#c3e88d;font-size:11px">MGET user:A:ts user:B:ts … user:Z:ts</code> — one round-trip for 200 friends. Key exists → online; missing (TTL expired) → offline.</div></div></div>
+    <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline" style="visibility:hidden"></div></div><div class="fb"><div class="ft">Flush Worker batch-writes last_seen to MySQL</div><div class="fd">Kafka consumer aggregates events, keeps max ts per user, bulk-UPSERTs every 60 s. MySQL stores durable last_seen for "X ago" display.</div></div></div>
+  </div>
+</div>
+
+<!-- ── 05 DESIGN DOC ── -->
+<div class="panel" id="p-design">
+  <div class="ptitle">Design <em>Document</em></div>
+  <p class="psub">Critical decisions: mental models for presence, connection pooling, caching issues at scale, async processing rationale, and chokepoints.</p>
+
+  <h3>3 Mental Models for Presence Detection</h3>
+  <div class="g g3">
+    <div class="card ct-r"><h4>Model 1 — Pull Polling</h4><p>Client polls <code style="font-size:11px">GET /status?id=X</code> every few seconds. 5M users × 200 friends × poll/10s = 100M RPS just for reads.</p><div class="call cr" style="font-size:12px;padding:8px 10px;margin-top:8px">❌ Not viable at scale</div></div>
+    <div class="card ct-a"><h4>Model 2 — WebSocket Push</h4><p>Server pushes status changes. Fan-out: User A goes online → push to all A's friends. 1K friends × 5M events = 5B pushes/s at peak. Needs stateful servers.</p><div class="call cw" style="font-size:12px;padding:8px 10px;margin-top:8px">⚠️ Good for chat events, not polling</div></div>
+    <div class="card ct-g"><h4>Model 3 — Heartbeat + TTL ✓</h4><p>Client heartbeats → Redis key with TTL. Key missing = offline. Status via MGET. Stateless servers. No fan-out on write. Scales linearly.</p><div class="call cg" style="font-size:12px;padding:8px 10px;margin-top:8px">✅ Chosen — industry standard</div></div>
+  </div>
+
+  <h3>Connection Pool & DB Proxy Decisions</h3>
+  <div class="g g2">
+    <div class="card"><h4>Redis — Client-side Sharding</h4><p>Each heartbeat server uses a Redis Cluster client that routes keys internally using consistent hashing on user_id. No proxy needed; avoids a SPOF. Adding a shard → rehash ~⅓ of keys; use MIGRATE for zero-downtime resize.</p></div>
+    <div class="card"><h4>MySQL — ProxySQL</h4><p>Flush worker has 1000 app connections but MySQL accepts ~500 real ones. ProxySQL multiplexes N→M connections. Short batch-UPSERT transactions make connection reuse very efficient. Prevents connection exhaustion.</p></div>
+  </div>
+
+  <h3>Caching Issues at Scale</h3>
+  <table>
+    <tr><th>Issue</th><th>Where It Hits</th><th>Mitigation</th></tr>
+    <tr><td>TTL too short (= heartbeat interval)</td><td>Any missed beat → user goes offline; terrible mobile UX</td><td>TTL = 3× heartbeat interval (30 s)</td></tr>
+    <tr><td>TTL too long (5 min)</td><td>Ghost users — appear online 5 min after crash</td><td>Explicit DEL on app background event</td></tr>
+    <tr><td>Redis restart stampede</td><td>All 5M keys expire together → cache miss storm</td><td>Redis AOF + RDB; Sentinel/Cluster failover</td></tr>
+    <tr><td>App-layer cache staleness</td><td>Status Query caches MGET results 5 s → slight staleness</td><td>Acceptable — eventual consistency is requirement</td></tr>
+    <tr><td>Hot key (celebrity)</td><td>Everyone queries Justin Bieber's status → hot shard</td><td>Read replicas + short app-layer cache for VIP users</td></tr>
+  </table>
+
+  <h3>Async Processing — Why Kafka</h3>
+  <div class="call ci">
+    <strong>Without Kafka:</strong> Heartbeat API → direct MySQL at 500K writes/s → InnoDB max ~100K/s → lock contention + timeouts → system collapses.<br><br>
+    <strong>With Kafka:</strong> Heartbeat API → publish event in microseconds (fire-and-forget) → Kafka buffers → Flush Consumer batch-writes ~83K rows/s in chunks of 10K → decoupled, durable, replayable on crash.
+  </div>
+
+  <h3>Chokepoints</h3>
+  <div class="g g2">
+    <div class="card ct-a"><h4>Short Term — Redis Write</h4><p>500K writes/s per node hits Redis ceiling (~1M ops/s). Mitigated with 3 shards → 167K/s each. Monitor shard latency; auto-scale shards when p99 &gt; 5 ms.</p></div>
+    <div class="card ct-a"><h4>Long Term — Read Fan-out</h4><p>1B users × 200-friend MGET = massive read amplification. Solution: Redis read replicas + 5 s in-memory cache on Status Query API servers. Short TTL keeps staleness acceptable.</p></div>
+  </div>
+</div>
+
+<!-- ── 06 CODE ── -->
+<div class="panel" id="p-code">
+  <div class="ptitle">Code — <em>Implementation</em></div>
+  <p class="psub">Heartbeat endpoint, MGET batch status query, and async Kafka flush worker. Both Python (FastAPI) and Java (Spring Boot).</p>
+
+  <div class="ltabs" id="ltabs">
+    <div class="ltab on" data-l="py">🐍 Python (FastAPI)</div>
+    <div class="ltab" data-l="java">☕ Java (Spring Boot)</div>
+  </div>
+
+  <div class="lpanel on" id="lp-py">
+    <div class="cw-wrap">
+      <div class="ctop"><span>heartbeat_service.py</span><span class="ltag lpy">Python</span></div>
+      <pre><span class="kw">import</span> time
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+<span class="kw">from</span> typing <span class="kw">import</span> List
+
+app = <span class="fn">FastAPI</span>()
+<span class="cmt"># Redis Cluster — client-side routing, no proxy needed</span>
+redis_client = aioredis.<span class="fn">RedisCluster</span>(host=<span class="str">"redis-cluster"</span>, port=<span class="num">6379</span>, decode_responses=<span class="kw">True</span>)
+
+<span class="cls">TTL</span>  = <span class="num">30</span>            <span class="cmt"># 3× heartbeat interval — tolerates 2 missed beats</span>
+<span class="cls">KEY</span>  = <span class="str">"user:{}:ts"</span>   <span class="cmt"># value = epoch ms of last heartbeat</span>
+
+<span class="kw">class</span> <span class="cls">HBReq</span>(BaseModel): user_id: int
+<span class="kw">class</span> <span class="cls">SReq</span>(BaseModel):  user_ids: <span class="fn">List</span>[int]
+
+<span class="dec">@app.post</span>(<span class="str">"/heartbeat"</span>)
+<span class="kw">async def</span> <span class="fn">heartbeat</span>(r: <span class="cls">HBReq</span>):
+    <span class="str">"""Client calls every 10 s. Refreshes TTL."""</span>
+    <span class="kw">await</span> redis_client.<span class="fn">set</span>(KEY.<span class="fn">format</span>(r.user_id), <span class="fn">int</span>(time.<span class="fn">time</span>()*<span class="num">1000</span>), ex=TTL)
+    <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">True</span>}
+
+<span class="dec">@app.post</span>(<span class="str">"/offline"</span>)
+<span class="kw">async def</span> <span class="fn">mark_offline</span>(r: <span class="cls">HBReq</span>):
+    <span class="str">"""Explicit disconnect: app goes to background, tab closes."""</span>
+    <span class="kw">await</span> redis_client.<span class="fn">delete</span>(KEY.<span class="fn">format</span>(r.user_id))
+    <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">True</span>}
+
+<span class="dec">@app.post</span>(<span class="str">"/status"</span>)
+<span class="kw">async def</span> <span class="fn">get_status</span>(r: <span class="cls">SReq</span>):
+    <span class="str">"""MGET — one Redis round-trip for entire friend list."""</span>
+    keys   = [KEY.<span class="fn">format</span>(uid) <span class="kw">for</span> uid <span class="kw">in</span> r.user_ids]
+    values = <span class="kw">await</span> redis_client.<span class="fn">mget</span>(keys)   <span class="cmt"># single pipeline call</span>
+    <span class="kw">return</span> {
+        uid: {<span class="str">"online"</span>: ts <span class="kw">is not None</span>, <span class="str">"last_seen"</span>: <span class="fn">int</span>(ts) <span class="kw">if</span> ts <span class="kw">else None</span>}
+        <span class="kw">for</span> uid, ts <span class="kw">in</span> <span class="fn">zip</span>(r.user_ids, values)
+    }</pre>
+    </div>
+    <div class="cw-wrap">
+      <div class="ctop"><span>flush_worker.py — Kafka consumer → MySQL batch UPSERT</span><span class="ltag lpy">Python</span></div>
+      <pre><span class="kw">import</span> asyncio, time, json
+<span class="kw">from</span> aiokafka <span class="kw">import</span> AIOKafkaConsumer
+<span class="kw">import</span> aiomysql
+
+<span class="kw">async def</span> <span class="fn">flush_worker</span>():
+    consumer = <span class="fn">AIOKafkaConsumer</span>(<span class="str">"presence.heartbeats"</span>, bootstrap_servers=<span class="str">"kafka:9092"</span>,
+        group_id=<span class="str">"presence-flush"</span>, value_deserializer=<span class="kw">lambda</span> v: json.<span class="fn">loads</span>(v))
+    <span class="kw">await</span> consumer.<span class="fn">start</span>()
+    pool = <span class="kw">await</span> aiomysql.<span class="fn">create_pool</span>(host=<span class="str">"mysql"</span>, db=<span class="str">"chat"</span>, user=<span class="str">"writer"</span>, password=<span class="str">"***"</span>, maxsize=<span class="num">20</span>)
+
+    buf: <span class="fn">dict</span>[int,int] = {}   <span class="cmt"># user_id → max(last_seen ms)</span>
+    t0 = time.<span class="fn">time</span>()
+
+    <span class="kw">async for</span> msg <span class="kw">in</span> consumer:
+        uid, ts = msg.value[<span class="str">"user_id"</span>], msg.value[<span class="str">"timestamp"</span>]
+        buf[uid] = <span class="fn">max</span>(buf.<span class="fn">get</span>(uid,<span class="num">0</span>), ts)       <span class="cmt"># keep max ts per user</span>
+        <span class="kw">if</span> <span class="fn">len</span>(buf) >= <span class="num">10_000</span> <span class="kw">or</span> time.<span class="fn">time</span>()-t0 >= <span class="num">60</span>:
+            <span class="kw">await</span> <span class="fn">_upsert</span>(pool, buf); buf.<span class="fn">clear</span>(); t0=time.<span class="fn">time</span>()
+
+<span class="kw">async def</span> <span class="fn">_upsert</span>(pool, buf):
+    rows = [(uid,ts) <span class="kw">for</span> uid,ts <span class="kw">in</span> buf.<span class="fn">items</span>()]
+    sql  = <span class="str">"INSERT INTO users(id,last_seen) VALUES(%s,%s) ON DUPLICATE KEY UPDATE last_seen=VALUES(last_seen)"</span>
+    <span class="kw">async with</span> pool.<span class="fn">acquire</span>() <span class="kw">as</span> conn:
+        <span class="kw">async with</span> conn.<span class="fn">cursor</span>() <span class="kw">as</span> cur:
+            <span class="kw">await</span> cur.<span class="fn">executemany</span>(sql, rows); <span class="kw">await</span> conn.<span class="fn">commit</span>()</pre>
+    </div>
+  </div>
+
+  <div class="lpanel" id="lp-java">
+    <div class="cw-wrap">
+      <div class="ctop"><span>HeartbeatController.java</span><span class="ltag ljv">Java</span></div>
+      <pre><span class="dec">@RestController</span> <span class="dec">@RequestMapping</span>(<span class="str">"/api"</span>)
+<span class="kw">public class</span> <span class="cls">HeartbeatController</span> {
+    <span class="kw">private static final int</span> TTL = <span class="num">30</span>;
+    <span class="kw">private static final</span> <span class="cls">String</span> K = <span class="str">"user:%d:ts"</span>;
+    <span class="kw">private final</span> <span class="cls">StringRedisTemplate</span> redis;
+    <span class="kw">public</span> <span class="fn">HeartbeatController</span>(<span class="cls">StringRedisTemplate</span> r) { <span class="kw">this</span>.redis=r; }
+
+    <span class="dec">@PostMapping</span>(<span class="str">"/heartbeat"</span>)
+    <span class="kw">public</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Boolean</span>&gt; <span class="fn">heartbeat</span>(<span class="dec">@RequestBody</span> <span class="cls">HBReq</span> req) {
+        redis.<span class="fn">opsForValue</span>().<span class="fn">set</span>(<span class="cls">String</span>.<span class="fn">format</span>(K, req.<span class="fn">getUserId</span>()),
+            <span class="cls">String</span>.<span class="fn">valueOf</span>(<span class="cls">Instant</span>.<span class="fn">now</span>().<span class="fn">toEpochMilli</span>()), TTL, <span class="cls">TimeUnit</span>.SECONDS);
+        <span class="kw">return</span> <span class="cls">Map</span>.<span class="fn">of</span>(<span class="str">"ok"</span>,<span class="kw">true</span>);
+    }
+
+    <span class="dec">@PostMapping</span>(<span class="str">"/offline"</span>)
+    <span class="kw">public</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Boolean</span>&gt; <span class="fn">offline</span>(<span class="dec">@RequestBody</span> <span class="cls">HBReq</span> req) {
+        redis.<span class="fn">delete</span>(<span class="cls">String</span>.<span class="fn">format</span>(K, req.<span class="fn">getUserId</span>()));
+        <span class="kw">return</span> <span class="cls">Map</span>.<span class="fn">of</span>(<span class="str">"ok"</span>,<span class="kw">true</span>);
+    }
+
+    <span class="dec">@PostMapping</span>(<span class="str">"/status"</span>)
+    <span class="kw">public</span> <span class="cls">Map</span>&lt;<span class="cls">Long</span>,<span class="cls">UserStatus</span>&gt; <span class="fn">status</span>(<span class="dec">@RequestBody</span> <span class="cls">StatusReq</span> req) {
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; keys = req.<span class="fn">getUserIds</span>().stream()
+            .<span class="fn">map</span>(id-&gt;<span class="cls">String</span>.<span class="fn">format</span>(K,id)).<span class="fn">toList</span>();
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; vals = redis.<span class="fn">opsForValue</span>().<span class="fn">multiGet</span>(keys); <span class="cmt">// MGET</span>
+        <span class="cls">Map</span>&lt;<span class="cls">Long</span>,<span class="cls">UserStatus</span>&gt; result = <span class="kw">new</span> <span class="cls">LinkedHashMap</span>&lt;&gt;();
+        <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; ids = req.<span class="fn">getUserIds</span>();
+        <span class="kw">for</span>(<span class="kw">int</span> i=<span class="num">0</span>;i&lt;ids.<span class="fn">size</span>();i++){
+            <span class="cls">String</span> v=vals.<span class="fn">get</span>(i);
+            result.<span class="fn">put</span>(ids.<span class="fn">get</span>(i), v!=<span class="kw">null</span>?<span class="kw">new</span> <span class="cls">UserStatus</span>(<span class="kw">true</span>,<span class="cls">Long</span>.<span class="fn">parseLong</span>(v))
+                                             :<span class="kw">new</span> <span class="cls">UserStatus</span>(<span class="kw">false</span>,<span class="kw">null</span>));
+        }
+        <span class="kw">return</span> result;
+    }
+}</pre>
+    </div>
+    <div class="cw-wrap">
+      <div class="ctop"><span>PresenceFlushConsumer.java</span><span class="ltag ljv">Java</span></div>
+      <pre><span class="dec">@Service</span>
+<span class="kw">public class</span> <span class="cls">PresenceFlushConsumer</span> {
+    <span class="kw">private final</span> <span class="cls">JdbcTemplate</span> jdbc;
+    <span class="kw">private final</span> <span class="cls">ConcurrentHashMap</span>&lt;<span class="cls">Long</span>,<span class="cls">Long</span>&gt; buf = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+    <span class="kw">private volatile long</span> lastFlush = <span class="cls">System</span>.<span class="fn">currentTimeMillis</span>();
+
+    <span class="dec">@KafkaListener</span>(topics=<span class="str">"presence.heartbeats"</span>, groupId=<span class="str">"presence-flush"</span>)
+    <span class="kw">public synchronized void</span> <span class="fn">consume</span>(<span class="cls">HeartbeatEvent</span> e) {
+        buf.<span class="fn">merge</span>(e.<span class="fn">getUserId</span>(), e.<span class="fn">getTimestamp</span>(), <span class="cls">Math</span>::max);
+        <span class="kw">if</span>(buf.<span class="fn">size</span>()&gt;=<span class="num">10_000</span> || <span class="cls">System</span>.<span class="fn">currentTimeMillis</span>()-lastFlush&gt;=<span class="num">60_000L</span>) <span class="fn">flush</span>();
+    }
+
+    <span class="kw">private void</span> <span class="fn">flush</span>() {
+        <span class="cls">List</span>&lt;<span class="cls">Object</span>[]&gt; rows = buf.<span class="fn">entrySet</span>().stream()
+            .<span class="fn">map</span>(e-&gt;<span class="kw">new</span> <span class="cls">Object</span>[]{e.<span class="fn">getKey</span>(),e.<span class="fn">getValue</span>()}).<span class="fn">toList</span>();
+        jdbc.<span class="fn">batchUpdate</span>(
+            <span class="str">"INSERT INTO users(id,last_seen) VALUES(?,?) ON DUPLICATE KEY UPDATE last_seen=VALUES(last_seen)"</span>, rows);
+        buf.<span class="fn">clear</span>(); lastFlush=<span class="cls">System</span>.<span class="fn">currentTimeMillis</span>();
+    }
+}</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ── 07 TRADEOFFS ── -->
+<div class="panel" id="p-tradeoffs">
+  <div class="ptitle">Trade<em>offs</em></div>
+  <p class="psub">Every design decision has a cost. Surfacing them explicitly is what separates senior engineers from the rest.</p>
+
+  <h3>Approach Comparison</h3>
+  <table>
+    <tr><th>Approach</th><th>Online Latency</th><th>Offline Latency</th><th>Server State</th><th>Scale</th><th>Verdict</th></tr>
+    <tr><td>HTTP Polling</td><td>Poll interval</td><td>Poll interval</td><td>Stateless</td><td>❌ Poor</td><td>❌</td></tr>
+    <tr><td>WebSocket Push</td><td>&lt;1 s</td><td>&lt;1 s</td><td>Stateful</td><td>⚠️ Good</td><td>⚠️ Chat events</td></tr>
+    <tr><td><strong>Heartbeat + TTL</strong></td><td>~10 s</td><td>~30 s</td><td>Stateless ✓</td><td>✅ Excellent</td><td>✅ Chosen</td></tr>
+    <tr><td>SSE (one-way push)</td><td>~10 s</td><td>~30 s</td><td>Semi-stateful</td><td>⚠️ Good</td><td>⚠️ Optional</td></tr>
+  </table>
+
+  <h3>Heartbeat + Redis TTL</h3>
+  <div class="tdp">
+    <div class="tdc pro"><h4>✅ Pros</h4><ul>
+      <li>Automatic offline via TTL — handles crashes, drops, backgrounding without explicit logout</li>
+      <li>Lock-free — Redis SET is atomic; zero deadlock risk</li>
+      <li>O(1) per write; MGET for batch reads in one round-trip</li>
+      <li>Horizontally scalable via Redis Cluster; shard by user_id % N</li>
+      <li>Stateless API servers — scale up/down freely, no sticky sessions</li>
+      <li>Self-healing — crashed clients auto-expire without cleanup jobs</li>
+    </ul></div>
+    <div class="tdc con"><h4>❌ Cons</h4><ul>
+      <li>Flaky networks cause flapping — user offline for ~30 s on brief disconnect</li>
+      <li>500K writes/s to Redis requires proper sharding and monitoring</li>
+      <li>Redis is in-memory — needs RDB/AOF + Kafka for durability</li>
+      <li>No push on change — clients must poll /status to see updates</li>
+      <li>TTL misconfiguration has product consequences (ghosts or flapping)</li>
+      <li>Adds Kafka + flush worker infra for durability</li>
+    </ul></div>
+  </div>
+
+  <h3>Consistency vs Availability</h3>
+  <table>
+    <tr><th>Failure Scenario</th><th>System Behaviour</th><th>Acceptable?</th></tr>
+    <tr><td>Redis primary crash</td><td>Replica promoted in &lt;30 s; brief stale reads possible</td><td>✅ with replicas</td></tr>
+    <tr><td>Network partition (client)</td><td>User appears offline after TTL expires (~30 s)</td><td>✅ lenient is requirement</td></tr>
+    <tr><td>Heartbeat server crash</td><td>In-flight heartbeats lost; users offline after 30 s</td><td>⚠️ use multi-AZ + LB</td></tr>
+    <tr><td>MySQL down</td><td>Redis still serves presence; Kafka buffers last_seen events</td><td>✅ graceful degradation</td></tr>
+    <tr><td>Kafka down</td><td>last_seen stops updating; Redis presence still works</td><td>✅ presence unaffected</td></tr>
+  </table>
+
+  <h3>TTL Sweet Spot</h3>
+  <div class="g g3">
+    <div class="card ct-r"><h4>TTL = 10 s</h4><p>= heartbeat interval. One missed beat → offline. Terrible on mobile. Avoid.</p></div>
+    <div class="card ct-g"><h4>TTL = 30 s ✓</h4><p>= 3× interval. 2 missed beats forgiven. Goes offline 30 s after last heartbeat. Chosen.</p></div>
+    <div class="card ct-a"><h4>TTL = 5 min</h4><p>Very tolerant but creates ghost users. Crash → appear online 5 min. Avoid for chat presence.</p></div>
+  </div>
+</div>
+
+<!-- ── 08 PROTOTYPE ── -->
+<div class="panel" id="p-prototype">
+  <div class="ptitle">Proto<em>type</em></div>
+  <p class="psub">Interactive demo. Online users appear first. Offline shows "last seen X ago". Click any user to toggle presence — simulating a heartbeat or disconnect.</p>
+
+  <div class="g g2" style="margin-bottom:14px">
+    <div class="card ct-g">
+      <h4>Recommended Tech Stack</h4>
+      <table style="margin:0;font-size:12px">
+        <tr><th>Component</th><th>Tech</th><th>Why</th></tr>
+        <tr><td>Backend</td><td>Python FastAPI / Node.js</td><td>Async I/O for heartbeat storms</td></tr>
+        <tr><td>Realtime</td><td>Socket.IO / WebSocket</td><td>Push status changes to viewer</td></tr>
+        <tr><td>Presence store</td><td>Redis 7 Cluster</td><td>Sub-ms, TTL, MGET pipeline</td></tr>
+        <tr><td>Persistent DB</td><td>MySQL 8</td><td>Durable last_seen</td></tr>
+        <tr><td>Queue</td><td>Apache Kafka</td><td>Decouple writes from DB</td></tr>
+        <tr><td>LB</td><td>AWS ALB</td><td>Sticky sessions for WebSocket</td></tr>
+      </table>
+    </div>
+    <div class="card ct-a">
+      <h4>⚠️ Keep in Mind</h4>
+      <ul class="rl">
+        <li>I/O in Node.js is <strong>asynchronous</strong> — never block the event loop in heartbeat handlers</li>
+        <li>Do <strong>NOT broadcast status changes to all users</strong> — fan-out only to the user's friend list. Broadcasting to 5M = catastrophic.</li>
+        <li>Trigger heartbeat on <strong>visibilitychange</strong> events on mobile, not just setInterval</li>
+        <li>Use <strong>exponential backoff</strong> if heartbeat fails — don't hammer the server on disconnect</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="dshell">
+    <div class="dbar">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <span style="margin-left:8px">Presence Demo — Chat App</span>
+      <button onclick="toggleRandom()" style="margin-left:auto;background:rgba(0,229,255,.08);border:1px solid var(--accent);color:var(--accent);padding:3px 11px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer">⚡ Simulate Heartbeat</button>
+    </div>
+    <div class="dbody">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em">● online first · ○ offline below</span>
+        <span id="ocnt" style="color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px"></span>
+      </div>
+      <ul id="ulist"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ── 09 OUTCOME ── -->
+<div class="panel" id="p-outcome">
+  <div class="ptitle">Out<em>come</em></div>
+  <p class="psub">By completing this design you build concrete, transferable mental models — all of which recur throughout the remaining 7 weeks.</p>
+
+  <ul class="ol">
+    <li><strong>Presence detection patterns</strong> — heartbeat + TTL is the industry standard (WhatsApp, Slack, Discord). You now understand the why, not just the what.</li>
+    <li><strong>Redis as first-class storage</strong> — not just a cache, but the primary store for high-throughput ephemeral state. TTL as a feature, not a workaround.</li>
+    <li><strong>Connection pooling decisions</strong> — Redis client-side routing vs. proxy; why MySQL needs ProxySQL at 500+ concurrent app connections.</li>
+    <li><strong>Decoupling writes with Kafka</strong> — async pipeline lets 500K writes/s land in Redis without touching MySQL. Fire-and-forget + durability via Kafka retention.</li>
+    <li><strong>Lock-free concurrency</strong> — Redis SET is atomic. Systems designed so locking is structurally impossible eliminate entire bug classes.</li>
+    <li><strong>Capacity planning as design driver</strong> — 500K writes/s → shard Redis; 200 MB footprint → no memory pressure. Numbers precede architecture, always.</li>
+    <li><strong>Eventual consistency in practice</strong> — 30 s offline latency is a deliberate product call with real UX tradeoffs, not an engineering limitation.</li>
+    <li><strong>MGET fan-out on read</strong> — collapsing 200 Redis GETs into 1 round-trip. The N+1 query pattern at scale.</li>
+    <li><strong>Schema design for "last seen"</strong> — store epoch ms (not DATETIME), index on last_seen, async write avoids hot-row contention on UPDATE.</li>
+    <li><strong>SocketIO broadcast trap</strong> — fanning out status changes to ALL users = O(5M) writes per event. Always scope push to friend lists.</li>
+  </ul>
+
+  <div class="done">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 1 · Topic 1 Complete ✦</div>
+    <p style="font-size:13px;color:var(--muted)">Next: 3 Mental Models &nbsp;·&nbsp; Connection Pools &nbsp;·&nbsp; Caching at Scale &nbsp;·&nbsp; Kafka Essentials &nbsp;·&nbsp; Communication Paradigms &nbsp;→&nbsp; Deployment Log Streamer</p>
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <span class="hbadge hb-c">Foundation Week</span>
+      <span class="hbadge hb-g">Topic 1 of 6</span>
+      <span class="hbadge hb-p">Week 1 of 8</span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /panels -->
+
+<script>
+// ── MAIN TAB SWITCHING ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const t = tab.dataset.t;
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('p-' + t).classList.add('active');
+    tab.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  });
+});
+
+// ── CODE LANGUAGE TABS ──
+document.querySelectorAll('.ltab').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l;
+    document.querySelectorAll('.ltab').forEach(x => x.classList.remove('on'));
+    document.querySelectorAll('.lpanel').forEach(x => x.classList.remove('on'));
+    lt.classList.add('on');
+    document.getElementById('lp-' + l).classList.add('on');
+  });
+});
+
+// ── PROTOTYPE DEMO ──
+const USERS = [
+  {id:1,name:'Arpit Bhayani',  col:'#7c3aed',on:true, ts:Date.now()-2000},
+  {id:2,name:'Priya Sharma',   col:'#0891b2',on:true, ts:Date.now()-5000},
+  {id:3,name:'Rahul Gupta',    col:'#059669',on:true, ts:Date.now()-8000},
+  {id:4,name:'Ananya Krishnan',col:'#1d4ed8',on:true, ts:Date.now()-3000},
+  {id:5,name:'Deepa Nair',     col:'#0f766e',on:true, ts:Date.now()-1000},
+  {id:6,name:'Sneha Patel',    col:'#d97706',on:false,ts:Date.now()-240000},
+  {id:7,name:'Vikram Singh',   col:'#be185d',on:false,ts:Date.now()-1800000},
+  {id:8,name:'Rohan Mehta',    col:'#6d28d9',on:false,ts:Date.now()-600000},
+];
+
+const ago = ms => {
+  const d = Date.now()-ms;
+  if(d<60000)   return Math.floor(d/1000)+'s ago';
+  if(d<3600000) return Math.floor(d/60000)+'m ago';
+  return Math.floor(d/3600000)+'h ago';
+};
+const ini = n => n.split(' ').map(w=>w[0]).join('').slice(0,2);
+
+function render() {
+  const sorted = [...USERS].sort((a,b)=>b.on-a.on);
+  const cnt = USERS.filter(u=>u.on).length;
+  document.getElementById('ocnt').textContent = cnt + ' online';
+  document.getElementById('ulist').innerHTML = sorted.map(u=>`
+    <li class="ui">
+      <div class="ul">
+        <div style="position:relative;display:flex;align-items:flex-end">
+          <div class="av" style="background:${u.col}">${ini(u.name)}</div>
+          <div class="sd ${u.on?'on':'off'}"></div>
+        </div>
+        <div>
+          <div class="un">${u.name}</div>
+          <div class="us ${u.on?'on':'off'}">${u.on?'● Online':'Last seen '+ago(u.ts)}</div>
+        </div>
+      </div>
+      <button class="tbtn" onclick="tog(${u.id})">${u.on?'Go offline':'Come online'}</button>
+    </li>`).join('');
+}
+
+function tog(id) {
+  const u = USERS.find(x=>x.id===id);
+  if(!u) return;
+  u.on = !u.on;
+  if(u.on) u.ts = Date.now();
+  render();
+}
+function toggleRandom() {
+  const i = Math.floor(Math.random()*USERS.length);
+  USERS[i].on = !USERS[i].on;
+  if(USERS[i].on) USERS[i].ts = Date.now();
+  render();
+}
+
+render();
+setInterval(render, 15000);
+</script>
+</body>
+</html>

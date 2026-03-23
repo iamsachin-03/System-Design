@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #13 — Stock Exchange</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;
+  --accent:#fbbf24;--a2:#f59e0b;--a3:#10b981;--a4:#f43f5e;--a5:#38bdf8;--a6:#a78bfa;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#fde68a;--code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#0d0b06 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;
+  background:radial-gradient(circle,rgba(251,191,36,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(251,191,36,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#fef3c7 0%,#fbbf24 50%,#d97706 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(251,191,36,.07);color:#fde68a;border:1px solid rgba(251,191,36,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;
+  font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 10px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(251,191,36,.1);color:var(--ecolor);border:1.5px solid rgba(251,191,36,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(251,191,36,.08);color:var(--accent);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.18);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fde68a;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--accent)}
+.info-box{background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-left:3px solid var(--a5);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bae6fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--a5)}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(251,191,36,.1);color:var(--accent);border:1.5px solid rgba(251,191,36,.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}.math-block .result{color:#fbbf24;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(251,191,36,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:580px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a4)}.tc-why{color:var(--accent)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-del{background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:160px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.class-grid{grid-template-columns:1fr}}
+.cb{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cb-name{background:rgba(251,191,36,.08);padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.cb-fields{padding:12px 18px;border-bottom:1px solid var(--border)}.cb-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .cft{color:#a78bfa}.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(251,191,36,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* Order book visualization */
+.ob-wrap{display:grid;grid-template-columns:1fr 1fr;gap:2px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:14px 0}
+.ob-side{background:var(--code);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ob-head{padding:8px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.ob-ask-head{background:rgba(244,63,94,.1);color:#fb7185;border-bottom:1px solid var(--border)}
+.ob-bid-head{background:rgba(16,185,129,.1);color:#34d399;border-bottom:1px solid var(--border)}
+.ob-row{display:flex;justify-content:space-between;padding:5px 14px;border-bottom:1px solid rgba(30,45,69,.3);font-size:11px}
+.ob-row:last-child{border-bottom:none}
+.ob-price-ask{color:#fb7185}.ob-price-bid{color:#34d399}
+.ob-qty{color:#94a3b8}
+.ob-bar-ask{background:rgba(244,63,94,.15)}.ob-bar-bid{background:rgba(16,185,129,.15)}
+.spread-box{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);padding:6px 14px;text-align:center;font-size:11px;color:#fde68a}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Financial Systems › <span>13 / Stock Exchange</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">📈</div>
+    <div>
+      <div class="h-title">Stock Exchange / Trading System</div>
+      <div class="h-desc">Design the core matching engine of a stock exchange — price-time priority order book, order types (market/limit/cancel), microsecond-latency matching, market data distribution (Level 2 feeds), risk checks, and the sequencer that guarantees total ordering of trades.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Order Book</span>
+        <span class="badge b-tag">Matching Engine</span>
+        <span class="badge b-tag">Sequencer</span>
+        <span class="badge b-tag">LMAX Disruptor</span>
+        <span class="badge b-tag">Price-Time Priority</span>
+        <span class="badge b-tag">Market Data Feed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('orderbook',this)">📊 Order Book</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══ REQUIREMENTS ══ -->
+<div id="req" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🎯 Clarify Scope</div>
+    <div class="sec-body">
+      <div class="warn-box"><strong>Stock exchange is the most latency-sensitive system design question.</strong> The hard constraints are microsecond-order latency, strict ordering guarantees (every trade must be deterministic — same input always produces same output), and zero tolerance for data loss or duplicate trades.</div><br>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Full exchange (matching + clearing + settlement) or just the matching engine?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Order types supported: market, limit, stop, stop-limit?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How many symbols (stocks) and what order rate?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Latency target — microseconds (HFT), milliseconds (retail)?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Market data feed — do we need to publish Level 2 order book updates?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Matching engine + order management. Clearing/settlement is downstream (out of scope).</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Market orders and limit orders (+ cancellations)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>10,000 symbols; 500,000 orders/sec peak</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Target: &lt;10ms p99 for order acknowledgment (retail exchange)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Yes — Level 1 (best bid/ask) and Level 2 (full book depth) feeds</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">✅ Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:12px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Place Order:</strong> Submit a buy or sell order (market or limit). Order receives a unique ID and is immediately acknowledged. Limit orders that don't match rest on the book.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Cancel Order:</strong> Cancel a resting limit order by order ID. Must be atomic — can't cancel an order that just matched.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Matching Engine:</strong> Match buy and sell orders using Price-Time Priority (FIFO within same price level). Produce trade records when orders match.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Order Book:</strong> Maintain the live order book per symbol: sorted bids (buy orders, descending price) and asks (sell orders, ascending price).</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Market Data Feed:</strong> Publish order book updates and trade executions in real-time to subscribers.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Order Status:</strong> Query current status of an order: PENDING, OPEN, PARTIALLY_FILLED, FILLED, CANCELLED.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a2);font-weight:700;letter-spacing:.08em;margin-bottom:12px">EXTENDED</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Pre-trade Risk Checks:</strong> Validate order before matching — sufficient funds/shares, price within circuit breaker limits, position limits.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Circuit Breakers:</strong> Halt trading for a symbol if price moves &gt;10% in 5 minutes.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Trade History:</strong> Immutable audit log of all trades (regulatory requirement). Every trade timestamped to nanosecond.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Market Open/Close:</strong> Pre-market auction, regular session, after-hours handling.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">LATENCY (CRITICAL)</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Order acknowledgment: <strong>&lt;10ms p99</strong> (retail exchange)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Matching engine internal: <strong>&lt;1µs</strong> per order (in-memory, single-threaded)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Market data feed lag: <strong>&lt;1ms</strong> from match to subscribers</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORRECTNESS (NON-NEGOTIABLE)</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>No duplicate trades — each order matched at most once per fill</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Strict price-time priority — no order jumping the queue</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Deterministic: replay of the same order sequence always produces same trades</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a5);font-weight:700;letter-spacing:.08em;margin-bottom:12px">DURABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a5)"></div><div>All orders persisted to WAL before acknowledgment</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a5)"></div><div>Crash recovery: replay WAL to reconstruct order book state</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a5)"></div><div>Trade records immutable, append-only, never deleted</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a6);font-weight:700;letter-spacing:.08em;margin-bottom:12px">THROUGHPUT</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>500,000 orders/sec peak across all symbols</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>10,000 symbols; ~50 orders/sec avg per symbol</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Market data: 1M+ subscribers receiving book updates</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Q&A ══ -->
+<div id="qa" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🎙 Phase 1 — Why Single-Threaded Matching Engine?</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · ARCHITECTURE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design a stock exchange matching engine. Start with the core architecture decision.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The most important architectural decision in a matching engine is: <b>the matching engine must be single-threaded.</b><br><br>
+        This sounds counterintuitive — why not use a thread pool for throughput? Because:<br><br>
+        <b>1. Correctness requires total ordering.</b> Two orders arriving simultaneously must be matched in a deterministic order. If thread A and thread B both try to match against the same resting order, you get a race condition — both could claim the same fill. A mutex "solves" this but introduces lock contention, which is expensive at microsecond latencies.<br><br>
+        <b>2. No locking = much faster.</b> A single thread operating on in-memory data structures with no locks can process 5-10 million orders/second on modern hardware. Lock contention on a multi-threaded approach typically achieves less throughput than a well-optimized single-threaded design.<br><br>
+        <b>3. Deterministic replay.</b> The matching engine is essentially a deterministic state machine: same input sequence → same output. This makes crash recovery trivial: replay the WAL through the matching engine from the last snapshot to rebuild state.<br><br>
+        <b>The architecture:</b>
+        <ol>
+          <li><b>Sequencer</b> — assigns a global monotonic sequence number to every incoming order. This defines total ordering.</li>
+          <li><b>Matching Engine</b> — single-threaded, processes orders in sequence number order from a ring buffer. No locks, no network I/O, just in-memory operations.</li>
+          <li><b>Outbound channels</b> — trade events and order book updates are written to output queues for downstream systems.</li>
+        </ol>
+        This is the LMAX Disruptor pattern, used by the LMAX Exchange (London), NASDAQ, and many others.
+      </div></div>
+      <div class="tip-box"><strong>💡 "Single-threaded for correctness" is the key insight.</strong> This immediately distinguishes you from candidates who suggest a distributed matching engine or thread pool. The matching engine is intentionally sequential — parallelism happens at the level of multiple independent matching engines (one per symbol or symbol group).</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📚 Phase 2 — Order Book & Matching Algorithm</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · ORDER BOOK</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Walk me through the order book data structure and the matching algorithm.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The order book is a sorted collection of outstanding limit orders. Two sides:<br>
+        <ul>
+          <li><b>Bids (buy orders):</b> Sorted by price descending (highest bid first), then by time ascending (FIFO within same price)</li>
+          <li><b>Asks (sell orders):</b> Sorted by price ascending (lowest ask first), then by time ascending</li>
+        </ul>
+        <b>Data structure: TreeMap&lt;Price, Queue&lt;Order&gt;&gt;</b><br>
+        - <code>TreeMap</code>: O(log N) price level insert/lookup. Price levels are the keys. This gives us sorted iteration by price.<br>
+        - <code>Queue&lt;Order&gt;</code> at each price level: Orders at the same price form a FIFO queue. The front of the queue is matched first (price-time priority).<br>
+        - We also maintain a <code>HashMap&lt;OrderId, Order&gt;</code> for O(1) cancel lookups.<br><br>
+        <b>Matching algorithm for a new buy limit order at price P:</b>
+        <ol>
+          <li>Check if best ask ≤ P (there's a matching sell order)</li>
+          <li>If yes: fill against the front order in the lowest ask queue</li>
+          <li>If the ask is fully filled, remove it from the queue; remove empty queue from TreeMap</li>
+          <li>If the new order is partially filled, continue matching against the next ask</li>
+          <li>If all asks at price ≤ P are exhausted, remaining quantity rests on the bid side</li>
+        </ol>
+        <b>Market order:</b> Same as limit order but with no price limit — keeps matching until fully filled or the book is empty (rare). If the book empties before the market order is filled, the remainder is typically cancelled (depends on exchange rules).
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What's the time complexity of adding an order? Cancelling?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        <b>Add limit order (no match):</b> O(log N) for TreeMap insert at a new price level, or O(1) if the price level already exists (just enqueue).<br><br>
+        <b>Match limit/market order:</b> O(K × log N) where K is the number of fills (usually 1-2), and log N is the TreeMap operation to check/remove exhausted price levels.<br><br>
+        <b>Cancel order:</b> O(1) average with the HashMap: lookup order by ID → O(1). Remove from the price level queue: O(1) for doubly-linked list (if order stores a pointer to its position). Remove price level if empty: O(log N) TreeMap remove.<br><br>
+        In practice, the matching engine processes hundreds of thousands of orders per second because all operations are O(1) or O(log N) on small N (the order book typically has &lt;1000 active price levels per symbol), and all data fits in L3 cache.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔢 Phase 3 — The Sequencer: Total Ordering</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · SEQUENCER</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you guarantee total ordering when orders arrive from thousands of brokers simultaneously?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        This is the sequencer's job. Every order, before it enters the matching engine, must be assigned a globally unique, monotonically increasing sequence number. Orders are then processed in sequence number order — this establishes total ordering.<br><br>
+        <b>Sequencer design:</b><br>
+        The sequencer is a <em>single bottleneck by design</em>. It receives all incoming orders and stamps them with a sequence number (1, 2, 3, ...). It then writes the sequenced order to a ring buffer (LMAX Disruptor pattern) from which the matching engine reads.<br><br>
+        <b>Why a ring buffer?</b><br>
+        The LMAX Disruptor ring buffer avoids garbage collection, lock contention, and is cache-friendly (all data in a pre-allocated array). The publisher (sequencer) writes to position N, the consumer (matching engine) reads from position N-1. One cache-line distance separation prevents false sharing. This gives ~6 million events/second on commodity hardware.<br><br>
+        <b>Durability:</b><br>
+        Before the sequencer publishes to the ring buffer, it writes the order to a Write-Ahead Log (WAL) on a local SSD (or replicated). The WAL is append-only, so it achieves low latency even with durability. On crash, replay the WAL through a fresh matching engine to reconstruct state from the last snapshot.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The sequencer is a single bottleneck. What's your strategy if it fails?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The sequencer must be highly available. Three approaches:<br><br>
+        <b>1. Hot standby:</b> A secondary sequencer receives all orders in parallel but doesn't publish sequence numbers. If the primary fails, the standby takes over at the last sequence number + 1. Failover time: ~100ms.<br><br>
+        <b>2. Raft-based sequencer:</b> 3 sequencer nodes form a Raft cluster. All writes go through the Raft leader. On leader failure, new leader elected in &lt;500ms. Higher latency (+1-2ms) due to Raft consensus. NYSE uses a similar multi-copy sequencing approach.<br><br>
+        <b>3. Accept the downtime:</b> Exchanges actually take brief maintenance windows. A 10-second outage for failover is acceptable (vs microseconds of latency degradation from Raft). Most real exchanges use hot standby with deterministic failover.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📡 Phase 4 — Market Data Feed</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · MARKET DATA</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you distribute market data (order book updates and trade prints) to 1 million subscribers?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Market data is a <b>fan-out problem</b> — one event (a trade at AAPL) must be delivered to 1M+ subscribers with &lt;1ms latency. The key constraint is that you cannot update the order book atomically for all subscribers — you must fan out.<br><br>
+        <b>Two tiers of market data:</b><br>
+        <b>Level 1 (BBO — Best Bid and Offer):</b> Just the best price and quantity on each side. Low bandwidth. All 1M subscribers can receive Level 1 updates via UDP multicast. UDP multicast sends one packet to a multicast group, the network switch copies it to all subscribers — massive bandwidth savings vs TCP unicast to 1M clients.<br><br>
+        <b>Level 2 (Full Depth):</b> All price levels in the book. Higher bandwidth. Typically sold as a premium data feed to a smaller set of subscribers (algorithmic traders, market makers). Published via TCP to dedicated data servers that re-distribute.<br><br>
+        <b>Sequence numbers on market data:</b> Every market data message has a sequence number. If a subscriber misses message 547 (gap between 546 and 548), it requests a retransmission from the market data replay server. This handles the unreliability of UDP multicast.<br><br>
+        <b>Feed architecture:</b><br>
+        Matching Engine → output ring buffer → Market Data Publisher → UDP multicast (Level 1) + TCP unicast (Level 2 premium) → subscribers
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🛡 Phase 5 — Risk Checks & Circuit Breakers</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · RISK</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Where do you perform risk checks? Before or after the sequencer?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        There are two layers of risk checks, each with different tradeoffs:<br><br>
+        <b>Pre-sequencer (soft checks at the gateway):</b><br>
+        Each broker gateway (the entry point for broker connections) performs fast, stateless checks:<br>
+        <ul>
+          <li>Order format validation (valid symbol, price, quantity)</li>
+          <li>Account authentication</li>
+          <li>Gross notional limit check: order value ≤ max allowed (e.g., single order can't be &gt;$1M for a retail account)</li>
+        </ul>
+        These run before the sequencer and can reject orders quickly, reducing sequencer load.<br><br>
+        <b>Pre-matching (hard checks inside the sequencer/engine):</b><br>
+        <ul>
+          <li>Position checks: does the seller actually own the shares they're selling?</li>
+          <li>Buying power check: does the buyer have sufficient funds?</li>
+          <li>Circuit breaker: is this symbol currently halted?</li>
+        </ul>
+        These must be synchronous with the matching engine to be authoritative. A position check at the gateway can be stale (another order just used up the position).<br><br>
+        <b>Circuit breakers:</b> If a stock moves &gt;10% in 5 minutes, halt trading. The matching engine checks the current price against the last circuit breaker snapshot on every match. If triggered, all new orders are rejected for 5 minutes, then trading resumes. This is a regulatory requirement (SEC Rule 48, LULD bands).
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ORDER BOOK DEEP DIVE ══ -->
+<div id="orderbook" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Live Order Book — AAPL</div>
+    <div class="sec-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:16px">The order book shows all outstanding limit orders. Highest bids on the left, lowest asks on the right. The spread is the gap between best bid and best ask.</p>
+
+      <div class="ob-wrap">
+        <div class="ob-side">
+          <div class="ob-head ob-ask-head">ASKS (SELL ORDERS) — lowest first</div>
+          <div class="ob-row ob-bar-ask"><span class="ob-price-ask">$185.50</span><span class="ob-qty">200 shares</span></div>
+          <div class="ob-row ob-bar-ask"><span class="ob-price-ask">$185.25</span><span class="ob-qty">500 shares</span></div>
+          <div class="ob-row ob-bar-ask"><span class="ob-price-ask">$185.10</span><span class="ob-qty">1,200 shares</span></div>
+          <div class="ob-row ob-bar-ask" style="background:rgba(244,63,94,.25)"><span class="ob-price-ask" style="font-weight:700">$185.01</span><span class="ob-qty" style="color:#fde68a">800 shares ← BEST ASK</span></div>
+        </div>
+        <div class="ob-side">
+          <div class="ob-head ob-bid-head">BIDS (BUY ORDERS) — highest first</div>
+          <div class="ob-row ob-bar-bid" style="background:rgba(16,185,129,.25)"><span class="ob-price-bid" style="font-weight:700">$185.00</span><span class="ob-qty" style="color:#fde68a">600 shares ← BEST BID</span></div>
+          <div class="ob-row ob-bar-bid"><span class="ob-price-bid">$184.90</span><span class="ob-qty">1,500 shares</span></div>
+          <div class="ob-row ob-bar-bid"><span class="ob-price-bid">$184.75</span><span class="ob-qty">900 shares</span></div>
+          <div class="ob-row ob-bar-bid"><span class="ob-price-bid">$184.50</span><span class="ob-qty">2,200 shares</span></div>
+        </div>
+      </div>
+      <div class="spread-box">📊 SPREAD: $185.01 - $185.00 = <strong>$0.01</strong> (1 cent) — tight spread = liquid market</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚙️ Matching Examples</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fde68a">📥 LIMIT ORDER — Immediate Fill</div>
+          <p style="font-size:12.5px;color:#94a3b8;margin-bottom:12px">New Order: Buy 500 shares AAPL at $185.05 limit</p>
+          <div class="fs"><div class="fnum">1</div><div>Check: best ask = $185.01 ≤ limit $185.05 → match!</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Fill 500 shares against ask at <strong>$185.01</strong> (price of the resting order, not the limit price)</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Ask at $185.01 partially filled: 800 - 500 = 300 shares remain</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Buy order fully filled. No remainder on book.</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Trade record: 500 shares @ $185.01, timestamp ns-precision</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Market data update published: ask side update, last trade price</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">📋 LIMIT ORDER — Rests on Book</div>
+          <p style="font-size:12.5px;color:#94a3b8;margin-bottom:12px">New Order: Buy 1000 shares AAPL at $184.80 limit</p>
+          <div class="fs"><div class="fnum">1</div><div>Check: best ask = $185.01 &gt; limit $184.80 → no match</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Order rests on bid side at price level $184.80</div></div>
+          <div class="fs"><div class="fnum">3</div><div>$184.80 is between $184.75 and $184.90 → insert new price level in TreeMap</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Book now shows $184.80 as a new bid level</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Order status: OPEN. Order will match if a sell order at ≤$184.80 arrives.</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Level 2 market data update: new bid level $184.80 published</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔧 Order Book Internal Data Structure</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:220px">
+<pre><code><span class="cm">// Order Book: per-symbol, in-memory, single-threaded access only
+// TreeMap gives O(log N) price level operations
+// Deque at each price level gives O(1) FIFO order management
+// HashMap gives O(1) cancel by order ID</span>
+
+<span class="kw">class</span> <span class="cls">OrderBook</span> {
+    <span class="cm">// Bids: sorted descending (highest price first)</span>
+    <span class="cls">TreeMap</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; bids =
+        <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;(<span class="cls">Comparator</span>.reverseOrder());
+
+    <span class="cm">// Asks: sorted ascending (lowest price first)</span>
+    <span class="cls">TreeMap</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; asks = <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;();
+
+    <span class="cm">// O(1) cancel: order ID → order object (stored in deque above)</span>
+    <span class="cls">HashMap</span>&lt;<span class="cls">Long</span>, <span class="cls">Order</span>&gt; orderIndex = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+
+    <span class="cm">// Sequence number of last processed event</span>
+    <span class="kw">long</span> lastSequence = <span class="num">0</span>;
+}
+
+<span class="cm">// Price-time priority: for same price, orders matched in FIFO order
+// Orders at the same price level maintain arrival order via ArrayDeque</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPACITY ══ -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Stock exchanges are NOT storage or bandwidth problems — they are latency problems.</strong> All active order books fit in a few GB of RAM. The challenge is processing 500K orders/sec with sub-millisecond latency.</div></div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">1</div><div><div class="step-title">Order Rate & Matching Engine Capacity</div><div class="step-sub">How fast must the matching engine be?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Given: 500,000 orders/sec peak, 10,000 symbols</span>
+
+<span class="label">Average orders per symbol per second:</span>
+  <span class="label">500,000 ÷ 10,000                          = </span><span class="val">50 orders/sec</span>  <span class="label">avg per symbol</span>
+
+<span class="label">Hot symbols (top 100, e.g., AAPL, TSLA): ~10× average</span>
+  <span class="label">500 orders/sec for hot symbols</span>
+
+<span class="label">Single-threaded matching engine throughput:</span>
+  <span class="label">LMAX Disruptor-style: 5-10 million ops/sec per core</span>
+  <span class="label">One matching engine per symbol group (100 symbols)</span>
+  <span class="label">100 matching engine threads for 10,000 symbols</span>
+  <span class="label">Each handles: 500,000 ÷ 100              = </span><span class="val">5,000 orders/sec</span>  <span class="label">comfortable</span>
+
+<span class="label">Time per order (each matching engine):</span>
+  <span class="label">1,000,000 µs/sec ÷ 5,000 orders/sec    = </span><span class="val">200 µs/order</span>  <span class="label">budget per order</span>
+  <span class="label">Actual matching: ~1 µs → </span><span class="val">200× headroom</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">2</div><div><div class="step-title">Order Book Memory</div><div class="step-sub">How much RAM for all active order books?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Per resting limit order size:</span>
+  <span class="label">order_id (8B) + symbol (4B) + side (1B) + price (8B)</span>
+  <span class="label">+ quantity (8B) + timestamp (8B) + client_id (8B) = </span><span class="val">45 bytes</span>
+
+<span class="label">Active resting orders per symbol (typical liquid stock):</span>
+  <span class="label">~1,000 price levels × 5 orders/level    = </span><span class="val">5,000 orders/symbol</span>
+
+<span class="label">Total active orders across all symbols:</span>
+  <span class="label">10,000 symbols × 5,000 orders           = </span><span class="val">50 million orders</span>
+
+<span class="label">Memory for all order books:</span>
+  <span class="label">50M × 45B                               = </span><span class="val">~2.25 GB RAM</span>
+
+<span class="label">Plus TreeMap overhead (~100B per price level):</span>
+  <span class="label">10,000 × 1,000 levels × 100B            = </span><span class="val">~1 GB</span>
+
+<span class="label">Total order book RAM                    ≈ </span><span class="val">~3.5 GB</span>
+<span class="result">→ All order books fit comfortably in 16 GB RAM. This is intentional — everything in-memory = fast.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">3</div><div><div class="step-title">Trade Storage & Market Data</div><div class="step-sub">Persistent storage requirements</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Trades executed per day (10% of orders result in a trade fill):</span>
+  <span class="label">500,000 orders/sec × 0.1 × 23,400 sec (trading day) = </span><span class="val">~1.17 billion fills/day</span>
+
+<span class="label">Per trade record size:</span>
+  <span class="label">trade_id (8B) + buy_order_id (8B) + sell_order_id (8B)</span>
+  <span class="label">+ symbol (4B) + price (8B) + quantity (8B) + timestamp (8B) = 52 bytes</span>
+
+<span class="label">Daily trade storage:</span>
+  <span class="label">1.17B × 52B                             = </span><span class="val">~61 GB/day</span>
+
+<span class="label">Annual trade storage (immutable audit log):</span>
+  <span class="label">61 GB × 252 trading days                = </span><span class="val">~15 TB/year</span>  <span class="label">(Cassandra append-only)</span>
+
+<span class="label">WAL throughput (orders + events, pre-matching):</span>
+  <span class="label">500,000 orders/sec × 64 bytes           = </span><span class="val">~32 MB/s</span>  <span class="label">NVMe SSD can sustain this easily</span>
+
+<span class="label">Market data feed bandwidth (Level 1 multicast):</span>
+  <span class="label">500,000 events/sec × 50B                = </span><span class="val">~25 MB/s</span>  <span class="label">UDP multicast</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Peak order rate</td><td class="hi">500,000/sec</td><td>10,000 symbols</td></tr>
+        <tr><td>Matching engine threads</td><td class="hi">100</td><td>One per 100-symbol group</td></tr>
+        <tr><td>Matching latency (internal)</td><td class="hi">&lt;1 µs</td><td>In-memory, no I/O</td></tr>
+        <tr><td>End-to-end order ack p99</td><td class="hi">&lt;10 ms</td><td>Including network</td></tr>
+        <tr><td>Order book RAM</td><td class="hi">~3.5 GB</td><td>All symbols in-memory</td></tr>
+        <tr><td>WAL write throughput</td><td class="hi">~32 MB/s</td><td>NVMe SSD, sequential append</td></tr>
+        <tr><td>Trade storage/year</td><td class="hi">~15 TB</td><td>Cassandra append-only</td></tr>
+        <tr><td>Market data bandwidth</td><td class="hi">~25 MB/s multicast</td><td>Level 1 UDP</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ API ══ -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 API Design</div>
+    <div class="sec-body"><div class="info-box"><strong>The trading API is synchronous for order acknowledgment but async for execution.</strong> "ACK" means the order was received and sequenced — not that it was filled. Fill notifications arrive asynchronously via WebSocket.</div></div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/orders</span><span class="api-desc">Place a new order</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">client_order_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Client-generated idempotency key. If same client_order_id submitted twice, second is rejected (no duplicate orders).</span></div>
+        <div class="frow"><span class="fn">symbol</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Stock ticker. E.g., <code>AAPL</code>, <code>TSLA</code>.</span></div>
+        <div class="frow"><span class="fn">side</span><span class="ft">enum</span><span class="fr">required</span><span class="fd"><code>BUY</code> | <code>SELL</code></span></div>
+        <div class="frow"><span class="fn">order_type</span><span class="ft">enum</span><span class="fr">required</span><span class="fd"><code>MARKET</code> | <code>LIMIT</code></span></div>
+        <div class="frow"><span class="fn">quantity</span><span class="ft">integer</span><span class="fr">required</span><span class="fd">Number of shares. Must be positive integer.</span></div>
+        <div class="frow"><span class="fn">price</span><span class="ft">decimal</span><span class="fo">required for LIMIT</span><span class="fd">Limit price. Max 2 decimal places (cents). Required for LIMIT orders, ignored for MARKET.</span></div>
+        <div class="frow"><span class="fn">time_in_force</span><span class="ft">enum</span><span class="fo">optional</span><span class="fd"><code>GTC</code> (Good Till Cancelled, default) | <code>IOC</code> (Immediate or Cancel) | <code>FOK</code> (Fill or Kill) | <code>DAY</code> (expires at close)</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 201 — Order accepted (synchronous ACK)</div>
+        <div class="frow"><span class="fn">order_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Exchange-assigned unique order ID. Use to track status and cancellations.</span></div>
+        <div class="frow"><span class="fn">status</span><span class="ft">enum</span><span class="fo"></span><span class="fd"><code>ACCEPTED</code> — order received and sequenced. Fill notifications arrive via WebSocket.</span></div>
+        <div class="frow"><span class="fn">sequence_number</span><span class="ft">long</span><span class="fo"></span><span class="fd">Global sequence number assigned to this order. Useful for debugging order priority.</span></div>
+        <div class="frow"><span class="fn">timestamp_ns</span><span class="ft">long</span><span class="fo"></span><span class="fd">Nanosecond-precision timestamp when sequencer received the order.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Error Responses</div>
+        <div class="frow"><span class="fn">400</span><span class="ft"></span><span class="fo"></span><span class="fd">Invalid order (bad symbol, quantity, price format)</span></div>
+        <div class="frow"><span class="fn">402</span><span class="ft"></span><span class="fo"></span><span class="fd">Insufficient funds/shares (pre-trade risk check failed)</span></div>
+        <div class="frow"><span class="fn">409</span><span class="ft"></span><span class="fo"></span><span class="fd">Duplicate client_order_id</span></div>
+        <div class="frow"><span class="fn">503</span><span class="ft"></span><span class="fo"></span><span class="fd">Symbol halted (circuit breaker active)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-del">DELETE</span><span class="api-path">/api/v1/orders/{order_id}</span><span class="api-desc">Cancel a resting limit order</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200 — Cancelled | 409 — Already filled/cancelled</div>
+        <div class="frow"><span class="fn">status</span><span class="ft">enum</span><span class="fo"></span><span class="fd"><code>CANCELLED</code> | <code>CANCEL_REJECTED</code> (order already filled or doesn't exist)</span></div>
+        <div class="frow"><span class="fn">filled_quantity</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Shares filled before cancellation (for partial fills)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/orderbook/{symbol}</span><span class="api-desc">Get current order book snapshot</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Query Parameters</div>
+        <div class="frow"><span class="fn">depth</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Number of price levels to return per side. Default 5, max 50.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">bids</span><span class="ft">PriceLevel[]</span><span class="fo"></span><span class="fd">Buy side: <code>[{"price": 185.00, "quantity": 600, "order_count": 3}, ...]</code> descending price</span></div>
+        <div class="frow"><span class="fn">asks</span><span class="ft">PriceLevel[]</span><span class="fo"></span><span class="fd">Sell side ascending price</span></div>
+        <div class="frow"><span class="fn">sequence_number</span><span class="ft">long</span><span class="fo"></span><span class="fd">Book snapshot corresponds to this sequence number. Use to reconcile with market data stream.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📡 WebSocket — Real-time Order & Trade Updates</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:220px">
+<pre><code><span class="cm">// WebSocket channel: wss://exchange.example.com/ws</span>
+<span class="cm">// Subscribe to order updates and market data</span>
+
+<span class="cm">// → Client sends subscription</span>
+{ <span class="str">"type"</span>: <span class="str">"subscribe"</span>, <span class="str">"channels"</span>: [<span class="str">"orders"</span>, <span class="str">"trades:AAPL"</span>] }
+
+<span class="cm">// ← Server sends execution report when order fills</span>
+{
+  <span class="str">"type"</span>: <span class="str">"execution_report"</span>,
+  <span class="str">"order_id"</span>: <span class="str">"ORD-12345"</span>,
+  <span class="str">"client_order_id"</span>: <span class="str">"client-abc-001"</span>,
+  <span class="str">"status"</span>: <span class="str">"PARTIALLY_FILLED"</span>,
+  <span class="str">"filled_qty"</span>: <span class="num">500</span>,
+  <span class="str">"remaining_qty"</span>: <span class="num">200</span>,
+  <span class="str">"fill_price"</span>: <span class="num">185.01</span>,
+  <span class="str">"sequence_number"</span>: <span class="num">98234721</span>,
+  <span class="str">"timestamp_ns"</span>: <span class="num">1711015200000000000</span>  <span class="cm">// nanosecond precision</span>
+}
+
+<span class="cm">// ← Server sends market data updates (Level 1)</span>
+{
+  <span class="str">"type"</span>: <span class="str">"book_update"</span>,
+  <span class="str">"symbol"</span>: <span class="str">"AAPL"</span>,
+  <span class="str">"best_bid"</span>: { <span class="str">"price"</span>: <span class="num">185.00</span>, <span class="str">"qty"</span>: <span class="num">600</span> },
+  <span class="str">"best_ask"</span>: { <span class="str">"price"</span>: <span class="num">185.01</span>, <span class="str">"qty"</span>: <span class="num">300</span> },  <span class="cm">// qty reduced after fill</span>
+  <span class="str">"sequence_number"</span>: <span class="num">98234722</span>
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HLD ══ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">👥 Actors</div>
+    <div class="sec-body">
+      <div class="actor-grid">
+        <div class="actor-card"><div class="actor-icon">🏦</div><div class="actor-name">Broker Gateway</div><div class="actor-role">FIX protocol / REST API entry point. Authenticates brokers, validates order format, enforces per-broker rate limits, performs basic pre-trade risk checks.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔢</div><div class="actor-name">Sequencer</div><div class="actor-role">Stamps every order with a globally monotonic sequence number. Writes to WAL for durability. Publishes to ring buffer. Single bottleneck — intentionally.</div></div>
+        <div class="actor-card"><div class="actor-icon">⚙️</div><div class="actor-name">Matching Engine</div><div class="actor-role">Single-threaded per symbol group. Reads from ring buffer. Applies orders to in-memory order books. Produces trade events. Zero network I/O in the critical path.</div></div>
+        <div class="actor-card"><div class="actor-icon">📡</div><div class="actor-name">Market Data Publisher</div><div class="actor-role">Consumes matching engine output. Publishes Level 1 (UDP multicast) and Level 2 (TCP unicast premium) order book updates and trade prints.</div></div>
+        <div class="actor-card"><div class="actor-icon">🛡</div><div class="actor-name">Risk Engine</div><div class="actor-role">Pre-trade position checks (per account). Circuit breaker monitoring. Post-trade margin calculations. Feeds back to sequencer to halt symbols if needed.</div></div>
+        <div class="actor-card"><div class="actor-icon">📊</div><div class="actor-name">Trade Store</div><div class="actor-role">Immutable append-only Cassandra store for all trades. Regulatory audit log. Query interface for trade history, P&L calculation.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔔</div><div class="actor-name">Notification Service</div><div class="actor-role">Pushes execution reports to broker WebSocket connections when orders fill or are cancelled.</div></div>
+        <div class="actor-card"><div class="actor-icon">📸</div><div class="actor-name">Snapshot Manager</div><div class="actor-role">Periodically serializes order book state to disk. Enables fast recovery: load snapshot + replay only recent WAL entries.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 980 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:520px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fbbf24"/></marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="arb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+            <marker id="arp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+            <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+          </defs>
+
+          <!-- Zones -->
+          <rect x="8" y="8" width="130" height="504" rx="10" fill="rgba(167,139,250,.02)" stroke="rgba(167,139,250,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="73" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a78bfa">BROKERS</text>
+
+          <rect x="148" y="8" width="240" height="504" rx="10" fill="rgba(251,191,36,.02)" stroke="rgba(251,191,36,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="268" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fbbf24">ORDER PATH (CRITICAL)</text>
+
+          <rect x="398" y="8" width="200" height="504" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="498" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">MATCHING</text>
+
+          <rect x="608" y="8" width="364" height="504" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="790" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">DOWNSTREAM</text>
+
+          <!-- Brokers -->
+          <rect x="18" y="50" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="73" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🏦 Broker A</text>
+          <text x="73" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">FIX / REST</text>
+
+          <rect x="18" y="110" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="73" y="126" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🏦 Broker B</text>
+          <text x="73" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">FIX / REST</text>
+
+          <rect x="18" y="170" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="73" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🤖 HFT Firm</text>
+          <text x="73" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">co-location</text>
+
+          <!-- Gateway -->
+          <rect x="160" y="50" width="180" height="60" rx="7" fill="#131c2e" stroke="#fbbf24" stroke-width="2"/>
+          <text x="250" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fde68a">🏦 Broker Gateway</text>
+          <text x="250" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">auth + validation</text>
+          <text x="250" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">pre-trade risk (basic)</text>
+
+          <!-- Risk Engine -->
+          <rect x="160" y="130" width="180" height="52" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="250" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">🛡 Risk Engine</text>
+          <text x="250" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">position + circuit breaker</text>
+
+          <!-- Sequencer -->
+          <rect x="160" y="202" width="180" height="70" rx="7" fill="#131c2e" stroke="#fbbf24" stroke-width="2.5"/>
+          <text x="250" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fde68a">🔢 Sequencer</text>
+          <text x="250" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">global seq number</text>
+          <text x="250" y="254" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">WAL → ring buffer</text>
+          <text x="250" y="266" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SINGLE THREAD</text>
+
+          <!-- WAL -->
+          <rect x="160" y="292" width="180" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="250" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📝 WAL (NVMe SSD)</text>
+          <text x="250" y="324" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">append-only, 32 MB/s</text>
+
+          <!-- Matching Engine -->
+          <rect x="410" y="50" width="176" height="100" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2.5"/>
+          <text x="498" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">⚙️ Matching Engine</text>
+          <text x="498" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">100 threads (1 per 100 symbols)</text>
+          <text x="498" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">reads from ring buffer</text>
+          <text x="498" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">in-memory order books</text>
+          <text x="498" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">LMAX Disruptor pattern</text>
+          <text x="498" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">NO LOCKS, NO NETWORK I/O</text>
+
+          <!-- Ring buffer annotation -->
+          <rect x="340" y="220" width="80" height="30" rx="5" fill="rgba(251,191,36,.1)" stroke="rgba(251,191,36,.3)" stroke-width="1"/>
+          <text x="380" y="233" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fde68a">Ring Buffer</text>
+          <text x="380" y="244" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">LMAX Disruptor</text>
+
+          <!-- Order book snapshot -->
+          <rect x="410" y="170" width="176" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="498" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📸 Snapshot Mgr</text>
+          <text x="498" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">periodic book snapshots</text>
+
+          <!-- Market Data Publisher -->
+          <rect x="620" y="50" width="150" height="60" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="695" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📡 Market Data Pub</text>
+          <text x="695" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">L1: UDP multicast</text>
+          <text x="695" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">L2: TCP unicast</text>
+
+          <!-- Notification Service -->
+          <rect x="620" y="130" width="150" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="695" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🔔 Notif Service</text>
+          <text x="695" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">broker WebSocket push</text>
+
+          <!-- Trade Store -->
+          <rect x="620" y="192" width="150" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="695" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Trade Store</text>
+          <text x="695" y="224" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Cassandra, append-only</text>
+
+          <!-- Subscribers -->
+          <rect x="790" y="50" width="170" height="42" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="875" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📊 Market Data Subs</text>
+          <text x="875" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1M+ subscribers (UDP)</text>
+
+          <!-- ARROWS -->
+          <line x1="128" y1="70" x2="158" y2="74" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="128" y1="130" x2="158" y2="100" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="250" y1="110" x2="250" y2="128" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="250" y1="182" x2="250" y2="200" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#ary)"/>
+          <line x1="250" y1="272" x2="250" y2="290" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="340" y1="235" x2="408" y2="235" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ary)"/>
+          <line x1="250" y1="240" x2="338" y2="235" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#ary)"/>
+          <line x1="586" y1="90" x2="618" y2="76" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arb)"/>
+          <line x1="586" y1="100" x2="618" y2="150" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arp)"/>
+          <line x1="586" y1="110" x2="618" y2="210" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="770" y1="70" x2="788" y2="70" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arb)"/>
+
+          <!-- Labels -->
+          <text x="152" y="65" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">orders</text>
+          <text x="255" y="125" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">risk check</text>
+          <text x="598" y="80" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">market data</text>
+          <text x="598" y="130" font-family="JetBrains Mono" font-size="8" fill="#c4b5fd">fills</text>
+          <text x="598" y="175" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">trades</text>
+
+          <!-- Critical path highlight -->
+          <rect x="152" y="40" width="450" height="170" rx="6" fill="none" stroke="rgba(251,191,36,.2)" stroke-width="1.5" stroke-dasharray="6,4"/>
+          <text x="380" y="450" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fbbf24">⚡ Critical path: Gateway → Risk → Sequencer → Ring Buffer → Matching Engine → Output</text>
+          <text x="380" y="465" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">All in-memory, on same server — roundtrip &lt; 1µs for matching itself</text>
+
+          <!-- Legend -->
+          <rect x="152" y="478" width="440" height="28" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+          <text x="162" y="494" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">Sequencer + Matching Engine on same physical box (colocation)</text>
+          <text x="162" y="500" font-family="JetBrains Mono" font-size="8" fill="#4e6070">NO network hop between sequencer → matching engine = nanosecond latency</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LLD ══ -->
+<div id="lld" class="panel">
+  <div class="sec">
+    <div class="sec-head">📦 Core Classes</div>
+    <div class="sec-body">
+      <div class="class-grid">
+        <div class="cb">
+          <div class="cb-name">OrderBook</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">symbol: <span class="cft">String</span></div>
+            <div class="cf">bids: <span class="cft">TreeMap&lt;Price, Deque&lt;Order&gt;&gt;</span></div>
+            <div class="cf">asks: <span class="cft">TreeMap&lt;Price, Deque&lt;Order&gt;&gt;</span></div>
+            <div class="cf">orderIndex: <span class="cft">HashMap&lt;Long, Order&gt;</span></div>
+            <div class="cf">lastSequence: <span class="cft">long</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">addOrder(order): List&lt;Trade&gt;</div>
+            <div class="cm2">cancelOrder(orderId): boolean</div>
+            <div class="cm2">getBestBid(): Optional&lt;PriceLevel&gt;</div>
+            <div class="cm2">getBestAsk(): Optional&lt;PriceLevel&gt;</div>
+            <div class="cm2">getDepth(levels): OrderBookSnapshot</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">MatchingEngine</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">books: <span class="cft">Map&lt;String, OrderBook&gt;</span></div>
+            <div class="cf">ringBuffer: <span class="cft">RingBuffer&lt;OrderEvent&gt;</span></div>
+            <div class="cf">outputQueue: <span class="cft">Queue&lt;TradeEvent&gt;</span></div>
+            <div class="cf">lastSequence: <span class="cft">AtomicLong</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">run(): void (main event loop)</div>
+            <div class="cm2">processOrder(event): void</div>
+            <div class="cm2">processCancel(event): void</div>
+            <div class="cm2">publishTrades(trades): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">Order</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">orderId: <span class="cft">long</span></div>
+            <div class="cf">clientOrderId: <span class="cft">String</span></div>
+            <div class="cf">symbol: <span class="cft">String</span></div>
+            <div class="cf">side: <span class="cft">enum BUY | SELL</span></div>
+            <div class="cf">type: <span class="cft">enum MARKET | LIMIT</span></div>
+            <div class="cf">price: <span class="cft">BigDecimal</span></div>
+            <div class="cf">quantity: <span class="cft">long</span></div>
+            <div class="cf">filledQty: <span class="cft">long</span></div>
+            <div class="cf">sequenceNumber: <span class="cft">long</span></div>
+            <div class="cf">timestampNs: <span class="cft">long</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">getRemainingQty(): long</div>
+            <div class="cm2">isFullyFilled(): boolean</div>
+            <div class="cm2">fill(qty): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">Sequencer</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">sequence: <span class="cft">AtomicLong</span></div>
+            <div class="cf">wal: <span class="cft">WriteAheadLog</span></div>
+            <div class="cf">ringBuffer: <span class="cft">RingBuffer</span></div>
+            <div class="cf">standby: <span class="cft">SequencerReplica</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">sequence(order): long</div>
+            <div class="cm2">writeWAL(event): void</div>
+            <div class="cm2">publish(event): void</div>
+            <div class="cm2">recoverFromWAL(): void</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CODE ══ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Stock Exchange — Matching Engine (Java)
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Order Book with Price-Time Priority ────────────</span>
+<span class="kw">public class</span> <span class="cls">OrderBook</span> {
+
+    <span class="kw">private final</span> <span class="cls">String</span> symbol;
+
+    <span class="cm">// Bids: highest price first → descending TreeMap</span>
+    <span class="kw">private final</span> <span class="cls">TreeMap</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; bids =
+        <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;(<span class="cls">Comparator</span>.reverseOrder());
+
+    <span class="cm">// Asks: lowest price first → natural ascending TreeMap</span>
+    <span class="kw">private final</span> <span class="cls">TreeMap</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; asks =
+        <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;();
+
+    <span class="cm">// O(1) cancel lookup by orderId</span>
+    <span class="kw">private final</span> <span class="cls">HashMap</span>&lt;<span class="cls">Long</span>, <span class="cls">Order</span>&gt; orderIndex = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">Trade</span>&gt; <span class="fn2">addOrder</span>(<span class="cls">Order</span> incoming) {
+        <span class="cls">List</span>&lt;<span class="cls">Trade</span>&gt; trades = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+
+        <span class="kw">if</span> (incoming.getSide() == <span class="cls">Side</span>.BUY) {
+            <span class="fn2">matchBuy</span>(incoming, trades);
+        } <span class="kw">else</span> {
+            <span class="fn2">matchSell</span>(incoming, trades);
+        }
+
+        <span class="cm">// If not fully filled and it's a limit order, add to book</span>
+        <span class="kw">if</span> (!incoming.isFullyFilled()
+                && incoming.getType() == <span class="cls">OrderType</span>.LIMIT) {
+            <span class="cls">TreeMap</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; side =
+                incoming.getSide() == <span class="cls">Side</span>.BUY ? bids : asks;
+            side.computeIfAbsent(incoming.getPrice(), p -> <span class="kw">new</span> <span class="cls">ArrayDeque</span>&lt;&gt;())
+                .addLast(incoming);  <span class="cm">// FIFO: new orders at the back</span>
+            orderIndex.put(incoming.getOrderId(), incoming);
+        }
+        <span class="kw">return</span> trades;
+    }
+
+    <span class="kw">private void</span> <span class="fn2">matchBuy</span>(<span class="cls">Order</span> buy, <span class="cls">List</span>&lt;<span class="cls">Trade</span>&gt; trades) {
+        <span class="cm">// Check each ask level from lowest price upward</span>
+        <span class="kw">while</span> (!buy.isFullyFilled() && !asks.isEmpty()) {
+            <span class="cls">Map</span>.<span class="cls">Entry</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; bestAskEntry =
+                asks.firstEntry();
+            <span class="cls">BigDecimal</span> bestAskPrice = bestAskEntry.getKey();
+
+            <span class="cm">// Check if price matches (limit: ask ≤ buy limit; market: always)</span>
+            <span class="kw">boolean</span> priceMatches = buy.getType() == <span class="cls">OrderType</span>.MARKET
+                || bestAskPrice.compareTo(buy.getPrice()) <= <span class="num">0</span>;
+
+            <span class="kw">if</span> (!priceMatches) <span class="kw">break</span>; <span class="cm">// no more matching asks</span>
+
+            <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt; askQueue = bestAskEntry.getValue();
+            <span class="cls">Order</span> sellOrder = askQueue.peekFirst(); <span class="cm">// FIFO: front of queue</span>
+
+            <span class="cm">// Calculate fill quantity</span>
+            <span class="kw">long</span> fillQty = <span class="cls">Math</span>.min(buy.getRemainingQty(),
+                                       sellOrder.getRemainingQty());
+
+            <span class="cm">// Execute fill at the ask price (price of the resting order)</span>
+            buy.fill(fillQty);
+            sellOrder.fill(fillQty);
+
+            trades.add(<span class="cls">Trade</span>.builder()
+                .buyOrderId(buy.getOrderId())
+                .sellOrderId(sellOrder.getOrderId())
+                .price(bestAskPrice)   <span class="cm">// price of the maker (resting) order</span>
+                .quantity(fillQty)
+                .symbol(symbol)
+                .timestampNs(<span class="cls">System</span>.nanoTime())
+                .build());
+
+            <span class="cm">// Remove fully filled sell orders from book</span>
+            <span class="kw">if</span> (sellOrder.isFullyFilled()) {
+                askQueue.pollFirst();
+                orderIndex.remove(sellOrder.getOrderId());
+                <span class="kw">if</span> (askQueue.isEmpty()) asks.remove(bestAskPrice);
+            }
+        }
+    }
+
+    <span class="kw">public boolean</span> <span class="fn2">cancelOrder</span>(<span class="kw">long</span> orderId) {
+        <span class="cls">Order</span> order = orderIndex.remove(orderId);
+        <span class="kw">if</span> (order == <span class="kw">null</span>) <span class="kw">return false</span>; <span class="cm">// not found / already filled</span>
+
+        <span class="cls">TreeMap</span>&lt;<span class="cls">BigDecimal</span>, <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt;&gt; side =
+            order.getSide() == <span class="cls">Side</span>.BUY ? bids : asks;
+
+        <span class="cls">ArrayDeque</span>&lt;<span class="cls">Order</span>&gt; queue = side.get(order.getPrice());
+        <span class="kw">if</span> (queue != <span class="kw">null</span>) {
+            queue.remove(order); <span class="cm">// O(N) for deque but N is usually tiny</span>
+            <span class="kw">if</span> (queue.isEmpty()) side.remove(order.getPrice());
+        }
+        <span class="kw">return true</span>;
+    }
+
+    <span class="kw">public</span> <span class="cls">Optional</span>&lt;<span class="cls">BigDecimal</span>&gt; <span class="fn2">getBestBid</span>() {
+        <span class="kw">return</span> bids.isEmpty()
+            ? <span class="cls">Optional</span>.empty()
+            : <span class="cls">Optional</span>.of(bids.firstKey());
+    }
+
+    <span class="kw">public</span> <span class="cls">Optional</span>&lt;<span class="cls">BigDecimal</span>&gt; <span class="fn2">getBestAsk</span>() {
+        <span class="kw">return</span> asks.isEmpty()
+            ? <span class="cls">Optional</span>.empty()
+            : <span class="cls">Optional</span>.of(asks.firstKey());
+    }
+}
+
+<span class="cm">// ── 2. Matching Engine Event Loop ─────────────────────</span>
+<span class="kw">public class</span> <span class="cls">MatchingEngine</span> <span class="kw">implements</span> <span class="cls">Runnable</span> {
+
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">OrderBook</span>&gt; books = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="cls">RingBuffer</span>&lt;<span class="cls">OrderEvent</span>&gt; ringBuffer; <span class="cm">// LMAX Disruptor</span>
+    <span class="kw">private final</span> <span class="cls">TradePublisher</span>           publisher;
+    <span class="kw">private final</span> <span class="cls">CircuitBreakerMonitor</span>     circuitBreaker;
+    <span class="kw">private volatile boolean</span>               running = <span class="kw">true</span>;
+
+    <span class="ann">@Override</span>
+    <span class="kw">public void</span> <span class="fn2">run</span>() {
+        <span class="kw">long</span> nextSeq = ringBuffer.getCursor() + <span class="num">1</span>;
+
+        <span class="kw">while</span> (running) {
+            <span class="kw">long</span> available = ringBuffer.waitFor(nextSeq);
+
+            <span class="kw">while</span> (nextSeq <= available) {
+                <span class="cls">OrderEvent</span> event = ringBuffer.get(nextSeq);
+                <span class="fn2">processEvent</span>(event);
+                nextSeq++;
+            }
+            ringBuffer.publish(nextSeq - <span class="num">1</span>); <span class="cm">// advance consumer cursor</span>
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">processEvent</span>(<span class="cls">OrderEvent</span> event) {
+        <span class="kw">switch</span> (event.getType()) {
+            <span class="kw">case</span> NEW_ORDER -> <span class="fn2">processNewOrder</span>(event.getOrder());
+            <span class="kw">case</span> CANCEL   -> <span class="fn2">processCancelOrder</span>(event.getOrderId());
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">processNewOrder</span>(<span class="cls">Order</span> order) {
+        <span class="cm">// Circuit breaker check</span>
+        <span class="kw">if</span> (circuitBreaker.isHalted(order.getSymbol())) {
+            publisher.publishRejection(order, <span class="str">"CIRCUIT_BREAKER_HALT"</span>);
+            <span class="kw">return</span>;
+        }
+
+        <span class="cls">OrderBook</span> book = books.computeIfAbsent(order.getSymbol(),
+            sym -> <span class="kw">new</span> <span class="cls">OrderBook</span>(sym));
+
+        <span class="cls">List</span>&lt;<span class="cls">Trade</span>&gt; trades = book.addOrder(order);
+
+        <span class="cm">// Publish all generated trades (market data + audit log)</span>
+        <span class="kw">for</span> (<span class="cls">Trade</span> trade : trades) {
+            publisher.publishTrade(trade);
+            circuitBreaker.onTrade(trade); <span class="cm">// update for circuit breaker</span>
+        }
+
+        <span class="cm">// Publish order status update</span>
+        publisher.publishOrderUpdate(order);
+    }
+}
+
+<span class="cm">// ── 3. Circuit Breaker Monitor ────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">CircuitBreakerMonitor</span> {
+
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">CircuitState</span>&gt; states = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+    <span class="kw">private static final double</span> HALT_THRESHOLD   = <span class="num">0.10</span>; <span class="cm">// 10% move</span>
+    <span class="kw">private static final long</span>   WINDOW_NANOS     = <span class="num">5</span> * <span class="num">60</span> * <span class="num">1_000_000_000L</span>;
+    <span class="kw">private static final long</span>   HALT_DURATION_NS = <span class="num">5</span> * <span class="num">60</span> * <span class="num">1_000_000_000L</span>;
+
+    <span class="kw">public void</span> <span class="fn2">onTrade</span>(<span class="cls">Trade</span> trade) {
+        <span class="cls">CircuitState</span> state = states.computeIfAbsent(
+            trade.getSymbol(), s -> <span class="kw">new</span> <span class="cls">CircuitState</span>());
+
+        <span class="kw">if</span> (state.referencePrice == <span class="kw">null</span>) {
+            state.referencePrice = trade.getPrice();
+            state.windowStart    = trade.getTimestampNs();
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// Reset reference price every 5-minute window</span>
+        <span class="kw">if</span> (trade.getTimestampNs() - state.windowStart > WINDOW_NANOS) {
+            state.referencePrice = trade.getPrice();
+            state.windowStart    = trade.getTimestampNs();
+        }
+
+        <span class="cm">// Check percentage move from window open</span>
+        <span class="kw">double</span> move = trade.getPrice().subtract(state.referencePrice)
+            .abs().divide(state.referencePrice, <span class="num">4</span>, <span class="cls">RoundingMode</span>.HALF_UP)
+            .doubleValue();
+
+        <span class="kw">if</span> (move >= HALT_THRESHOLD && !state.isHalted) {
+            state.isHalted   = <span class="kw">true</span>;
+            state.haltedAt   = trade.getTimestampNs();
+            log.warn(<span class="str">"Circuit breaker triggered: {} moved {}%"</span>,
+                     trade.getSymbol(), move * <span class="num">100</span>);
+        }
+    }
+
+    <span class="kw">public boolean</span> <span class="fn2">isHalted</span>(<span class="cls">String</span> symbol) {
+        <span class="cls">CircuitState</span> state = states.get(symbol);
+        <span class="kw">if</span> (state == <span class="kw">null</span> || !state.isHalted) <span class="kw">return false</span>;
+        <span class="cm">// Auto-resume after HALT_DURATION_NS</span>
+        <span class="kw">if</span> (<span class="cls">System</span>.nanoTime() - state.haltedAt > HALT_DURATION_NS) {
+            state.isHalted = <span class="kw">false</span>;
+            <span class="kw">return false</span>;
+        }
+        <span class="kw">return true</span>;
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Stock Exchange — Matching Engine (Python)
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">from</span> sortedcontainers <span class="kw">import</span> SortedDict
+<span class="kw">from</span> collections <span class="kw">import</span> deque
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> decimal <span class="kw">import</span> Decimal
+<span class="kw">from</span> enum <span class="kw">import</span> Enum
+<span class="kw">from</span> typing <span class="kw">import</span> List, Dict, Optional
+<span class="kw">import</span> time
+
+
+<span class="kw">class</span> <span class="cls">Side</span>(<span class="cls">Enum</span>):
+    BUY  = <span class="str">"BUY"</span>
+    SELL = <span class="str">"SELL"</span>
+
+<span class="kw">class</span> <span class="cls">OrderType</span>(<span class="cls">Enum</span>):
+    MARKET = <span class="str">"MARKET"</span>
+    LIMIT  = <span class="str">"LIMIT"</span>
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Order</span>:
+    order_id:        int
+    client_order_id: str
+    symbol:          str
+    side:            <span class="cls">Side</span>
+    order_type:      <span class="cls">OrderType</span>
+    quantity:        int
+    price:           Optional[<span class="cls">Decimal</span>] = <span class="kw">None</span>
+    filled_qty:      int                  = <span class="num">0</span>
+    sequence_number: int                  = <span class="num">0</span>
+    timestamp_ns:    int                  = field(default_factory=time.time_ns)
+
+    <span class="kw">def</span> <span class="fn2">remaining_qty</span>(self) -> int:
+        <span class="kw">return</span> self.quantity - self.filled_qty
+
+    <span class="kw">def</span> <span class="fn2">is_fully_filled</span>(self) -> bool:
+        <span class="kw">return</span> self.filled_qty >= self.quantity
+
+    <span class="kw">def</span> <span class="fn2">fill</span>(self, qty: int):
+        self.filled_qty += qty
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Trade</span>:
+    buy_order_id:  int
+    sell_order_id: int
+    symbol:        str
+    price:         <span class="cls">Decimal</span>
+    quantity:      int
+    timestamp_ns:  int = field(default_factory=time.time_ns)
+
+
+<span class="cm"># ── Order Book (Price-Time Priority) ──────────────────</span>
+<span class="kw">class</span> <span class="cls">OrderBook</span>:
+    <span class="str">"""
+    Maintains bids and asks for one symbol.
+    Price-Time Priority: highest bid first, lowest ask first.
+    Within same price: FIFO (oldest order matched first).
+
+    Data structures:
+    - SortedDict for O(log N) price level operations
+    - deque at each price level for O(1) FIFO
+    - dict for O(1) cancel by order_id
+    """</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, symbol: str):
+        self.symbol = symbol
+        <span class="cm"># Bids: negate price so SortedDict gives highest-first ordering</span>
+        self.bids: Dict[Decimal, deque] = SortedDict(lambda p: -p)
+        <span class="cm"># Asks: natural ascending order (lowest ask first)</span>
+        self.asks: Dict[Decimal, deque] = SortedDict()
+        <span class="cm"># O(1) lookup for cancel</span>
+        self.order_index: Dict[int, <span class="cls">Order</span>] = {}
+
+    <span class="kw">def</span> <span class="fn2">add_order</span>(self, order: <span class="cls">Order</span>) -> List[<span class="cls">Trade</span>]:
+        trades = []
+        <span class="kw">if</span> order.side == <span class="cls">Side</span>.BUY:
+            self._match_buy(order, trades)
+        <span class="kw">else</span>:
+            self._match_sell(order, trades)
+
+        <span class="cm"># Remaining unmatched quantity → rest on book (limit orders only)</span>
+        <span class="kw">if not</span> order.is_fully_filled() <span class="kw">and</span> order.order_type == <span class="cls">OrderType</span>.LIMIT:
+            side = self.bids <span class="kw">if</span> order.side == <span class="cls">Side</span>.BUY <span class="kw">else</span> self.asks
+            <span class="kw">if</span> order.price <span class="kw">not in</span> side:
+                side[order.price] = deque()
+            side[order.price].append(order)  <span class="cm"># FIFO: append to back</span>
+            self.order_index[order.order_id] = order
+        <span class="kw">return</span> trades
+
+    <span class="kw">def</span> <span class="fn2">_match_buy</span>(self, buy: <span class="cls">Order</span>, trades: List[<span class="cls">Trade</span>]):
+        <span class="str">"""Match a buy order against resting asks (lowest price first)."""</span>
+        <span class="kw">while not</span> buy.is_fully_filled() <span class="kw">and</span> self.asks:
+            best_ask_price = next(iter(self.asks))  <span class="cm"># lowest ask</span>
+
+            <span class="cm"># Price check: for limit orders, ask must be ≤ buy limit</span>
+            <span class="kw">if</span> (buy.order_type == <span class="cls">OrderType</span>.LIMIT
+                    <span class="kw">and</span> best_ask_price > buy.price):
+                <span class="kw">break</span>
+
+            ask_queue = self.asks[best_ask_price]
+            sell_order = ask_queue[<span class="num">0</span>]  <span class="cm"># front of queue (FIFO)</span>
+
+            fill_qty = min(buy.remaining_qty(), sell_order.remaining_qty())
+            buy.fill(fill_qty)
+            sell_order.fill(fill_qty)
+
+            trades.append(<span class="cls">Trade</span>(
+                buy_order_id=buy.order_id,
+                sell_order_id=sell_order.order_id,
+                symbol=self.symbol,
+                price=best_ask_price,   <span class="cm"># maker price (resting order)</span>
+                quantity=fill_qty
+            ))
+
+            <span class="cm"># Clean up fully filled sell orders</span>
+            <span class="kw">if</span> sell_order.is_fully_filled():
+                ask_queue.popleft()
+                self.order_index.pop(sell_order.order_id, <span class="kw">None</span>)
+                <span class="kw">if not</span> ask_queue:
+                    <span class="kw">del</span> self.asks[best_ask_price]
+
+    <span class="kw">def</span> <span class="fn2">_match_sell</span>(self, sell: <span class="cls">Order</span>, trades: List[<span class="cls">Trade</span>]):
+        <span class="str">"""Match a sell order against resting bids (highest price first)."""</span>
+        <span class="kw">while not</span> sell.is_fully_filled() <span class="kw">and</span> self.bids:
+            best_bid_price = next(iter(self.bids))  <span class="cm"># highest bid (SortedDict negated)</span>
+
+            <span class="kw">if</span> (sell.order_type == <span class="cls">OrderType</span>.LIMIT
+                    <span class="kw">and</span> best_bid_price < sell.price):
+                <span class="kw">break</span>
+
+            bid_queue = self.bids[best_bid_price]
+            buy_order = bid_queue[<span class="num">0</span>]
+
+            fill_qty = min(sell.remaining_qty(), buy_order.remaining_qty())
+            sell.fill(fill_qty)
+            buy_order.fill(fill_qty)
+
+            trades.append(<span class="cls">Trade</span>(
+                buy_order_id=buy_order.order_id,
+                sell_order_id=sell.order_id,
+                symbol=self.symbol,
+                price=best_bid_price,
+                quantity=fill_qty
+            ))
+
+            <span class="kw">if</span> buy_order.is_fully_filled():
+                bid_queue.popleft()
+                self.order_index.pop(buy_order.order_id, <span class="kw">None</span>)
+                <span class="kw">if not</span> bid_queue:
+                    <span class="kw">del</span> self.bids[best_bid_price]
+
+    <span class="kw">def</span> <span class="fn2">cancel_order</span>(self, order_id: int) -> bool:
+        order = self.order_index.pop(order_id, <span class="kw">None</span>)
+        <span class="kw">if not</span> order:
+            <span class="kw">return False</span>  <span class="cm"># already filled or not found</span>
+
+        side = self.bids <span class="kw">if</span> order.side == <span class="cls">Side</span>.BUY <span class="kw">else</span> self.asks
+        queue = side.get(order.price)
+        <span class="kw">if</span> queue:
+            <span class="kw">try</span>:
+                queue.remove(order)  <span class="cm"># O(N) but queue is tiny</span>
+            <span class="kw">except ValueError</span>:
+                <span class="kw">pass</span>
+            <span class="kw">if not</span> queue:
+                <span class="kw">del</span> side[order.price]
+        <span class="kw">return True</span>
+
+    <span class="kw">def</span> <span class="fn2">best_bid</span>(self) -> Optional[<span class="cls">Decimal</span>]:
+        <span class="kw">return</span> next(iter(self.bids), <span class="kw">None</span>) <span class="kw">if</span> self.bids <span class="kw">else None</span>
+
+    <span class="kw">def</span> <span class="fn2">best_ask</span>(self) -> Optional[<span class="cls">Decimal</span>]:
+        <span class="kw">return</span> next(iter(self.asks), <span class="kw">None</span>) <span class="kw">if</span> self.asks <span class="kw">else None</span>
+
+    <span class="kw">def</span> <span class="fn2">spread</span>(self) -> Optional[<span class="cls">Decimal</span>]:
+        b, a = self.best_bid(), self.best_ask()
+        <span class="kw">return</span> (a - b) <span class="kw">if</span> b <span class="kw">and</span> a <span class="kw">else None</span>
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRADEOFFS ══ -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Design Tradeoffs</div>
+    <div class="sec-body"><div class="warn-box"><strong>Stock exchanges make explicit tradeoffs between latency, correctness, and availability.</strong> Unlike most web systems, correctness is more important than availability — it's better to halt trading than to produce incorrect trades.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">⚙️ Matching Engine: Single-Threaded vs Multi-Threaded vs Distributed</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Single-Threaded per Symbol Group</div><p>No locking overhead. Cache-friendly (all data in L3 cache). Deterministic — same input always produces same output (essential for audit and replay). LMAX Exchange achieved 6M orders/sec on a single core. Multiple matching engines (one per symbol group) give horizontal scaling.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Multi-Threaded (shared order book)</div><p>Requires locks or CAS for order book operations. Lock contention at high throughput is catastrophically slow — worse than single-threaded. Non-deterministic — impossible to reconstruct state from WAL if thread scheduling affects outcomes. Never used in production matching engines.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ Distributed Matching Engine</div><p>Partition order book across nodes. But: matching requires atomic access to the entire book for a symbol — you can't split one symbol's book. Distributed works at the symbol partition level (different nodes handle different symbols), not within a symbol. NASDAQ uses per-symbol matching engine threads.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📝 Durability: Synchronous WAL vs Async WAL vs No Persistence</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Synchronous WAL (fsync before ACK)</div><p>Order acknowledged only after written to WAL. On crash, replay WAL to reconstruct state. Zero data loss. This is the standard for real exchanges — regulatory requirement to have immutable audit trail. NVMe SSD fsync latency: ~100µs, acceptable.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Async WAL (batch fsync every 1ms)</div><p>Acknowledgment before fsync. Sub-microsecond ACK latency. But: on crash, lose last ~1ms of orders. Acceptable for some HFT systems with guaranteed retransmission from brokers. Tradeoff: lower latency, small data loss window.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ In-memory only</div><p>Zero I/O overhead. But: any crash loses all outstanding orders — unacceptable for a regulated exchange. Regulatory requirement (SEC, FINRA) is to maintain a complete audit trail with nanosecond timestamps. In-memory only violates this.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📡 Market Data: UDP Multicast vs TCP Unicast vs Kafka</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ UDP Multicast (Level 1)</div><p>Single packet to multicast group, network hardware delivers to all subscribers. 1M subscribers at essentially zero marginal cost. Sub-millisecond latency. Unreliable — handles gaps with sequence numbers + retransmission from replay server. NYSE, NASDAQ use this.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ TCP Unicast (Level 2 premium)</div><p>Reliable delivery guaranteed by TCP. Used for full order book depth (higher bandwidth). Suitable for hundreds/thousands of premium subscribers. Higher latency than UDP multicast. Cannot scale to millions of subscribers.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ Kafka (delayed data)</div><p>Great for analytics, backtesting, downstream processing. But adds ~1ms+ latency. Not suitable for live trading where milliseconds matter. Use Kafka for persisting market data for historical queries, not for real-time trading feeds.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔢 Sequencer HA: Hot Standby vs Raft vs Accept Downtime</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Hot Standby + Deterministic Failover</div><p>Primary sequences all orders; standby receives all orders in parallel but doesn't publish. On primary failure, standby takes over at next sequence number. Failover: ~100ms. Zero added latency in normal operation. Most real exchanges use this.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Raft Consensus</div><p>3-node Raft cluster. All writes confirmed by majority before acknowledgment. Strong consistency guarantee. But: +1-2ms latency for every order (Raft round trip). At 500K orders/sec, this extra latency significantly impacts HFT firms who co-locate at the exchange.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Accept Planned Downtime</div><p>Exchanges operate during defined market hours. Brief maintenance windows (10-30s) during low-traffic periods are acceptable. NYSE opens at 9:30am ET — the 2 minutes before open can be used for failover/restart. Not all downtime scenarios are equal.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #8 — Distributed Cache (Redis)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;
+  --accent:#f43f5e;--a2:#fb7185;--a3:#10b981;--a4:#f59e0b;--a5:#38bdf8;--a6:#a78bfa;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#fda4af;--code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#130a0d 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;
+  background:radial-gradient(circle,rgba(244,63,94,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(244,63,94,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#fda4af 0%,#f43f5e 50%,#be123c 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(244,63,94,.07);color:#fda4af;border:1px solid rgba(244,63,94,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 10px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(244,63,94,.1);color:var(--ecolor);border:1.5px solid rgba(244,63,94,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(244,63,94,.08);color:var(--accent);border:1px solid rgba(244,63,94,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--a4)}
+.info-box{background:rgba(244,63,94,.05);border:1px solid rgba(244,63,94,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fda4af;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-box{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(244,63,94,.1);color:var(--accent);border:1.5px solid rgba(244,63,94,.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}.math-block .result{color:#f43f5e;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(244,63,94,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(244,63,94,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+/* Eviction policy cards */
+.evict-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:14px 0}
+.evict-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.evict-name{background:rgba(244,63,94,.1);padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.evict-body{padding:10px 14px;font-size:12px;color:#94a3b8;line-height:1.6}
+.evict-body strong{color:#e2e8f0}
+/* Consistent hashing ring */
+.ring-caption{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);text-align:center;margin-top:8px}
+/* API endpoint styling */
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-del{background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:160px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.class-grid{grid-template-columns:1fr}}
+.cb{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cb-name{background:rgba(244,63,94,.08);padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.cb-fields{padding:12px 18px;border-bottom:1px solid var(--border)}.cb-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .cft{color:#a78bfa}.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>08 / Distributed Cache</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">⚡</div>
+    <div>
+      <div class="h-title">Distributed Cache (Redis)</div>
+      <div class="h-desc">Design a distributed caching system from scratch — consistent hashing, virtual nodes, rebalancing on node add/remove, replication, eviction policies, cache stampede prevention, and all the failure modes that kill production systems.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Consistent Hashing</span>
+        <span class="badge b-tag">Virtual Nodes</span>
+        <span class="badge b-tag">LRU/LFU Eviction</span>
+        <span class="badge b-tag">Cache Stampede</span>
+        <span class="badge b-tag">Replication</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('hashing',this)">🔄 Consistent Hashing</button>
+  <button class="nbtn" onclick="show('eviction',this)">🗑 Eviction Policies</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══ REQUIREMENTS ══ -->
+<div id="req" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🎯 Clarify Scope</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Distributed cache is asked in two ways:</strong> (1) "Design a cache" — deep dive into consistent hashing, eviction, replication. (2) "How would you add caching to system X?" — cache invalidation strategies, write-through vs read-through. Know both deeply.</div><br>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Design the cache from scratch, or integrate into an existing system?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>What data types — key/value strings, or richer types (lists, sets, hashes)?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How many nodes? What's the scale (ops/sec, data size)?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Do we need replication for high availability?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Eviction policy — LRU, LFU, TTL-based?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Is this a cache (tolerates loss) or a store (must persist)?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Design from scratch — understand internals deeply</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Key/value strings (like Memcached/Redis GET/SET)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>10 nodes, 10M ops/sec, 100 GB total cache size</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — 1 primary + 1 replica per shard (HA)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>LRU with TTL support</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Cache (can lose data on node failure — rebuild from source)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">✅ Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:12px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE OPERATIONS</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>GET(key) → value | null</strong>: Return cached value or null (cache miss). O(1). Should not block.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>SET(key, value, ttl)</strong>: Store key-value pair with optional TTL. O(1). Overwrite if exists.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>DELETE(key)</strong>: Remove a key. O(1). No-op if not found.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>TTL/EXPIRE</strong>: Keys auto-expire after specified duration. Expired keys return null.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SYSTEM BEHAVIORS</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Consistent Hashing:</strong> Keys distributed across nodes using consistent hashing. Adding/removing a node only remaps ~1/N keys (minimal disruption).</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Eviction:</strong> When a node is full, evict keys using the configured policy (LRU, LFU, etc.) to make room for new entries.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Replication:</strong> Each shard has 1 primary (writes) + 1 replica (reads + failover). Replica promoted on primary failure.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Hot key handling:</strong> A single popular key doesn't overwhelm one node. Detect and distribute hot keys.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">PERFORMANCE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>GET/SET latency: <strong>p99 &lt; 1ms</strong></div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Throughput: 10M ops/sec across cluster</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Cache hit rate target: &gt;90%</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SCALABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Horizontally scalable: add nodes without restart</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Adding a node remaps only ~1/N keys, not all keys</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Linear throughput scaling with node count</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">RELIABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Node failure: replica promotes, no data loss for replicated keys</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Cache loss on total failure: rebuild from source DB (acceptable — it's a cache)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>No cascading failures (cache stampede protection)</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a6);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CONSISTENCY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Eventually consistent: replica may lag primary by ~ms</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Stale reads acceptable (cache semantics)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Atomic operations: INCR, SETNX for specific use cases</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Q&A ══ -->
+<div id="qa" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🎙 Phase 1 — Why Consistent Hashing?</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · MOTIVATION</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design a distributed cache. Let's start with how you distribute keys across nodes.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The naive approach: hash the key, take modulo N nodes:<br>
+        <code>node = hash(key) % N</code><br><br>
+        This works. But the moment you add or remove a node, N changes. <em>Every single key remaps to a different node</em>. If you have 10M cached keys and add an 11th node, all 10M cache entries become invalid simultaneously — a thundering herd of 10M DB queries. Your database gets destroyed.<br><br>
+        This is why <b>consistent hashing</b> exists. With consistent hashing, adding/removing a node only remaps approximately <em>1/N</em> of the keys instead of all keys. Adding the 11th node to a 10-node cluster only remaps ~10% of keys — the rest stay valid.<br><br>
+        The key insight: instead of mapping keys to nodes, we map both keys and nodes to a <em>circular hash ring</em> (0 to 2³²-1). A key is served by the first node encountered going clockwise from the key's position on the ring.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>If adding a node only remaps 1/N keys, what happens to those 1/N cache entries that move to the new node?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Those cache entries are <b>cache misses</b> — the client looks up the key, hits the new node, and finds nothing there. It then fetches from the origin database, stores in the new node, and future requests hit the cache normally.<br><br>
+        The disruption is bounded and temporary. If you have a 10-node cluster and add a node, ~10% of keys miss once. That's a 10% increase in DB load for a short period — completely manageable. Compare to modulo hashing where 100% of keys miss simultaneously.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🎯 Phase 2 — Virtual Nodes (The Critical Enhancement)</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · VIRTUAL NODES</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Basic consistent hashing has a problem — key distribution is uneven. How do you fix that?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        With N nodes placed on the ring, each node occupies a random arc. Some nodes might occupy 30% of the ring, others only 5%. The more popular arcs get more requests — <em>hotspot nodes</em> that are overloaded while others are idle.<br><br>
+        <b>Virtual Nodes</b> (vnodes) fix this. Instead of placing each physical node once on the ring, we place it <em>K times</em> (K virtual nodes per physical node). For example, with 10 nodes × 100 virtual nodes = 1,000 points on the ring.<br><br>
+        Why this works: with 1,000 points uniformly distributed (via different hash seeds), each physical node's total arc coverage converges toward 10% of the ring — even distribution by the law of large numbers. No single physical node gets disproportionately more keys.<br><br>
+        <b>Benefits beyond even distribution:</b><br>
+        <ul>
+          <li><b>Graceful node loss:</b> If a node dies, its K virtual nodes are distributed across all other nodes rather than all going to one neighbor — spreading the load</li>
+          <li><b>Heterogeneous clusters:</b> A larger node can have more virtual nodes (proportional to its capacity), naturally receiving more traffic</li>
+          <li>K = 100–150 virtual nodes per physical node is typical in production (Cassandra uses 256)</li>
+        </ul>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔥 Phase 3 — Cache Stampede & Hot Keys</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · FAILURE MODES</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What's a cache stampede and how do you prevent it?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        A <b>cache stampede</b> (also called thundering herd) happens when a popular cache entry expires simultaneously, and many concurrent requests all see a cache miss at the same time. All of them query the database simultaneously — potentially thousands of queries for the same key, crushing the DB.<br><br>
+        <b>Example:</b> A product page for the iPhone 16 is cached with TTL 60 minutes. At 11am, the TTL expires. In the next 50 milliseconds, 10,000 users request that page — all see cache miss, all hit the DB.<br><br>
+        <b>Prevention strategies:</b><br>
+        <ol>
+          <li><b>Mutex/Lock (Cache aside with lock):</b> First request to detect miss acquires a Redis distributed lock (<code>SET NX</code>). While lock is held, other requests for the same key return stale value or wait. Lock holder fetches from DB, updates cache, releases lock. Only 1 DB query instead of 10,000.</li>
+          <li><b>Probabilistic Early Expiration (PER):</b> Each request probabilistically decides to refresh the cache <em>before</em> it expires, using the formula: refresh if <code>now + β × log(random()) &gt; expiry</code>. More likely to refresh as TTL approaches. Smooths the refresh over time instead of a spike.</li>
+          <li><b>Stale-while-revalidate:</b> Serve the stale value immediately (cache hit), then asynchronously refresh in the background. Zero-latency response, no DB spike. The 1-2s staleness is usually acceptable.</li>
+          <li><b>Jitter on TTL:</b> Instead of <code>TTL = 3600</code>, use <code>TTL = 3600 + random(0, 300)</code>. Prevents mass expiration of entries set at the same time.</li>
+        </ol>
+        I'd use <b>stale-while-revalidate + TTL jitter</b> for most cases. Add distributed lock for situations where stale data is truly unacceptable.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What about hot keys — a single key receiving millions of requests per second?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Hot keys are a fundamental problem in consistent hashing — all requests for a key always go to the same node. If one key gets 1M requests/sec and the node handles 100K, it's overwhelmed regardless of how many other nodes you have.<br><br>
+        <b>Three solutions:</b><br>
+        <b>1. Client-side hot key replication:</b> Detect hot keys (threshold: >10K req/sec). Store N copies of the hot key: <code>hot_key_0</code>, <code>hot_key_1</code>, ..., <code>hot_key_N-1</code>. Client reads from a random copy: <code>hot_key_{random(0, N)}</code>. Writes go to all N copies. Spreads read load across N nodes.<br><br>
+        <b>2. Local in-process (L1) cache:</b> Each application server maintains a tiny in-memory cache (e.g., Caffeine, ~10K entries). Hot keys stay in L1 for 1–5 seconds. The distributed cache (L2) only sees cache misses. Effectively 0 network calls for the hottest keys.<br><br>
+        <b>3. CDN for truly viral content:</b> If a key is public and cacheable (e.g., a viral video's metadata), put it in a CDN. CDN edge nodes absorb the traffic before it even reaches your caching layer.
+      </div></div>
+      <div class="tip-box"><strong>💡 Hot keys + cache stampede</strong> are the two most-tested cache failure modes in FAANG interviews. Be able to explain both from first principles and give multiple prevention strategies for each.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔄 Phase 4 — Cache Invalidation Strategies</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · INVALIDATION</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you keep the cache consistent with the database? Walk through the main strategies.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Cache invalidation is famously one of the hardest problems in computer science. There are four main patterns, each with distinct tradeoffs:<br><br>
+        <b>1. Cache Aside (Lazy Loading)</b><br>
+        Application code: On read miss → fetch from DB → store in cache. On write → write to DB first, then DELETE cache entry.<br>
+        <em>Pro:</em> Cache only contains data that's actually been requested. Works with any DB. Simple.<br>
+        <em>Con:</em> First read after write is always a miss. Race condition: two writes can leave stale data if interleaved.<br><br>
+        <b>2. Write Through</b><br>
+        On every write → write to cache AND DB simultaneously (synchronous). No cache-behind lag.<br>
+        <em>Pro:</em> Cache is always up-to-date. No stale reads.<br>
+        <em>Con:</em> Write latency = DB latency + cache latency. Cache fills with data that may never be read.<br><br>
+        <b>3. Write Behind (Write Back)</b><br>
+        Write to cache immediately, return success. Asynchronously flush to DB in batches.<br>
+        <em>Pro:</em> Extremely fast writes (in-memory speed). Great for write-heavy workloads.<br>
+        <em>Con:</em> Data loss risk if cache node crashes before DB flush. Complex to implement safely.<br><br>
+        <b>4. Refresh Ahead</b><br>
+        Background process predicts which keys will expire soon and pre-fetches them. Cache always warm.<br>
+        <em>Pro:</em> No cache misses for predicted-popular keys. Low read latency.<br>
+        <em>Con:</em> Requires prediction logic. May refresh data nobody ends up requesting.<br><br>
+        <b>My recommendation:</b> Cache Aside for most read-heavy workloads. Write Through for critical data (user sessions, payment state). Write Behind for metrics/counters where DB write throughput matters.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔁 Phase 5 — Replication & Failure Handling</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · REPLICATION</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does Redis replication and failover work?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Redis uses <b>asynchronous primary-replica replication</b>:<br>
+        <ol>
+          <li>Primary accepts all writes. After writing to its own memory, it <em>asynchronously</em> streams the write commands to replicas via a replication backlog buffer.</li>
+          <li>Replicas apply the commands and stay in sync (typically &lt;1ms lag).</li>
+          <li>Reads can be served from replicas (read scaling) or primary only (stronger consistency).</li>
+        </ol>
+        <b>Failover with Redis Sentinel:</b><br>
+        Redis Sentinel is a distributed monitoring system that runs alongside Redis:<br>
+        <ol>
+          <li>Multiple Sentinel processes monitor the primary. If primary doesn't respond for &gt;30s, Sentinel consensus (quorum) declares it down.</li>
+          <li>Sentinel promotes the replica with the most up-to-date replication offset as the new primary.</li>
+          <li>Other replicas and application clients are notified of the new primary address.</li>
+          <li>Application clients using the Sentinel-aware client library reconnect automatically.</li>
+        </ol>
+        <b>Redis Cluster (alternative):</b> Built-in sharding + replication. 16,384 hash slots distributed across nodes. Each master has at least one replica. No separate Sentinel needed. The standard for production Redis at scale.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONSISTENT HASHING ══ -->
+<div id="hashing" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🔄 Consistent Hashing — Deep Dive</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Consistent hashing is frequently asked standalone</strong> — "Implement consistent hashing in Java/Python." Know the algorithm by heart.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📐 The Hash Ring</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:400px">
+          <!-- Ring -->
+          <circle cx="300" cy="200" r="150" fill="none" stroke="#1e2d45" stroke-width="3"/>
+
+          <!-- Node A -->
+          <circle cx="300" cy="50" r="18" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="300" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#f43f5e">A</text>
+          <text x="300" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">hash=0°</text>
+
+          <!-- Node B -->
+          <circle cx="490" cy="255" r="18" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+          <text x="490" y="260" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#10b981">B</text>
+          <text x="510" y="255" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">120°</text>
+
+          <!-- Node C -->
+          <circle cx="110" cy="255" r="18" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+          <text x="110" y="260" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#38bdf8">C</text>
+          <text x="78" y="255" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">240°</text>
+
+          <!-- Key k1 -->
+          <circle cx="385" cy="72" r="10" fill="rgba(245,158,11,.2)" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="385" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">k1</text>
+          <text x="400" y="65" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Node B</text>
+
+          <!-- Key k2 -->
+          <circle cx="215" cy="72" r="10" fill="rgba(245,158,11,.2)" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="215" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">k2</text>
+          <text x="180" y="65" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Node A</text>
+
+          <!-- Key k3 -->
+          <circle cx="450" cy="170" r="10" fill="rgba(245,158,11,.2)" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="450" y="174" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">k3</text>
+          <text x="465" y="162" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Node B</text>
+
+          <!-- Arrows (clockwise) -->
+          <path d="M 395 73 Q 450 70 476 250" fill="none" stroke="rgba(245,158,11,.3)" stroke-width="1" stroke-dasharray="3,3"/>
+
+          <!-- Direction arrow on ring -->
+          <text x="430" y="118" font-family="JetBrains Mono" font-size="10" fill="#334155">↻</text>
+          <text x="300" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">clockwise →</text>
+          <text x="300" y="222" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">next node</text>
+
+          <!-- Title -->
+          <text x="300" y="390" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6b7fa0">3 nodes → each owns ~⅓ of ring. k1 → clockwise → Node B</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📌 Virtual Nodes — Load Balancing</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:300px">
+          <!-- Without vnodes (uneven) -->
+          <rect x="30" y="20" width="280" height="260" rx="10" fill="rgba(244,63,94,.03)" stroke="rgba(244,63,94,.15)" stroke-width="1"/>
+          <text x="170" y="38" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f43f5e">WITHOUT Virtual Nodes</text>
+          <circle cx="170" cy="160" r="100" fill="none" stroke="#1e2d45" stroke-width="2"/>
+          <!-- Node A takes 50% -->
+          <path d="M 170 60 A 100 100 0 1 1 170.001 60 Z" fill="rgba(244,63,94,.2)" stroke="#f43f5e" stroke-width="2"/>
+          <path d="M 170 60 A 100 100 0 0 1 270 160" fill="rgba(244,63,94,.2)" stroke="#f43f5e" stroke-width="2"/>
+          <circle cx="170" cy="60" r="8" fill="#f43f5e"/><text x="182" y="50" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">A(50%)</text>
+          <!-- Node B takes 30% -->
+          <circle cx="270" cy="160" r="8" fill="#10b981"/><text x="280" y="165" font-family="JetBrains Mono" font-size="8" fill="#10b981">B(30%)</text>
+          <!-- Node C takes 20% -->
+          <circle cx="130" cy="247" r="8" fill="#38bdf8"/><text x="90" y="242" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">C(20%)</text>
+          <text x="170" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">⚠ Uneven load! A overwhelmed</text>
+
+          <!-- With vnodes (even) -->
+          <rect x="390" y="20" width="280" height="260" rx="10" fill="rgba(16,185,129,.03)" stroke="rgba(16,185,129,.15)" stroke-width="1"/>
+          <text x="530" y="38" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#10b981">WITH Virtual Nodes (100 each)</text>
+          <circle cx="530" cy="160" r="100" fill="none" stroke="#1e2d45" stroke-width="2"/>
+          <!-- Alternating colored segments (simplified) -->
+          <path d="M 530 60 A 100 100 0 0 1 596 193" fill="rgba(244,63,94,.25)" stroke="#f43f5e" stroke-width="2"/>
+          <path d="M 596 193 A 100 100 0 0 1 530 260" fill="rgba(16,185,129,.25)" stroke="#10b981" stroke-width="2"/>
+          <path d="M 530 260 A 100 100 0 0 1 430 160" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2"/>
+          <path d="M 430 160 A 100 100 0 0 1 530 60" fill="rgba(167,139,250,.2)" stroke="#a78bfa" stroke-width="2"/>
+          <text x="565" y="95" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">A ~33%</text>
+          <text x="560" y="235" font-family="JetBrains Mono" font-size="8" fill="#10b981">B ~33%</text>
+          <text x="440" y="200" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">C ~33%</text>
+          <text x="530" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">✅ Even load — ~33% each</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Add/Remove Node — What Gets Remapped</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fda4af">➕ ADDING A NODE (Node D)</div>
+          <div class="fs"><div class="fnum">1</div><div>Node D's virtual nodes are placed on the ring at computed positions</div></div>
+          <div class="fs"><div class="fnum">2</div><div>For each of D's positions on the ring, the keys that previously mapped to the <em>next</em> clockwise node now map to D</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Only the keys in D's new segments get remapped — ~K/ring_size fraction = ~1/N keys total</div></div>
+          <div class="fs"><div class="fnum">4</div><div>These keys are cache misses on first access → fetched from DB → stored on D</div></div>
+          <div class="fs"><div class="fnum">5</div><div>All other keys are unaffected — no disruption</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">➖ REMOVING A NODE (Node B fails)</div>
+          <div class="fs"><div class="fnum">1</div><div>B's virtual nodes are removed from the ring</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Keys that were on B's segments now map to the next node clockwise from each of B's positions</div></div>
+          <div class="fs"><div class="fnum">3</div><div>With 100 virtual nodes, B's keys scatter to ~many different nodes (not all to one neighbor)</div></div>
+          <div class="fs"><div class="fnum">4</div><div>These keys are cache misses initially — refilled from DB over time</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Load distributes evenly across remaining nodes (virtual node benefit)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EVICTION POLICIES ══ -->
+<div id="eviction" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🗑 Eviction Policies — When the Cache is Full</div>
+    <div class="sec-body">
+      <div class="warn-box"><strong>Know all 8 Redis eviction policies by name.</strong> Interviewers ask "which would you use for a session cache vs a product catalog cache vs a leaderboard?"</div><br>
+      <div class="evict-grid">
+        <div class="evict-card">
+          <div class="evict-name">noeviction</div>
+          <div class="evict-body"><strong>Never evict.</strong> Return error when full. Use only when cache is also the source of truth (not typical).</div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">allkeys-lru</div>
+          <div class="evict-body"><strong>LRU across all keys.</strong> Evict the least recently accessed key. <em>Best for general caches where recency predicts future access.</em></div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">allkeys-lfu</div>
+          <div class="evict-body"><strong>LFU across all keys.</strong> Evict the least frequently accessed. Better than LRU for skewed access patterns (popular items stay longer).</div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">volatile-lru</div>
+          <div class="evict-body"><strong>LRU only among keys with TTL.</strong> Never evicts keys without TTL. Use when some keys are critical and must never be evicted.</div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">volatile-lfu</div>
+          <div class="evict-body"><strong>LFU only among keys with TTL.</strong> LFU variant of volatile-lru.</div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">volatile-ttl</div>
+          <div class="evict-body"><strong>Evict soonest-to-expire keys first.</strong> When full, removes keys with the shortest remaining TTL. Useful when you want maximum fresh data.</div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">volatile-random</div>
+          <div class="evict-body"><strong>Random eviction among TTL keys.</strong> Low overhead. Use when access pattern is uniform (no hot keys).</div>
+        </div>
+        <div class="evict-card">
+          <div class="evict-name">allkeys-random</div>
+          <div class="evict-body"><strong>Fully random eviction.</strong> Lowest overhead, no access tracking. Only useful for truly random access patterns.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🎯 Which Policy for Which Use Case</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Use Case</th><th>Recommended Policy</th><th>Why</th></tr>
+        <tr><td>General-purpose cache (product catalog, user profiles)</td><td class="ans">allkeys-lru</td><td>Recency predicts future use well. Simple, effective.</td></tr>
+        <tr><td>Viral content (videos, tweets with skewed popularity)</td><td class="ans">allkeys-lfu</td><td>Popular items stay in cache longer. LRU evicts them after a single access gap.</td></tr>
+        <tr><td>Session cache (user auth tokens)</td><td class="ans">volatile-lru or volatile-ttl</td><td>Sessions have TTLs. Volatile policies respect explicit expiry, never evict permanent keys.</td></tr>
+        <tr><td>Rate limiting counters</td><td class="ans">noeviction</td><td>Counters must not be silently dropped. Pre-size the cache appropriately.</td></tr>
+        <tr><td>Leaderboard / sorted scores</td><td class="ans">allkeys-lru</td><td>Always accessed, always recent. LRU keeps the data you need.</td></tr>
+        <tr><td>Pre-computed reports (batch results)</td><td class="ans">volatile-ttl</td><td>Reports have natural expiry. Evict soon-to-expire reports first — they're least valuable.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚙️ LRU Implementation — O(1) GET and O(1) SET</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Classic interview question:</strong> "Implement an LRU cache in O(1) time for both GET and SET." The key insight: HashMap + Doubly Linked List.</div>
+      <br>
+      <div class="two-col">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Data Structures</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;line-height:2">
+            <div style="color:#fcd34d;margin-bottom:8px">HashMap&lt;key, DListNode&gt;</div>
+            <div>→ O(1) lookup: given key, find node in list</div><br>
+            <div style="color:#fcd34d;margin-bottom:8px">Doubly Linked List (DLL)</div>
+            <div>→ Most recently used = head</div>
+            <div>→ Least recently used = tail</div>
+            <div>→ O(1) move to front (with pointer to node)</div>
+            <div>→ O(1) remove from tail (eviction)</div>
+          </div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Operations</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;line-height:2">
+            <div style="color:#6ee7b7;margin-bottom:6px">GET(key):</div>
+            <div>1. Lookup node in HashMap → O(1)</div>
+            <div>2. Move node to head of DLL → O(1)</div>
+            <div>3. Return value</div><br>
+            <div style="color:#6ee7b7;margin-bottom:6px">SET(key, value):</div>
+            <div>1. If exists: update + move to head</div>
+            <div>2. If new: create node, add to head</div>
+            <div>3. If full: remove tail node (LRU victim), delete from HashMap</div>
+            <div style="color:#f43f5e">→ Both GET and SET: O(1)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPACITY ══ -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Key question: how much RAM do you need?</strong> Most cache sizing questions are about memory, not compute.</div></div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">1</div><div><div class="step-title">Memory Sizing</div><div class="step-sub">How much RAM per node?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Total cache size: 100 GB. Distributed across 10 nodes.</span>
+
+<span class="label">Memory per node (raw data):</span>
+  <span class="label">100 GB ÷ 10 nodes               = </span><span class="val">10 GB per node</span>
+
+<span class="label">Redis overhead per key (metadata + dict structure):</span>
+  <span class="label">~55-90 bytes overhead per key (dict entry, TTL, LRU clock)</span>
+  <span class="label">For a 100-byte value, total Redis memory per key = </span><span class="val">~160 bytes</span>
+  <span class="label">Memory multiplier                = </span><span class="val">~1.5-2×</span>  <span class="label">vs raw data</span>
+
+<span class="label">Actual Redis node memory needed:</span>
+  <span class="label">10 GB × 2 overhead               = </span><span class="val">20 GB RAM per node</span>  <span class="label">(to hold 10 GB of data)</span>
+
+<span class="label">AWS r6g.xlarge (32 GB RAM): comfortable for 10 GB data + 20 GB overhead</span>
+<span class="label">With 1 replica per node: 20 nodes total (10 primary + 10 replica)</span>
+  <span class="result">→ 20 × 32 GB RAM nodes = 640 GB RAM total for 100 GB of cached data</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">2</div><div><div class="step-title">Throughput — Ops/Sec Per Node</div><div class="step-sub">How many operations can each node handle?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Total throughput needed: 10M ops/sec across cluster</span>
+
+<span class="label">Redis throughput per node (single-threaded command processing):</span>
+  <span class="label">Simple GET/SET (pipelined)        ≈ </span><span class="val">1M ops/sec</span>  <span class="label">per node</span>
+  <span class="label">With Lua scripts or complex ops   ≈ </span><span class="val">100-500K ops/sec</span>
+
+<span class="label">Nodes needed for throughput:</span>
+  <span class="label">10M ÷ 1M per node                = </span><span class="val">10 nodes</span>  <span class="label">(matches our 10-node design)</span>
+
+<span class="label">With replicas handling reads (assuming 80% reads):</span>
+  <span class="label">Read ops: 8M/sec → 4M/sec primary + 4M/sec replica</span>
+  <span class="label">Write ops: 2M/sec → primary only</span>
+  <span class="label">Effective throughput per primary: 4M+2M=6M ÷ 10 = 600K/node → comfortable</span>
+  <span class="result">→ 10 nodes, each handling 600K ops/sec → well within 1M limit</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">3</div><div><div class="step-title">Network Bandwidth</div><div class="step-sub">How much network traffic does the cache generate?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Average value size: 1 KB (product data, session tokens, etc.)</span>
+<span class="label">Average key size: 50 bytes</span>
+
+<span class="label">Inbound to cache (writes + reads):</span>
+  <span class="label">10M ops/sec × avg (50B key + 1KB value) / 2 (avg read+write):</span>
+  <span class="label">10M × 550B                       = </span><span class="val">5.5 GB/s</span>  <span class="label">total cluster</span>
+  <span class="label">Per node: 5.5 GB/s ÷ 10          = </span><span class="val">550 MB/s</span>  <span class="label">per node</span>
+
+<span class="label">With 10 Gbps NIC per node (1.25 GB/s capacity):</span>
+  <span class="label">550 MB/s vs 1,250 MB/s capacity   = </span><span class="val">44% utilisation</span>  <span class="label">comfortable</span>
+
+<span class="label">Replication bandwidth (async writes to replica):</span>
+  <span class="label">2M writes/sec × 1050B             = </span><span class="val">2.1 GB/s</span>  <span class="label">additional to replica nodes</span>
+  <span class="result">→ 10 Gbps NIC per node is sufficient</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Cache cluster nodes</td><td class="hi">10 primary + 10 replica</td><td>1 replica per shard</td></tr>
+        <tr><td>RAM per node</td><td class="hi">32 GB</td><td>~10 GB data + 2× overhead</td></tr>
+        <tr><td>Total RAM</td><td class="hi">640 GB</td><td>For 100 GB of cached data</td></tr>
+        <tr><td>Throughput per node</td><td class="hi">~600K ops/sec</td><td>Well under 1M limit</td></tr>
+        <tr><td>Total cluster throughput</td><td class="hi">10M ops/sec</td><td>Linearly scales with nodes</td></tr>
+        <tr><td>Network per node</td><td class="hi">~550 MB/s</td><td>44% of 10 Gbps NIC</td></tr>
+        <tr><td>Virtual nodes per physical</td><td class="hi">100-150</td><td>Even distribution</td></tr>
+        <tr><td>Keys per cluster (avg 1KB values)</td><td class="hi">~100M keys</td><td>100 GB ÷ 1 KB</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ API ══ -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 Cache Client API</div>
+    <div class="sec-body"><div class="info-box"><strong>The cache API is simple — GET, SET, DELETE, TTL.</strong> The complexity is in the client library: consistent hashing, connection pooling, retry with backoff, hot key detection.</div></div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">cache.get(key) → value | null</span><span class="api-desc">Read-through with stampede protection</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Parameters</div>
+        <div class="frow"><span class="fn">key</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Cache key. Max 512 bytes. Namespace with prefix: <code>user:profile:123</code></span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Behavior</div>
+        <div class="frow"><span class="fn">Cache Hit</span><span class="ft"></span><span class="fo"></span><span class="fd">Returns value immediately from the node owning this key (consistent hash routing)</span></div>
+        <div class="frow"><span class="fn">Cache Miss</span><span class="ft"></span><span class="fo"></span><span class="fd">Returns null. Caller responsible for fetching from DB and calling SET. Library can optionally handle stampede protection via internal lock.</span></div>
+        <div class="frow"><span class="fn">Node Failure</span><span class="ft"></span><span class="fo"></span><span class="fd">Library routes to replica. If both unavailable, returns null (fail open — treat as cache miss)</span></div>
+        <div class="frow"><span class="fn">Timeout</span><span class="ft"></span><span class="fo"></span><span class="fd">Default 10ms timeout. On timeout, return null (don't wait for slow cache node — DB fallback)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">SET</span><span class="api-path">cache.set(key, value, ttl_seconds) → bool</span><span class="api-desc">Write with optional TTL</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Parameters</div>
+        <div class="frow"><span class="fn">key</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Cache key.</span></div>
+        <div class="frow"><span class="fn">value</span><span class="ft">bytes</span><span class="fr">required</span><span class="fd">Value to store. Max 512 MB but recommend &lt;1 MB for performance.</span></div>
+        <div class="frow"><span class="fn">ttl_seconds</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Auto-expiry in seconds. Add jitter: <code>ttl + random(0, ttl*0.1)</code> to prevent cache stampede at boundary. If null, key never expires (use eviction policy to reclaim).</span></div>
+        <div class="frow"><span class="fn">nx (SET_IF_NOT_EXISTS)</span><span class="ft">boolean</span><span class="fo">optional</span><span class="fd">Only write if key doesn't exist. Used for distributed locking and stampede prevention.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-del">DEL</span><span class="api-path">cache.delete(key) → bool</span><span class="api-desc">Explicit invalidation</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Notes</div>
+        <div class="frow"><span class="fn">On DB write</span><span class="ft"></span><span class="fo"></span><span class="fd">The recommended pattern: write to DB first, then DELETE cache (not SET cache). Avoids race condition between concurrent writers. Next read is a miss → fetches fresh data from DB → warms cache.</span></div>
+        <div class="frow"><span class="fn">Batch delete</span><span class="ft"></span><span class="fo"></span><span class="fd"><code>cache.delete_many([key1, key2, ...key_n])</code> — pipelined, single round trip per shard.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🛡 Cache Aside with Stampede Protection</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:220px">
+<pre><code><span class="cm">// The recommended pattern: Cache Aside + Distributed Lock (anti-stampede)</span>
+<span class="kw">async function</span> <span class="fn2">getWithCache</span>(key, fetchFromDB, ttl) {
+  <span class="cm">// 1. Try cache first (fast path)</span>
+  <span class="kw">const</span> cached = <span class="kw">await</span> cache.get(key);
+  <span class="kw">if</span> (cached !== <span class="kw">null</span>) <span class="kw">return</span> cached;
+
+  <span class="cm">// 2. Cache miss — try to acquire lock (prevents stampede)</span>
+  <span class="kw">const</span> lockKey = <span class="str">`lock:${key}`</span>;
+  <span class="kw">const</span> acquired = <span class="kw">await</span> cache.set(lockKey, <span class="str">"1"</span>, { nx: <span class="kw">true</span>, ttl: <span class="num">5</span> });
+
+  <span class="kw">if</span> (!acquired) {
+    <span class="cm">// Another request is fetching — wait briefly and retry</span>
+    <span class="kw">await</span> sleep(<span class="num">50</span>); <span class="cm">// ms</span>
+    <span class="kw">const</span> retried = <span class="kw">await</span> cache.get(key);
+    <span class="kw">if</span> (retried !== <span class="kw">null</span>) <span class="kw">return</span> retried;
+  }
+
+  <span class="kw">try</span> {
+    <span class="cm">// 3. Lock holder: fetch from DB</span>
+    <span class="kw">const</span> value = <span class="kw">await</span> fetchFromDB(key);
+
+    <span class="cm">// 4. Store in cache with TTL jitter (prevents mass expiry)</span>
+    <span class="kw">const</span> jitter = Math.random() * ttl * <span class="num">0.1</span>;
+    <span class="kw">await</span> cache.set(key, value, { ttl: ttl + jitter });
+
+    <span class="kw">return</span> value;
+  } <span class="kw">finally</span> {
+    <span class="kw">await</span> cache.delete(lockKey); <span class="cm">// always release lock</span>
+  }
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HLD ══ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">👥 Actors</div>
+    <div class="sec-body">
+      <div class="actor-grid">
+        <div class="actor-card"><div class="actor-icon">📱</div><div class="actor-name">Application Server</div><div class="actor-role">Uses cache client library. Performs GET/SET/DEL. Never talks to DB if cache hits.</div></div>
+        <div class="actor-card"><div class="actor-icon">📚</div><div class="actor-name">Cache Client Library</div><div class="actor-role">Implements consistent hashing ring. Routes requests to correct node. Handles retries, timeouts, hot key detection.</div></div>
+        <div class="actor-card"><div class="actor-icon">⚡</div><div class="actor-name">Cache Node (Primary)</div><div class="actor-role">Serves reads + writes. In-memory data structure server (Redis). Single-threaded command processing.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔁</div><div class="actor-name">Cache Node (Replica)</div><div class="actor-role">Async replication from primary. Serves read-only requests. Promotes to primary on failure.</div></div>
+        <div class="actor-card"><div class="actor-icon">📡</div><div class="actor-name">Config Service</div><div class="actor-role">Maintains cluster topology (which nodes exist, primary/replica mapping). Notifies clients on topology change.</div></div>
+        <div class="actor-card"><div class="actor-icon">🏥</div><div class="actor-name">Health Monitor</div><div class="actor-role">Heartbeat checks per node. Triggers failover on primary failure. Updates Config Service.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:480px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+            <marker id="arc" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+            <marker id="arb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+          </defs>
+
+          <!-- App servers -->
+          <rect x="20" y="50" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="75" y="67" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📱 App Server 1</text>
+          <text x="75" y="81" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">+ cache client</text>
+
+          <rect x="20" y="120" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="75" y="137" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📱 App Server 2</text>
+          <text x="75" y="151" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">+ cache client</text>
+
+          <rect x="20" y="190" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="75" y="207" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4e6070">📱 App Server N</text>
+          <text x="75" y="221" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">+ cache client</text>
+
+          <!-- Consistent hash ring (visual) -->
+          <rect x="155" y="30" width="200" height="220" rx="10" fill="rgba(244,63,94,.03)" stroke="rgba(244,63,94,.2)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="255" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">CLIENT-SIDE HASH RING</text>
+          <circle cx="255" cy="145" r="80" fill="none" stroke="#1e2d45" stroke-width="2"/>
+          <!-- Ring nodes -->
+          <circle cx="255" cy="65" r="12" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="255" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">N1</text>
+          <circle cx="315" cy="95" r="12" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="315" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">N2</text>
+          <circle cx="335" cy="165" r="12" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="335" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">N3</text>
+          <circle cx="255" cy="225" r="12" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="255" y="230" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">N4</text>
+          <circle cx="175" cy="165" r="12" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="175" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">N5</text>
+          <circle cx="195" cy="95" r="12" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="195" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">N6</text>
+          <text x="255" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">hash(key)</text>
+          <text x="255" y="163" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4e6070">→ node</text>
+
+          <!-- Cache Nodes (Primaries) -->
+          <rect x="395" y="30" width="130" height="50" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+          <text x="460" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Node 1 (P)</text>
+          <text x="460" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10 GB, LRU eviction</text>
+
+          <rect x="395" y="100" width="130" height="50" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="460" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Node 2 (P)</text>
+          <text x="460" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10 GB, LRU eviction</text>
+
+          <text x="460" y="185" text-anchor="middle" font-family="JetBrains Mono" font-size="16" fill="#334155">⋮</text>
+          <text x="460" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">8 more nodes</text>
+
+          <!-- Cache Replicas -->
+          <rect x="570" y="30" width="130" height="50" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="635" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">⚡ Node 1 (R)</text>
+          <text x="635" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">async replica</text>
+
+          <rect x="570" y="100" width="130" height="50" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1"/>
+          <text x="635" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">⚡ Node 2 (R)</text>
+          <text x="635" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">async replica</text>
+
+          <!-- DB -->
+          <rect x="730" y="30" width="130" height="100" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="795" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Source DB</text>
+          <text x="795" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(MySQL/Postgres)</text>
+          <text x="795" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">read on cache miss</text>
+          <text x="795" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">write on DB update</text>
+
+          <!-- Config Service -->
+          <rect x="395" y="280" width="130" height="42" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="460" y="298" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📡 Config Svc</text>
+          <text x="460" y="312" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">cluster topology</text>
+
+          <!-- Health Monitor -->
+          <rect x="570" y="280" width="130" height="42" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1"/>
+          <text x="635" y="298" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">🏥 Health Monitor</text>
+          <text x="635" y="312" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">heartbeat + failover</text>
+
+          <!-- ARROWS -->
+          <line x1="130" y1="70" x2="153" y2="90" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="130" y1="140" x2="153" y2="130" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="355" y1="90" x2="393" y2="60" stroke="#f43f5e" stroke-width="2" marker-end="url(#arc)"/>
+          <line x1="355" y1="120" x2="393" y2="130" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#arc)"/>
+          <line x1="525" y1="55" x2="568" y2="55" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arg)"/>
+          <line x1="525" y1="125" x2="568" y2="125" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arg)"/>
+          <line x1="700" y1="60" x2="728" y2="68" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ary)"/>
+          <line x1="460" y1="170" x2="460" y2="278" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arb)"/>
+          <line x1="635" y1="208" x2="635" y2="278" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arc)"/>
+
+          <!-- Labels -->
+          <text x="370" y="75" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">route to node</text>
+          <text x="535" y="48" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">async replicate</text>
+          <text x="705" y="50" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">cache miss</text>
+
+          <!-- Legend -->
+          <rect x="20" y="400" width="860" height="60" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+          <text x="30" y="418" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">P = Primary (read+write)</text>
+          <text x="30" y="432" font-family="JetBrains Mono" font-size="8" fill="#10b981">R = Replica (read-only + failover)</text>
+          <text x="30" y="446" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">- - = async replication</text>
+          <text x="280" y="418" font-family="JetBrains Mono" font-size="9" fill="#fbbf24">Cache Miss Flow: App Server → hash(key) → Primary Node → miss → DB → SET cache → return</text>
+          <text x="280" y="432" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Cache Hit Flow: App Server → hash(key) → Primary Node → hit → return value (no DB)</text>
+          <text x="280" y="446" font-family="JetBrains Mono" font-size="9" fill="#fb7185">Failure Flow: Primary down → Client routes to Replica → Health Monitor promotes Replica → topology updated</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LLD ══ -->
+<div id="lld" class="panel">
+  <div class="sec">
+    <div class="sec-head">📦 Core Classes</div>
+    <div class="sec-body">
+      <div class="class-grid">
+        <div class="cb">
+          <div class="cb-name">ConsistentHashRing</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">ring: <span class="cft">TreeMap&lt;Long, CacheNode&gt;</span></div>
+            <div class="cf">virtualNodesPerNode: <span class="cft">int</span> = 150</div>
+            <div class="cf">hashFunction: <span class="cft">HashFunction</span> (MD5)</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">addNode(node: CacheNode): void</div>
+            <div class="cm2">removeNode(node: CacheNode): void</div>
+            <div class="cm2">getNode(key: String): CacheNode</div>
+            <div class="cm2">getNodes(key, replicas): List&lt;CacheNode&gt;</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">CacheClient</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">ring: <span class="cft">ConsistentHashRing</span></div>
+            <div class="cf">connectionPool: <span class="cft">Map&lt;String, Pool&gt;</span></div>
+            <div class="cf">hotKeyThreshold: <span class="cft">int</span> = 10000/sec</div>
+            <div class="cf">localCache: <span class="cft">LRUCache</span> (L1, 10K entries)</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">get(key): byte[] | null</div>
+            <div class="cm2">set(key, value, ttl): boolean</div>
+            <div class="cm2">delete(key): boolean</div>
+            <div class="cm2">getWithStampedeProtection(key, loader): byte[]</div>
+            <div class="cm2">detectHotKey(key): boolean</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">LRUCache (Node-level)</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">capacity: <span class="cft">int</span></div>
+            <div class="cf">map: <span class="cft">HashMap&lt;String, DListNode&gt;</span></div>
+            <div class="cf">head: <span class="cft">DListNode</span> (most recent)</div>
+            <div class="cf">tail: <span class="cft">DListNode</span> (least recent)</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">get(key): Object — O(1)</div>
+            <div class="cm2">put(key, value): void — O(1)</div>
+            <div class="cm2">evict(): DListNode — removes tail</div>
+            <div class="cm2">moveToFront(node): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">CacheNode</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">nodeId: <span class="cft">String</span></div>
+            <div class="cf">host: <span class="cft">String</span></div>
+            <div class="cf">port: <span class="cft">int</span></div>
+            <div class="cf">role: <span class="cft">Enum</span> PRIMARY|REPLICA</div>
+            <div class="cf">status: <span class="cft">Enum</span> ALIVE|DOWN</div>
+            <div class="cf">replicaOf: <span class="cft">String</span> nodeId</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">isAlive(): boolean</div>
+            <div class="cm2">promote(): void (replica → primary)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CODE ══ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Distributed Cache — Java Implementation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Consistent Hash Ring ───────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">ConsistentHashRing</span> {
+
+    <span class="cm">// Sorted map: hash position → cache node</span>
+    <span class="kw">private final</span> <span class="cls">TreeMap</span>&lt;<span class="cls">Long</span>, <span class="cls">CacheNode</span>&gt; ring = <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="kw">int</span>  virtualNodesPerNode;
+    <span class="kw">private final</span> <span class="cls">ReadWriteLock</span> lock = <span class="kw">new</span> <span class="cls">ReentrantReadWriteLock</span>();
+
+    <span class="kw">public</span> <span class="cls">ConsistentHashRing</span>(<span class="kw">int</span> virtualNodesPerNode) {
+        <span class="kw">this</span>.virtualNodesPerNode = virtualNodesPerNode;
+    }
+
+    <span class="kw">public void</span> <span class="fn2">addNode</span>(<span class="cls">CacheNode</span> node) {
+        lock.writeLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; virtualNodesPerNode; i++) {
+                <span class="cm">// Each virtual node gets a unique hash seed</span>
+                <span class="kw">long</span> hash = <span class="fn2">hash</span>(node.getNodeId() + <span class="str">"#"</span> + i);
+                ring.put(hash, node);
+            }
+        } <span class="kw">finally</span> {
+            lock.writeLock().unlock();
+        }
+    }
+
+    <span class="kw">public void</span> <span class="fn2">removeNode</span>(<span class="cls">CacheNode</span> node) {
+        lock.writeLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; virtualNodesPerNode; i++) {
+                <span class="kw">long</span> hash = <span class="fn2">hash</span>(node.getNodeId() + <span class="str">"#"</span> + i);
+                ring.remove(hash);
+            }
+        } <span class="kw">finally</span> {
+            lock.writeLock().unlock();
+        }
+    }
+
+    <span class="kw">public</span> <span class="cls">CacheNode</span> <span class="fn2">getNode</span>(<span class="cls">String</span> key) {
+        lock.readLock().lock();
+        <span class="kw">try</span> {
+            <span class="kw">if</span> (ring.isEmpty()) <span class="kw">return null</span>;
+            <span class="kw">long</span> hash = <span class="fn2">hash</span>(key);
+            <span class="cm">// Find the first node clockwise (>= hash position)</span>
+            <span class="cls">Map</span>.<span class="cls">Entry</span>&lt;<span class="cls">Long</span>, <span class="cls">CacheNode</span>&gt; entry = ring.ceilingEntry(hash);
+            <span class="cm">// Wrap around the ring if at the end</span>
+            <span class="kw">if</span> (entry == <span class="kw">null</span>) entry = ring.firstEntry();
+            <span class="kw">return</span> entry.getValue();
+        } <span class="kw">finally</span> {
+            lock.readLock().unlock();
+        }
+    }
+
+    <span class="cm">/** Get N distinct nodes for a key (for replication or hot key copies) */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">CacheNode</span>&gt; <span class="fn2">getNodes</span>(<span class="cls">String</span> key, <span class="kw">int</span> n) {
+        lock.readLock().lock();
+        <span class="kw">try</span> {
+            <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; seen = <span class="kw">new</span> <span class="cls">HashSet</span>&lt;&gt;();
+            <span class="cls">List</span>&lt;<span class="cls">CacheNode</span>&gt; nodes = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+            <span class="kw">long</span> hash = <span class="fn2">hash</span>(key);
+
+            <span class="cm">// Walk ring clockwise, collecting unique physical nodes</span>
+            <span class="cls">NavigableMap</span>&lt;<span class="cls">Long</span>, <span class="cls">CacheNode</span>&gt; tail = ring.tailMap(hash);
+            <span class="cls">Iterable</span>&lt;<span class="cls">CacheNode</span>&gt; iter = <span class="cls">Iterables</span>.concat(
+                tail.values(), ring.values());
+
+            <span class="kw">for</span> (<span class="cls">CacheNode</span> node : iter) {
+                <span class="kw">if</span> (seen.add(node.getNodeId())) {
+                    nodes.add(node);
+                    <span class="kw">if</span> (nodes.size() == n) <span class="kw">break</span>;
+                }
+            }
+            <span class="kw">return</span> nodes;
+        } <span class="kw">finally</span> {
+            lock.readLock().unlock();
+        }
+    }
+
+    <span class="cm">/** MD5-based hash: consistent, well-distributed */</span>
+    <span class="kw">private long</span> <span class="fn2">hash</span>(<span class="cls">String</span> key) {
+        <span class="kw">try</span> {
+            <span class="cls">MessageDigest</span> md = <span class="cls">MessageDigest</span>.getInstance(<span class="str">"MD5"</span>);
+            <span class="kw">byte</span>[] digest = md.digest(key.getBytes(<span class="cls">StandardCharsets</span>.UTF_8));
+            <span class="kw">return</span> ((<span class="kw">long</span>) (digest[<span class="num">3</span>] & <span class="num">0xFF</span>) &lt;&lt; <span class="num">24</span>)
+                 | ((<span class="kw">long</span>) (digest[<span class="num">2</span>] & <span class="num">0xFF</span>) &lt;&lt; <span class="num">16</span>)
+                 | ((<span class="kw">long</span>) (digest[<span class="num">1</span>] & <span class="num">0xFF</span>) &lt;&lt; <span class="num">8</span>)
+                 | ((<span class="kw">long</span>) (digest[<span class="num">0</span>] & <span class="num">0xFF</span>));
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) { <span class="kw">throw new</span> <span class="cls">RuntimeException</span>(e); }
+    }
+}
+
+<span class="cm">// ── 2. LRU Cache (O(1) GET + SET) ────────────────────</span>
+<span class="kw">public class</span> <span class="cls">LRUCache</span>&lt;K, V&gt; {
+
+    <span class="kw">private final int</span> capacity;
+    <span class="kw">private final</span> <span class="cls">LinkedHashMap</span>&lt;K, V&gt; cache;
+
+    <span class="kw">public</span> <span class="cls">LRUCache</span>(<span class="kw">int</span> capacity) {
+        <span class="kw">this</span>.capacity = capacity;
+        <span class="cm">// LinkedHashMap with accessOrder=true: LRU order maintained automatically</span>
+        <span class="kw">this</span>.cache = <span class="kw">new</span> <span class="cls">LinkedHashMap</span>&lt;&gt;(capacity, <span class="num">0.75f</span>, <span class="kw">true</span>) {
+            <span class="ann">@Override</span>
+            <span class="kw">protected boolean</span> <span class="fn2">removeEldestEntry</span>(<span class="cls">Map</span>.<span class="cls">Entry</span>&lt;K, V&gt; eldest) {
+                <span class="kw">return</span> size() > capacity; <span class="cm">// auto-evict LRU when full</span>
+            }
+        };
+    }
+
+    <span class="kw">public synchronized</span> V <span class="fn2">get</span>(K key) {
+        <span class="kw">return</span> cache.getOrDefault(key, <span class="kw">null</span>); <span class="cm">// updates access order (LRU)</span>
+    }
+
+    <span class="kw">public synchronized void</span> <span class="fn2">put</span>(K key, V value) {
+        cache.put(key, value); <span class="cm">// removes eldest if over capacity</span>
+    }
+
+    <span class="kw">public synchronized void</span> <span class="fn2">remove</span>(K key) {
+        cache.remove(key);
+    }
+
+    <span class="kw">public synchronized int</span> <span class="fn2">size</span>() { <span class="kw">return</span> cache.size(); }
+}
+
+<span class="cm">// ── 3. Cache Client (routing + stampede protection) ───</span>
+<span class="kw">public class</span> <span class="cls">DistributedCacheClient</span> {
+
+    <span class="kw">private final</span> <span class="cls">ConsistentHashRing</span> ring;
+    <span class="kw">private final</span> <span class="cls">LRUCache</span>&lt;<span class="cls">String</span>, <span class="kw">byte</span>[]&gt; localL1;  <span class="cm">// in-process hot key cache</span>
+    <span class="kw">private final</span> <span class="cls">ConcurrentHashMap</span>&lt;<span class="cls">String</span>, <span class="cls">AtomicLong</span>&gt; reqCounts; <span class="cm">// hot key detection</span>
+
+    <span class="kw">private static final int</span> L1_SIZE       = <span class="num">10_000</span>;
+    <span class="kw">private static final int</span> HOT_THRESHOLD = <span class="num">10_000</span>; <span class="cm">// req/sec</span>
+    <span class="kw">private static final int</span> TIMEOUT_MS    = <span class="num">10</span>;
+
+    <span class="kw">public</span> <span class="cls">DistributedCacheClient</span>(<span class="cls">List</span>&lt;<span class="cls">CacheNode</span>&gt; nodes) {
+        ring     = <span class="kw">new</span> <span class="cls">ConsistentHashRing</span>(<span class="num">150</span>);
+        localL1  = <span class="kw">new</span> <span class="cls">LRUCache</span>&lt;&gt;(L1_SIZE);
+        reqCounts= <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+        nodes.forEach(ring::addNode);
+    }
+
+    <span class="kw">public byte</span>[] <span class="fn2">get</span>(<span class="cls">String</span> key) {
+        <span class="cm">// L1 check: hot keys served from in-process cache (0 network calls)</span>
+        <span class="kw">byte</span>[] l1Value = localL1.get(key);
+        <span class="kw">if</span> (l1Value != <span class="kw">null</span>) <span class="kw">return</span> l1Value;
+
+        <span class="cm">// Route to correct node via consistent hash</span>
+        <span class="cls">CacheNode</span> node = ring.getNode(key);
+        <span class="kw">if</span> (node == <span class="kw">null</span>) <span class="kw">return null</span>;
+
+        <span class="kw">try</span> {
+            <span class="kw">byte</span>[] value = node.get(key, TIMEOUT_MS);
+
+            <span class="cm">// Hot key detection: store in L1 if accessed frequently</span>
+            <span class="kw">if</span> (<span class="fn2">isHotKey</span>(key) && value != <span class="kw">null</span>) {
+                localL1.put(key, value);
+            }
+            <span class="kw">return</span> value;
+        } <span class="kw">catch</span> (<span class="cls">TimeoutException</span> | <span class="cls">NodeUnavailableException</span> e) {
+            <span class="cm">// Fail open: treat as cache miss, let caller fall back to DB</span>
+            log.warn(<span class="str">"Cache get failed, failing open: {}"</span>, key);
+            <span class="kw">return null</span>;
+        }
+    }
+
+    <span class="kw">public boolean</span> <span class="fn2">set</span>(<span class="cls">String</span> key, <span class="kw">byte</span>[] value, <span class="kw">int</span> ttlSeconds) {
+        <span class="cm">// Invalidate L1 on write</span>
+        localL1.remove(key);
+
+        <span class="cls">CacheNode</span> node = ring.getNode(key);
+        <span class="kw">if</span> (node == <span class="kw">null</span>) <span class="kw">return false</span>;
+
+        <span class="cm">// TTL jitter: prevents mass expiry at same time (stampede prevention)</span>
+        <span class="kw">int</span> jitter = (<span class="kw">int</span>) (<span class="cls">Math</span>.random() * ttlSeconds * <span class="num">0.1</span>);
+        <span class="kw">int</span> finalTtl = ttlSeconds + jitter;
+
+        <span class="kw">try</span> {
+            <span class="kw">return</span> node.set(key, value, finalTtl, TIMEOUT_MS);
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) {
+            log.warn(<span class="str">"Cache set failed: {}"</span>, key);
+            <span class="kw">return false</span>;
+        }
+    }
+
+    <span class="kw">private boolean</span> <span class="fn2">isHotKey</span>(<span class="cls">String</span> key) {
+        <span class="kw">return</span> reqCounts
+            .computeIfAbsent(key, k -> <span class="kw">new</span> <span class="cls">AtomicLong</span>())
+            .incrementAndGet() > HOT_THRESHOLD;
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Distributed Cache — Python Implementation
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> hashlib, bisect, threading, time
+<span class="kw">from</span> collections <span class="kw">import</span> OrderedDict
+<span class="kw">from</span> typing <span class="kw">import</span> List, Optional, Dict, Any
+
+
+<span class="cm"># ── 1. Consistent Hash Ring ───────────────────────────</span>
+<span class="kw">class</span> <span class="cls">ConsistentHashRing</span>:
+    <span class="str">"""
+    Consistent hashing with virtual nodes.
+    Adding/removing a node remaps only ~1/N keys.
+    """</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, virtual_nodes: int = <span class="num">150</span>):
+        self.virtual_nodes  = virtual_nodes
+        self._ring: Dict[int, str] = {}     <span class="cm"># hash → node_id</span>
+        self._sorted_keys: List[int] = []   <span class="cm"># sorted hash positions</span>
+        self._nodes: Dict[str, any] = {}    <span class="cm"># node_id → node object</span>
+        self._lock = threading.RWLock()
+
+    <span class="kw">def</span> <span class="fn2">add_node</span>(self, node_id: str, node: any):
+        <span class="kw">with</span> self._lock.writer():
+            self._nodes[node_id] = node
+            <span class="kw">for</span> i <span class="kw">in</span> range(self.virtual_nodes):
+                key = self._hash(f<span class="str">"{node_id}#{i}"</span>)
+                self._ring[key] = node_id
+            self._sorted_keys = sorted(self._ring.keys())
+
+    <span class="kw">def</span> <span class="fn2">remove_node</span>(self, node_id: str):
+        <span class="kw">with</span> self._lock.writer():
+            <span class="kw">for</span> i <span class="kw">in</span> range(self.virtual_nodes):
+                key = self._hash(f<span class="str">"{node_id}#{i}"</span>)
+                self._ring.pop(key, <span class="kw">None</span>)
+            self._nodes.pop(node_id, <span class="kw">None</span>)
+            self._sorted_keys = sorted(self._ring.keys())
+
+    <span class="kw">def</span> <span class="fn2">get_node</span>(self, cache_key: str) -> Optional[any]:
+        <span class="kw">with</span> self._lock.reader():
+            <span class="kw">if not</span> self._ring:
+                <span class="kw">return None</span>
+            h = self._hash(cache_key)
+            <span class="cm"># Find first ring position >= h (clockwise)</span>
+            idx = bisect.bisect_left(self._sorted_keys, h)
+            <span class="cm"># Wrap around</span>
+            idx = idx % len(self._sorted_keys)
+            node_id = self._ring[self._sorted_keys[idx]]
+            <span class="kw">return</span> self._nodes[node_id]
+
+    <span class="kw">def</span> <span class="fn2">_hash</span>(self, key: str) -> int:
+        <span class="str">"""MD5-based hash for good distribution"""</span>
+        h = hashlib.md5(key.encode()).digest()
+        <span class="kw">return</span> int.from_bytes(h[:4], <span class="str">'big'</span>)
+
+
+<span class="cm"># ── 2. LRU Cache (O(1) GET and SET) ──────────────────</span>
+<span class="kw">class</span> <span class="cls">LRUCache</span>:
+    <span class="str">"""
+    O(1) LRU cache using Python OrderedDict.
+    OrderedDict maintains insertion order + O(1) move-to-end.
+    """</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, capacity: int):
+        self.capacity = capacity
+        self.cache    = <span class="cls">OrderedDict</span>()  <span class="cm"># key → value, LRU order</span>
+        self._lock    = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">get</span>(self, key: str) -> Optional[Any]:
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if</span> key <span class="kw">not in</span> self.cache:
+                <span class="kw">return None</span>
+            <span class="cm"># Move to end (most recently used)</span>
+            self.cache.move_to_end(key)
+            <span class="kw">return</span> self.cache[key]
+
+    <span class="kw">def</span> <span class="fn2">put</span>(self, key: str, value: Any) -> None:
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if</span> key <span class="kw">in</span> self.cache:
+                self.cache.move_to_end(key)
+            self.cache[key] = value
+            <span class="kw">if</span> len(self.cache) > self.capacity:
+                <span class="cm"># Remove least recently used (first item)</span>
+                self.cache.popitem(last=<span class="kw">False</span>)
+
+    <span class="kw">def</span> <span class="fn2">delete</span>(self, key: str) -> None:
+        <span class="kw">with</span> self._lock:
+            self.cache.pop(key, <span class="kw">None</span>)
+
+
+<span class="cm"># ── 3. Cache Aside with Stampede Protection ───────────</span>
+<span class="kw">class</span> <span class="cls">CacheClient</span>:
+    <span class="str">"""
+    Distributed cache client with:
+    - Consistent hash routing
+    - L1 (in-process) + L2 (distributed) two-tier cache
+    - Cache stampede protection via distributed lock
+    - Fail-open on node unavailability
+    """</span>
+    L1_SIZE       = <span class="num">10_000</span>
+    LOCK_TTL_SEC  = <span class="num">5</span>
+    TIMEOUT_MS    = <span class="num">10</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, nodes: list):
+        self.ring   = <span class="cls">ConsistentHashRing</span>(virtual_nodes=<span class="num">150</span>)
+        self.l1     = <span class="cls">LRUCache</span>(capacity=self.L1_SIZE)
+        self._hit_counts: Dict[str, int] = {}
+
+        <span class="kw">for</span> node <span class="kw">in</span> nodes:
+            self.ring.add_node(node.node_id, node)
+
+    <span class="kw">def</span> <span class="fn2">get</span>(self, key: str) -> Optional[bytes]:
+        <span class="str">"""Two-tier GET: L1 (in-process) → L2 (distributed)"""</span>
+        <span class="cm"># L1 check (in-process, zero network)</span>
+        l1_val = self.l1.get(key)
+        <span class="kw">if</span> l1_val <span class="kw">is not None</span>:
+            <span class="kw">return</span> l1_val
+
+        <span class="cm"># L2: distributed cache</span>
+        node = self.ring.get_node(key)
+        <span class="kw">if not</span> node:
+            <span class="kw">return None</span>
+
+        <span class="kw">try</span>:
+            value = node.get(key, timeout_ms=self.TIMEOUT_MS)
+            <span class="kw">if</span> value <span class="kw">is not None</span>:
+                self._maybe_promote_to_l1(key, value)
+            <span class="kw">return</span> value
+        <span class="kw">except Exception</span> <span class="kw">as</span> e:
+            <span class="cm"># Fail open: treat as cache miss</span>
+            <span class="kw">return None</span>
+
+    <span class="kw">def</span> <span class="fn2">get_with_loader</span>(self, key: str, loader_fn,
+                          ttl: int = <span class="num">300</span>) -> Any:
+        <span class="str">"""
+        Cache aside with stampede protection.
+        Only ONE request fetches from DB when cache misses.
+        Others wait briefly or return stale.
+        """</span>
+        value = self.get(key)
+        <span class="kw">if</span> value <span class="kw">is not None</span>:
+            <span class="kw">return</span> value
+
+        lock_key = f<span class="str">"lock:{key}"</span>
+        node = self.ring.get_node(lock_key)
+
+        <span class="kw">try</span>:
+            <span class="cm"># Try to acquire lock (NX = only if not exists)</span>
+            acquired = node.set(lock_key, <span class="str">"1"</span>,
+                                ttl=self.LOCK_TTL_SEC, nx=<span class="kw">True</span>)
+        <span class="kw">except</span>:
+            acquired = <span class="kw">False</span>
+
+        <span class="kw">if not</span> acquired:
+            <span class="cm"># Another request is loading — wait and retry</span>
+            time.sleep(<span class="num">0.05</span>)
+            retried = self.get(key)
+            <span class="kw">if</span> retried <span class="kw">is not None</span>:
+                <span class="kw">return</span> retried
+            <span class="cm"># Still no value — fall through to load (lock may have expired)</span>
+
+        <span class="kw">try</span>:
+            value = loader_fn(key)
+            jitter = int(ttl * <span class="num">0.1</span> * (<span class="num">0.5</span> + <span class="num">0.5</span> * hash(key) % <span class="num">1000</span> / <span class="num">1000</span>))
+            self.set(key, value, ttl + jitter)
+            <span class="kw">return</span> value
+        <span class="kw">finally</span>:
+            <span class="kw">try</span>: node.delete(lock_key)  <span class="cm"># always release</span>
+            <span class="kw">except</span>: <span class="kw">pass</span>
+
+    <span class="kw">def</span> <span class="fn2">set</span>(self, key: str, value: bytes, ttl: int = <span class="num">300</span>) -> bool:
+        self.l1.delete(key)  <span class="cm"># invalidate L1 on write</span>
+        node = self.ring.get_node(key)
+        <span class="kw">if not</span> node:
+            <span class="kw">return False</span>
+        <span class="kw">try</span>:
+            <span class="kw">return</span> node.set(key, value, ttl=ttl)
+        <span class="kw">except</span>:
+            <span class="kw">return False</span>
+
+    <span class="kw">def</span> <span class="fn2">_maybe_promote_to_l1</span>(self, key: str, value: bytes):
+        count = self._hit_counts.get(key, <span class="num">0</span>) + <span class="num">1</span>
+        self._hit_counts[key] = count
+        <span class="kw">if</span> count > <span class="num">10</span>:  <span class="cm"># promote hot keys to L1</span>
+            self.l1.put(key, value)
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRADEOFFS ══ -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Design Tradeoffs</div>
+    <div class="sec-body"><div class="warn-box"><strong>Cache design is full of tradeoffs.</strong> Every caching decision trades off consistency, availability, and performance in different ways.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔄 Key Distribution: Consistent Hashing vs Modulo vs Rendezvous Hashing</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Consistent Hashing + Virtual Nodes</div><p>Adding/removing nodes only remaps ~1/N keys. Virtual nodes ensure even distribution. Industry standard (Redis Cluster, Cassandra, DynamoDB). Minimal cache invalidation on topology changes.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Modulo Hashing</div><p>Simple: <code>node = hash(key) % N</code>. Works perfectly with a fixed N. Fails completely on N change: all keys remap → cache becomes empty simultaneously → DB gets 100% traffic. Never use with dynamic clusters.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ Rendezvous Hashing</div><p>For each key, compute score for each node, pick highest score. Minimal remapping on change (same as consistent hashing). But: O(N) per lookup (check all nodes). Only practical with few nodes. Consistent hashing with virtual nodes scales better.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">💾 Cache Write Pattern: Cache Aside vs Write-Through vs Write-Behind</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Cache Aside (Lazy Loading)</div><p>Application code: read miss → DB fetch → SET cache. Write: DB write → DELETE cache key. Most flexible. Cache only stores actually-requested data. Works with any backend. Potential for brief stale reads after write.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Write-Through</div><p>Write to cache AND DB synchronously. Always consistent. But: write latency = DB latency. Every write goes through cache even if the data is never read again. Cache fills with cold data. Use for user sessions, payment state — low write rate, must be consistent.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ Write-Behind</div><p>Write to cache, async to DB. Blazing fast writes. But: data loss risk if cache crashes before flush. Ordering challenges for multi-key transactions. Use only for analytics counters or non-critical metrics where some loss is acceptable.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🏃 Eviction: LRU vs LFU vs TTL-only</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ LRU (allkeys-lru)</div><p>Evict least recently used. O(1) with HashMap + DLL. Handles temporal locality well — recently accessed items tend to be accessed again. Good for most general caches: product pages, user profiles.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ LFU (allkeys-lfu)</div><p>Evict least frequently used. Keeps popular items longer. Better for viral/skewed workloads (top 20% items get 80% traffic). But: newly popular items start with low frequency — slow to "promote". Redis 4.0+ implements approximate LFU efficiently.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 TTL-only</div><p>No active eviction — keys expire by TTL. Predictable: each key lives exactly N seconds. Simplest to reason about. Bad for highly variable access patterns — popular items expire as frequently as unpopular ones. Often combine with LRU/LFU: TTL for correctness, LRU/LFU for memory pressure.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔥 Cache Stampede: Lock vs Stale-While-Revalidate vs Early Expiration</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Stale-While-Revalidate</div><p>Serve stale data immediately. Refresh asynchronously in background. Zero extra latency for caller. Eliminates stampede completely. Acceptable staleness window (1-2s). Best for non-critical data (product catalog, blog posts).</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Distributed Lock (NX)</div><p>First miss acquires Redis NX lock. Others wait. Only one DB query per cache miss. Correct. But: adds latency for waiters (50ms wait loop). Lock holder failure requires TTL-based auto-release. Use for data where staleness is truly unacceptable (inventory counts).</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 TTL Jitter</div><p>Add randomness to TTL: <code>base_ttl + random(0, base_ttl*0.1)</code>. Prevents N items cached at the same time all expiring simultaneously. Simplest prevention. Combine with stale-while-revalidate for comprehensive stampede protection.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

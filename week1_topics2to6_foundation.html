@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 — Foundation Topics 2–6</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--purple:#7c3aed;--green:#22c55e;
+  --amber:#f59e0b;--red:#ef4444;--text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+
+/* HEADER */
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+
+/* TOP-LEVEL TOPIC TABS */
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 12px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:7px;height:38px;padding:0 16px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+/* SUB-TABS (within each topic) */
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 16px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 12px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+/* TOPIC SECTIONS */
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+
+/* SUB-PANELS */
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:24px 28px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+/* TYPOGRAPHY */
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:20px;max-width:700px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:20px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:14px 0 7px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+
+/* GRID */
+.g{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(196px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:16px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}.ct-r{border-top:2px solid var(--red)}
+
+/* STAT */
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* LIST */
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+/* CALLOUT */
+.call{border-left:3px solid;padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:8px 11px;text-align:left;border:1px solid var(--border)}
+td{padding:7px 11px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+/* CODE */
+.cwrap{margin:8px 0 16px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:6px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}.lyml{background:rgba(168,85,247,.2);color:#c084fc}
+pre{background:var(--codebg);padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+/* CODE LANG SWITCHER */
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:6px 13px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+
+/* DIAGRAM */
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0}
+
+/* FLOW */
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:12px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:30px;height:30px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:3px auto}
+.fb{padding:4px 0 16px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+/* TRADEOFF PAIR */
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:14px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 8px}.con h4{color:var(--red);margin:0 0 8px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:6px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+/* INTERACTIVE DEMO styles */
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:12px 0}
+.demo-bar{background:var(--surf2);padding:8px 14px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:16px}
+
+/* KAFKA DEMO */
+.kafka-topic{background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:12px}
+.kafka-msg{display:inline-block;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent);border-radius:4px;padding:2px 8px;margin:3px;font-size:11px;animation:slidein .3s ease}
+@keyframes slidein{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.consumer-out{background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:8px 12px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);min-height:40px}
+
+/* CACHE DEMO */
+.cache-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cache-cell{background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;transition:all .3s}
+.cache-hit{border-color:var(--green);background:rgba(34,197,94,.08);color:var(--green)}
+.cache-miss{border-color:var(--red);background:rgba(239,68,68,.08);color:var(--red)}
+.cache-evict{border-color:var(--amber);background:rgba(245,158,11,.08);color:var(--amber)}
+
+/* COMM DEMO */
+.comm-pipe{display:flex;align-items:center;gap:8px;padding:8px;background:var(--surf2);border-radius:6px;margin:5px 0}
+.comm-node{background:var(--surf3);border:1px solid var(--border);border-radius:5px;padding:6px 12px;font-size:12px;text-align:center;min-width:80px}
+.comm-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
+
+/* outcome */
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:10px 13px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:20px;text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 1 · Foundation &nbsp;›&nbsp; Topics 2 – 6</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">Mental Models</span>
+    <span class="hbadge hb-g">Caching</span>
+    <span class="hbadge hb-p">Kafka</span>
+    <span class="hbadge hb-a">Comm Paradigms</span>
+  </div>
+</div>
+
+<!-- TOPIC TABS -->
+<div class="topicbar">
+  <div class="ttab active" data-topic="t2"><span class="tnum">02</span>3 Mental Models</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>Connection Pools &amp; DB Proxies</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>Caching at Scale</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Kafka Essentials</div>
+  <div class="ttab"        data-topic="t6"><span class="tnum">06</span>Comm Paradigms &amp; Log Streamer</div>
+</div>
+
+<!-- ════════════════════════════════════
+     TOPIC 2 — 3 MENTAL MODELS
+════════════════════════════════════ -->
+<div class="topics">
+<div class="topic active" id="t2">
+  <div class="subtabwrap" data-for="t2">
+    <div class="stab active" data-s="t2-overview">Overview</div>
+    <div class="stab" data-s="t2-model1">Model 1: Decompose</div>
+    <div class="stab" data-s="t2-model2">Model 2: Bottleneck</div>
+    <div class="stab" data-s="t2-model3">Model 3: Trade-off</div>
+    <div class="stab" data-s="t2-apply">Applying the Models</div>
+    <div class="stab" data-s="t2-outcome">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+    <!-- OVERVIEW -->
+    <div class="spanel active" id="t2-overview">
+      <div class="ptitle">3 Mental Models for <em>System Design</em></div>
+      <p class="psub">Before drawing a single box, you need the right intuition. These three models are a repeatable thinking framework applicable to every system design problem in this course and beyond.</p>
+      <h3>Why Mental Models Matter</h3>
+      <p>Most engineers jump to components — "put a Kafka here, a Redis there." That leads to over-engineered, fragile designs. Mental models force you to ask <em>why</em> before <em>what</em>. They turn ambiguous problems into structured reasoning paths.</p>
+      <div class="g g3">
+        <div class="card ct-c" style="text-align:center;padding:20px">
+          <div style="font-size:32px;margin-bottom:8px">🔬</div>
+          <h4 style="margin:0 0 6px">Model 1</h4>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#fff;margin-bottom:6px">Decompose</div>
+          <p style="font-size:12.5px;margin:0">Break any system into: <em>read path</em>, <em>write path</em>, and <em>storage</em>. Solve each independently.</p>
+        </div>
+        <div class="card ct-g" style="text-align:center;padding:20px">
+          <div style="font-size:32px;margin-bottom:8px">🔍</div>
+          <h4 style="margin:0 0 6px">Model 2</h4>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#fff;margin-bottom:6px">Bottleneck First</div>
+          <p style="font-size:12.5px;margin:0">Find the single slowest/hottest component. Optimize it first. Everything else is premature optimization.</p>
+        </div>
+        <div class="card ct-p" style="text-align:center;padding:20px">
+          <div style="font-size:32px;margin-bottom:8px">⚖️</div>
+          <h4 style="margin:0 0 6px">Model 3</h4>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#fff;margin-bottom:6px">Trade-off Surfacing</div>
+          <p style="font-size:12.5px;margin:0">For every decision: state what you gain, what you give up, and under what conditions you'd flip the choice.</p>
+        </div>
+      </div>
+      <div class="call ci" style="margin-top:16px">
+        <strong>Arpit's core principle:</strong> A good design is always simple and elegant. If you're adding a component, ask — "would I build and operate this myself?" If not, reconsider. Complexity should be justified by a concrete requirement, not by making the diagram look impressive.
+      </div>
+    </div>
+
+    <!-- MODEL 1 -->
+    <div class="spanel" id="t2-model1">
+      <div class="ptitle">Model 1 — <em>Decompose</em></div>
+      <p class="psub">Every system, no matter how complex, can be split into three paths. Design each path independently, then compose them.</p>
+      <h3>The Three Paths</h3>
+      <div class="g g3">
+        <div class="card ct-c">
+          <h4>Write Path</h4>
+          <p>How does data enter the system? Direct DB write? Queue → async worker? Batch ingest? The write path defines your <strong>durability</strong> and <strong>write throughput</strong> constraints.</p>
+          <ul class="rl">
+            <li>Sync write → immediate durability, lower throughput</li>
+            <li>Async via queue → higher throughput, eventual durability</li>
+            <li>Batch → highest throughput, highest latency</li>
+          </ul>
+        </div>
+        <div class="card ct-g">
+          <h4>Read Path</h4>
+          <p>How does data leave the system? Direct DB query? Cache hit? CDN? The read path defines your <strong>read latency</strong> and <strong>consistency</strong> guarantees.</p>
+          <ul class="rl">
+            <li>Cache-aside → fast reads, potential staleness</li>
+            <li>Read-through → transparent caching, cache miss penalty</li>
+            <li>Read replicas → horizontal read scaling</li>
+          </ul>
+        </div>
+        <div class="card ct-p">
+          <h4>Storage Layer</h4>
+          <p>What is the source of truth? Relational, NoSQL, in-memory, blob? The storage layer defines your <strong>data model</strong>, <strong>query patterns</strong>, and <strong>scale ceiling</strong>.</p>
+          <ul class="rl">
+            <li>Relational → ACID, complex queries, vertical scale ceiling</li>
+            <li>NoSQL → horizontal scale, eventual consistency</li>
+            <li>In-memory → highest speed, ephemeral</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Applied to Online/Offline Indicator</h3>
+      <div class="diag">
+<svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="116" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Write -->
+  <rect x="20" y="20" width="160" height="80" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="100" y="44" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">WRITE PATH</text>
+  <text x="100" y="61" text-anchor="middle" fill="#5a6a85" font-size="9">Client → POST /heartbeat</text>
+  <text x="100" y="75" text-anchor="middle" fill="#5a6a85" font-size="9">→ Redis SET EX 30</text>
+  <text x="100" y="89" text-anchor="middle" fill="#5a6a85" font-size="9">→ Kafka → MySQL flush</text>
+  <!-- Storage -->
+  <rect x="270" y="20" width="160" height="80" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="350" y="44" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">STORAGE</text>
+  <text x="350" y="61" text-anchor="middle" fill="#5a6a85" font-size="9">Redis: user:&lt;id&gt;:ts</text>
+  <text x="350" y="75" text-anchor="middle" fill="#5a6a85" font-size="9">(hot, ephemeral)</text>
+  <text x="350" y="89" text-anchor="middle" fill="#5a6a85" font-size="9">MySQL: last_seen (durable)</text>
+  <!-- Read -->
+  <rect x="520" y="20" width="160" height="80" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="600" y="44" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">READ PATH</text>
+  <text x="600" y="61" text-anchor="middle" fill="#5a6a85" font-size="9">Client → GET /status</text>
+  <text x="600" y="75" text-anchor="middle" fill="#5a6a85" font-size="9">→ Redis MGET (primary)</text>
+  <text x="600" y="89" text-anchor="middle" fill="#5a6a85" font-size="9">→ MySQL fallback (last_seen)</text>
+  <line x1="180" y1="60" x2="268" y2="60" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#ar)" opacity=".7"/>
+  <line x1="430" y1="60" x2="518" y2="60" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ar)" opacity=".7"/>
+</svg>
+      </div>
+      <h3>Rule: Optimize Write and Read Paths Independently</h3>
+      <div class="g g2">
+        <div class="card"><h4>Write path can be async</h4><p>Heartbeat writes to Redis (fast, in-memory) and asynchronously to MySQL via Kafka. The caller doesn't wait for MySQL. Write latency = Redis latency only (~1 ms).</p></div>
+        <div class="card"><h4>Read path can be stale</h4><p>Status query reads from Redis. If key is gone (user offline), falls back to MySQL last_seen. Slight staleness (up to TTL) is acceptable by requirement.</p></div>
+      </div>
+    </div>
+
+    <!-- MODEL 2 -->
+    <div class="spanel" id="t2-model2">
+      <div class="ptitle">Model 2 — <em>Bottleneck First</em></div>
+      <p class="psub">Find the single component that will fail first under load. Solve that. Don't pre-optimize everything — that leads to premature complexity.</p>
+      <h3>Bottleneck Identification Process</h3>
+      <div class="flow">
+        <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Calculate load per component</div><div class="fd">Start with your capacity estimate. Divide total load by component capacity. The one closest to 100% is your bottleneck.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Identify the critical path</div><div class="fd">Trace a single request end-to-end. The slowest hop in the chain is your latency bottleneck. The component with highest concurrency is your throughput bottleneck.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Fix only the bottleneck — not everything</div><div class="fd">Adding Redis won't help if your DB is not the bottleneck. Adding Kafka won't help if the consumer is the bottleneck. One fix at a time.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Re-calculate after each fix</div><div class="fd">When you fix one bottleneck, the next one surfaces. This is called "shifting the bottleneck." Design iterates, not explodes.</div></div></div>
+      </div>
+      <h3>Bottleneck Examples Across Systems</h3>
+      <table>
+        <tr><th>System</th><th>Bottleneck</th><th>Signal</th><th>Fix</th></tr>
+        <tr><td>Online/Offline Indicator</td><td>Redis write throughput (500K/s)</td><td>Redis CPU &gt; 80%, p99 &gt; 5ms</td><td>Shard Redis by user_id % N</td></tr>
+        <tr><td>Social feed</td><td>Fan-out on write (celebrity users)</td><td>High latency for users with many followers</td><td>Lazy fan-out or hybrid</td></tr>
+        <tr><td>Image upload service</td><td>Disk I/O on upload servers</td><td>CPU idle, disk queue full</td><td>Stream to object storage directly</td></tr>
+        <tr><td>URL shortener</td><td>DB read (redirect lookup)</td><td>High DB CPU, low cache hit rate</td><td>Cache popular URLs in Redis</td></tr>
+        <tr><td>Kafka consumer lag</td><td>Single-partition consumer</td><td>Partition lag growing</td><td>Increase partition count + consumers</td></tr>
+      </table>
+      <h3>The "Good Enough" Principle</h3>
+      <div class="call cg">A system that handles 10× current load with simple components is better than one that handles 100× with 20 components. Design for the next 18 months, not for hypothetical 10B users. Complexity has a cost: ops overhead, debugging time, hiring.</div>
+    </div>
+
+    <!-- MODEL 3 -->
+    <div class="spanel" id="t2-model3">
+      <div class="ptitle">Model 3 — <em>Trade-off Surfacing</em></div>
+      <p class="psub">Every design decision is a trade-off. The skill is not picking the "right" answer — it's articulating <em>what you give up</em> for <em>what you gain</em>.</p>
+      <h3>The Trade-off Framework</h3>
+      <div class="g g2">
+        <div class="card ct-c">
+          <h4>Structure</h4>
+          <ul class="rl">
+            <li><strong>Option A</strong> — what you gain, what you lose</li>
+            <li><strong>Option B</strong> — what you gain, what you lose</li>
+            <li><strong>When to flip</strong> — conditions under which you'd change your choice</li>
+            <li><strong>Default choice</strong> — for your current scale/requirements</li>
+          </ul>
+        </div>
+        <div class="card ct-g">
+          <h4>The CAP Triangle (applied)</h4>
+          <ul class="rl">
+            <li>Consistency + Availability → gives up Partition Tolerance</li>
+            <li>Availability + Partition Tolerance → gives up Consistency (most web systems)</li>
+            <li>Consistency + Partition Tolerance → gives up Availability</li>
+            <li><strong>Most systems choose AP</strong> — accept eventual consistency</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Core Trade-off Pairs You'll Encounter Every Week</h3>
+      <table>
+        <tr><th>Dimension</th><th>Option A</th><th>Option B</th><th>When to choose B</th></tr>
+        <tr><td>Consistency</td><td>Strong (sync write)</td><td>Eventual (async + queue)</td><td>Throughput &gt; consistency requirement</td></tr>
+        <tr><td>Latency vs Durability</td><td>In-memory (fast, lossy)</td><td>Disk-backed (slow, durable)</td><td>Data loss is unacceptable</td></tr>
+        <tr><td>Storage cost vs Query speed</td><td>Denormalized (fast, large)</td><td>Normalized (slow joins, small)</td><td>Write-heavy, complex queries rare</td></tr>
+        <tr><td>Complexity vs Scale</td><td>Monolith (simple, vertical)</td><td>Microservices (complex, horizontal)</td><td>Team &gt; 50 engineers, distinct scaling needs</td></tr>
+        <tr><td>Freshness vs Performance</td><td>Real-time (no cache)</td><td>Cached (stale, fast)</td><td>Data changes &lt; once/min or staleness acceptable</td></tr>
+        <tr><td>Fan-out write vs read</td><td>Write-time fan-out (read fast)</td><td>Read-time fan-out (write fast)</td><td>Heavy writes, read can afford aggregation</td></tr>
+      </table>
+      <h3>Applying to Any Interview Question</h3>
+      <div class="call ci">"I'll use Redis for the hot path because it gives us sub-millisecond reads and atomic operations. The trade-off is that it's in-memory — data is lost on crash unless we persist with RDB/AOF. Given that our requirement is eventual consistency and we have MySQL as a fallback for last_seen, this trade-off is acceptable at our scale."<br><br><strong>→ This is the response pattern that gets you senior-level credit.</strong></div>
+    </div>
+
+    <!-- APPLY -->
+    <div class="spanel" id="t2-apply">
+      <div class="ptitle">Applying All 3 <em>Models Together</em></div>
+      <p class="psub">A walkthrough of how to apply all three models sequentially to a new problem — using a URL shortener as an example.</p>
+      <h3>Example: Design a URL Shortener</h3>
+      <div class="flow">
+        <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Decompose (Model 1)</div><div class="fd"><strong>Write path:</strong> POST /shorten → generate short code → store in DB. <strong>Read path:</strong> GET /&lt;code&gt; → lookup → 301 redirect. <strong>Storage:</strong> key-value (code → long URL). These are independent — read is 100× heavier than write.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Bottleneck First (Model 2)</div><div class="fd">1B redirects/day ÷ 86400 = 11,600 reads/s. DB max ~5K reads/s/node. Bottleneck = DB read. Fix: add Redis cache for top URLs. 95% cache hit rate → DB sees only 580 reads/s. ✅</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Trade-off Surfacing (Model 3)</div><div class="fd">Cache with 1h TTL: fast, but if URL is deleted, stale for 1h. Trade-off: simplicity + speed vs. instant consistency on delete. At scale, acceptable. For enterprise (link invalidation critical), use shorter TTL or active cache invalidation.</div></div></div>
+      </div>
+      <h3>The Mental Model Cheat Sheet</h3>
+      <div class="g g3">
+        <div class="card ct-c"><h4>Start here</h4><p><strong>Decompose:</strong> What are the read path, write path, and storage for this system? Draw them separately before connecting them.</p></div>
+        <div class="card ct-g"><h4>Then here</h4><p><strong>Bottleneck:</strong> Given the capacity numbers, which component hits 100% first? Solve only that. Resist adding components for hypothetical scale.</p></div>
+        <div class="card ct-p"><h4>Always do this</h4><p><strong>Trade-off:</strong> For every major component you add, state: gain, loss, and flip condition. Never add anything without articulating the trade-off.</p></div>
+      </div>
+    </div>
+
+    <!-- OUTCOME -->
+    <div class="spanel" id="t2-outcome">
+      <div class="ptitle">Out<em>come</em></div>
+      <p class="psub">What you've internalized from the 3 Mental Models topic.</p>
+      <ul class="ol">
+        <li><strong>Decompose into read/write/storage paths</strong> — every system can be split this way; design each path for its own constraints before connecting them.</li>
+        <li><strong>Bottleneck-first design</strong> — calculate load per component, find the one closest to capacity, fix only that. Premature optimization is the root of over-engineered systems.</li>
+        <li><strong>Trade-off articulation is the skill</strong> — knowing Redis is fast is table stakes. Knowing what you give up (memory, cost, persistence) and under what conditions you'd switch — that's senior engineering.</li>
+        <li><strong>Shifting bottleneck pattern</strong> — fixing one bottleneck surfaces the next. This is normal and expected. Design iterates toward simplicity, not away from it.</li>
+        <li><strong>Simple is harder than complex</strong> — adding components is easy. Justifying each one with a concrete requirement is the discipline that separates good designs from cargo-cult architectures.</li>
+      </ul>
+    </div>
+
+  </div><!-- /subpanels t2 -->
+</div><!-- /topic t2 -->
+
+<!-- ════════════════════════════════════
+     TOPIC 3 — CONNECTION POOLS & DB PROXIES
+════════════════════════════════════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap" data-for="t3">
+    <div class="stab active" data-s="t3-overview">Overview</div>
+    <div class="stab" data-s="t3-pools">Connection Pools</div>
+    <div class="stab" data-s="t3-proxy">DB Proxies</div>
+    <div class="stab" data-s="t3-issues">Issues at Scale</div>
+    <div class="stab" data-s="t3-code">Code</div>
+    <div class="stab" data-s="t3-outcome">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+    <div class="spanel active" id="t3-overview">
+      <div class="ptitle">Connection Pools &amp; <em>DB Proxies</em></div>
+      <p class="psub">Every database has a hard limit on concurrent connections. Without pooling, your app servers will exhaust it under moderate load. Understanding this is foundational to every data-intensive system.</p>
+      <h3>The Problem</h3>
+      <div class="g g2">
+        <div class="card ct-r">
+          <h4>Without Connection Pooling</h4>
+          <p>Every request opens a new DB connection → executes query → closes connection. TCP handshake + TLS + DB auth = 5–50ms overhead per query. At 10K RPS: 10K new connections/s → DB crashes.</p>
+          <div class="call cr" style="font-size:12px;padding:8px 10px">MySQL default max_connections = 151. Your app has 10 servers × 100 threads = 1000 connections. 💥</div>
+        </div>
+        <div class="card ct-g">
+          <h4>With Connection Pooling</h4>
+          <p>Pool maintains N persistent connections. Requests borrow a connection, use it, return it. Overhead = queue wait time (microseconds). Same 10K RPS with 50 pool connections per server = fine.</p>
+          <div class="call cg" style="font-size:12px;padding:8px 10px">10 servers × 50 pool conns = 500 total DB connections. MySQL handles this easily.</div>
+        </div>
+      </div>
+      <h3>Quick Numbers</h3>
+      <div class="g g4">
+        <div class="card ct-c" style="text-align:center"><div class="snum">5–50ms</div><div class="slbl">Cost of new TCP connection</div></div>
+        <div class="card ct-c" style="text-align:center"><div class="snum">&lt;1ms</div><div class="slbl">Pool borrow/return overhead</div></div>
+        <div class="card ct-a" style="text-align:center"><div class="snum">151</div><div class="slbl">MySQL default max_connections</div></div>
+        <div class="card ct-g" style="text-align:center"><div class="snum">10–50</div><div class="slbl">Recommended pool size per server</div></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t3-pools">
+      <div class="ptitle">Connection <em>Pools</em> — Deep Dive</div>
+      <p class="psub">A connection pool is a cache of pre-established DB connections. Requests borrow from the pool and return after use.</p>
+      <h3>How a Pool Works</h3>
+      <div class="flow">
+        <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Pool initialises min_connections at startup</div><div class="fd">Opens <code>min_size</code> (e.g., 5) connections to DB during app startup. No per-request overhead from here on.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Request borrows a connection</div><div class="fd">If a free connection exists → borrow immediately (microseconds). If pool exhausted → wait in queue or raise PoolTimeout exception.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Query executes, connection returned</div><div class="fd">After query, connection is returned to pool — NOT closed. Pool can reuse it for the next request. Connection stays warm (authenticated, session vars set).</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Pool scales up to max_connections</div><div class="fd">If all connections busy, pool opens new ones up to <code>max_size</code>. After burst, idle connections are closed back down to <code>min_size</code>.</div></div></div>
+      </div>
+      <h3>Pool Size Formula</h3>
+      <div class="call ci">
+        <strong>Practical formula:</strong> pool_size = (core_count × 2) + effective_spindle_count<br>
+        For a 4-core app server: pool_size = (4 × 2) + 1 = <strong>9 connections</strong>.<br><br>
+        Counter-intuitively, <strong>fewer connections = better throughput</strong> up to a point. More connections = more context switching on the DB server = degraded performance. HikariCP's default is 10.
+      </div>
+      <h3>Pool Configuration Parameters</h3>
+      <table>
+        <tr><th>Parameter</th><th>Description</th><th>Recommended</th></tr>
+        <tr><td>min_size / minimumIdle</td><td>Connections kept warm even when idle</td><td>Same as max_size (avoid resize overhead)</td></tr>
+        <tr><td>max_size / maximumPoolSize</td><td>Max concurrent DB connections from this server</td><td>10–50 depending on query duration</td></tr>
+        <tr><td>connection_timeout</td><td>Max wait time for a connection from pool</td><td>30s (fail fast on overload)</td></tr>
+        <tr><td>idle_timeout</td><td>Close idle connections after this period</td><td>600s</td></tr>
+        <tr><td>max_lifetime</td><td>Force-close connection after this duration (prevents DB-side stale)</td><td>1800s (30 min)</td></tr>
+        <tr><td>validation_query</td><td>Query to test if connection is still alive</td><td>SELECT 1</td></tr>
+      </table>
+    </div>
+
+    <div class="spanel" id="t3-proxy">
+      <div class="ptitle">DB <em>Proxies</em></div>
+      <p class="psub">When you have 100s of app servers each with their own pool, the DB still sees 100s × 50 = 5000 connections. A DB Proxy multiplexes all app connections into a smaller set of actual DB connections.</p>
+      <h3>What a DB Proxy Does</h3>
+      <div class="diag">
+<svg viewBox="0 0 700 130" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="ar2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="126" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- App servers -->
+  <rect x="16" y="20" width="148" height="90" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="90" y="38" text-anchor="middle" fill="#3a4a60" font-size="9" letter-spacing="1">APP SERVERS</text>
+  <rect x="24" y="46" width="62" height="26" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1"/>
+  <text x="55" y="63" text-anchor="middle" fill="#e2e8f0" font-size="9">App 1 ×50</text>
+  <rect x="96" y="46" width="62" height="26" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1"/>
+  <text x="127" y="63" text-anchor="middle" fill="#e2e8f0" font-size="9">App 2 ×50</text>
+  <rect x="24" y="80" width="134" height="22" rx="3" fill="#0e1420" stroke="#1e2d45" stroke-dasharray="2,2"/>
+  <text x="91" y="95" text-anchor="middle" fill="#3a4a60" font-size="8">…100 servers × 50 = 5000 conns</text>
+  <!-- Arrow to proxy -->
+  <line x1="166" y1="65" x2="220" y2="65" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="193" y="58" text-anchor="middle" fill="#f59e0b" font-size="8">5000 conns</text>
+  <!-- Proxy -->
+  <rect x="222" y="30" width="140" height="70" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="292" y="54" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">ProxySQL</text>
+  <text x="292" y="70" text-anchor="middle" fill="#5a6a85" font-size="9">Connection multiplexing</text>
+  <text x="292" y="84" text-anchor="middle" fill="#5a6a85" font-size="8">Query routing (R/W split)</text>
+  <!-- Arrow to DB -->
+  <line x1="364" y1="65" x2="418" y2="65" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="391" y="58" text-anchor="middle" fill="#22c55e" font-size="8">50 conns</text>
+  <!-- DB -->
+  <rect x="420" y="20" width="130" height="40" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="485" y="38" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">MySQL Primary</text>
+  <text x="485" y="52" text-anchor="middle" fill="#3a4a60" font-size="8">max 500 real conns</text>
+  <rect x="420" y="70" width="130" height="40" rx="5" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="485" y="88" text-anchor="middle" fill="#8a9bb5" font-size="10">MySQL Replica</text>
+  <text x="485" y="102" text-anchor="middle" fill="#3a4a60" font-size="8">reads only</text>
+  <!-- arrow to replica -->
+  <line x1="364" y1="75" x2="418" y2="87" stroke="#5a6a85" stroke-width="1" marker-end="url(#ar2)" stroke-dasharray="3,2"/>
+  <!-- RDS Proxy note -->
+  <rect x="570" y="30" width="120" height="80" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1"/>
+  <text x="630" y="52" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">AWS RDS Proxy</text>
+  <text x="630" y="68" text-anchor="middle" fill="#3a4a60" font-size="8">Managed proxy</text>
+  <text x="630" y="82" text-anchor="middle" fill="#3a4a60" font-size="8">for RDS/Aurora</text>
+  <text x="630" y="96" text-anchor="middle" fill="#3a4a60" font-size="8">IAM auth support</text>
+</svg>
+      </div>
+      <h3>Popular DB Proxies</h3>
+      <table>
+        <tr><th>Proxy</th><th>Best For</th><th>Key Feature</th><th>Limitation</th></tr>
+        <tr><td>PgBouncer</td><td>PostgreSQL</td><td>Ultra-lightweight, 3 pooling modes (session/transaction/statement)</td><td>No R/W splitting, single-threaded</td></tr>
+        <tr><td>ProxySQL</td><td>MySQL / MariaDB</td><td>R/W splitting, query routing rules, hostgroup failover</td><td>More complex config, higher memory</td></tr>
+        <tr><td>AWS RDS Proxy</td><td>AWS RDS / Aurora</td><td>Managed, IAM auth, failover &lt;30s, serverless friendly</td><td>AWS-only, adds latency (~1ms)</td></tr>
+        <tr><td>Vitess</td><td>MySQL at huge scale</td><td>Horizontal sharding, connection pooling, resharding</td><td>Complex ops, YouTube-scale only</td></tr>
+      </table>
+      <h3>PgBouncer Pooling Modes</h3>
+      <div class="g g3">
+        <div class="card ct-r"><h4>Session Mode</h4><p>1 client = 1 server conn for the session duration. Same as no proxy for connection count. Only helps with auth overhead.</p></div>
+        <div class="card ct-a"><h4>Transaction Mode ✓</h4><p>Server conn held only during transaction. Most efficient — 1 conn shared by many clients. <strong>Most common choice.</strong> Breaks session-level features (prepared statements, advisory locks).</p></div>
+        <div class="card ct-g"><h4>Statement Mode</h4><p>Conn returned after each statement. Ultra-aggressive reuse. Only works if queries are all single-statement (no transactions). Rarely used.</p></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t3-issues">
+      <div class="ptitle">Issues at <em>Scale</em></div>
+      <p class="psub">What goes wrong when you get connection pooling wrong — and how to detect and fix each issue.</p>
+      <h3>Common Failure Patterns</h3>
+      <div class="g g2">
+        <div class="card ct-r"><h4>Connection Pool Exhaustion</h4><p>All pool connections are busy. New requests queue or get PoolTimeout. Symptom: p99 latency spikes, errors like "connection pool exhausted."</p><p><strong>Cause:</strong> Long-running queries holding connections. <strong>Fix:</strong> Set query timeout; increase pool size; optimize slow queries.</p></div>
+        <div class="card ct-a"><h4>Connection Leak</h4><p>App checks out a connection, throws an exception, never returns it. Pool slowly drains. Symptom: gradual latency increase, restart fixes it.</p><p><strong>Fix:</strong> Always use try-finally or context managers. Pool <code>max_lifetime</code> as safety net.</p></div>
+        <div class="card ct-a"><h4>Thundering Herd</h4><p>App restarts; all pool connections initialize at once → DB gets 10 servers × 50 = 500 new connections in 1 second. DB connection setup is expensive.</p><p><strong>Fix:</strong> Staggered startup, lazy pool initialization, exponential backoff.</p></div>
+        <div class="card ct-r"><h4>Stale Connections</h4><p>DB restarts or firewall drops idle connections. Pool still thinks connections are alive → first query on stale conn fails.</p><p><strong>Fix:</strong> Set <code>max_lifetime &lt; DB wait_timeout</code>. Use <code>testOnBorrow=true</code> or keepalive.</p></div>
+      </div>
+      <h3>How Locking Affects Pool Throughput</h3>
+      <div class="call cw">
+        <strong>Key insight:</strong> A long-running query holding a DB row lock also holds a pool connection. If 50 requests are waiting for the lock, they also hold 50 pool connections doing nothing. This is how a single slow query can cascade into a pool exhaustion event that takes down the entire service.
+      </div>
+      <table>
+        <tr><th>Lock Type</th><th>Scope</th><th>Pool Impact</th><th>Mitigation</th></tr>
+        <tr><td>Row lock (SELECT FOR UPDATE)</td><td>Single row</td><td>Conn held until transaction commits</td><td>Keep transactions short; use optimistic locking</td></tr>
+        <tr><td>Table lock</td><td>Entire table</td><td>All concurrent conns blocked</td><td>Avoid; use row-level locks only</td></tr>
+        <tr><td>Deadlock</td><td>Two rows</td><td>Both conns held until timeout</td><td>Always acquire locks in same order</td></tr>
+        <tr><td>Long transaction</td><td>All modified rows</td><td>Conn held for transaction duration</td><td>Set innodb_lock_wait_timeout; avoid long transactions</td></tr>
+      </table>
+    </div>
+
+    <div class="spanel" id="t3-code">
+      <div class="ptitle">Code — <em>Pool Configuration</em></div>
+      <p class="psub">Practical connection pool setup in Python (SQLAlchemy + asyncpg) and Java (HikariCP), the two most common production choices.</p>
+      <div class="ltabs" id="lt3">
+        <div class="ltab on" data-l2="t3py">🐍 Python (SQLAlchemy)</div>
+        <div class="ltab" data-l2="t3java">☕ Java (HikariCP)</div>
+      </div>
+      <div class="lpanel on" id="t3py">
+        <div class="cwrap">
+          <div class="ctop"><span>db_pool.py — SQLAlchemy async pool</span><span class="ltag lpy">Python</span></div>
+          <pre><span class="kw">from</span> sqlalchemy.ext.asyncio <span class="kw">import</span> create_async_engine, AsyncSession
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> sessionmaker
+<span class="kw">from</span> contextlib <span class="kw">import</span> asynccontextmanager
+
+<span class="cmt"># Connection string with pool params</span>
+DATABASE_URL = <span class="str">"postgresql+asyncpg://user:pass@localhost/mydb"</span>
+
+engine = <span class="fn">create_async_engine</span>(
+    DATABASE_URL,
+    pool_size=<span class="num">10</span>,          <span class="cmt"># steady-state connections</span>
+    max_overflow=<span class="num">20</span>,       <span class="cmt"># extra conns allowed during burst</span>
+    pool_timeout=<span class="num">30</span>,       <span class="cmt"># wait 30s for a free connection</span>
+    pool_recycle=<span class="num">1800</span>,     <span class="cmt"># force-close conns after 30 min</span>
+    pool_pre_ping=<span class="kw">True</span>,    <span class="cmt"># test conn before handing out (stale check)</span>
+    echo=<span class="kw">False</span>
+)
+
+<span class="cls">AsyncSessionLocal</span> = <span class="fn">sessionmaker</span>(
+    engine, class_=<span class="cls">AsyncSession</span>, expire_on_commit=<span class="kw">False</span>
+)
+
+<span class="dec">@asynccontextmanager</span>
+<span class="kw">async def</span> <span class="fn">get_db</span>():
+    <span class="str">"""Context manager — guarantees connection return even on exceptions."""</span>
+    session = <span class="cls">AsyncSessionLocal</span>()
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> session
+        <span class="kw">await</span> session.<span class="fn">commit</span>()
+    <span class="kw">except Exception</span>:
+        <span class="kw">await</span> session.<span class="fn">rollback</span>()
+        <span class="kw">raise</span>
+    <span class="kw">finally</span>:
+        <span class="kw">await</span> session.<span class="fn">close</span>()   <span class="cmt"># returns conn to pool, never closes it</span>
+
+<span class="cmt"># Usage — connection auto-returned even if exception occurs</span>
+<span class="kw">async with</span> <span class="fn">get_db</span>() <span class="kw">as</span> db:
+    result = <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"SELECT 1"</span>)</pre>
+        </div>
+      </div>
+      <div class="lpanel" id="t3java">
+        <div class="cwrap">
+          <div class="ctop"><span>HikariConfig.java — HikariCP setup</span><span class="ltag ljv">Java</span></div>
+          <pre><span class="kw">import</span> com.zaxxer.hikari.*;
+
+<span class="dec">@Configuration</span>
+<span class="kw">public class</span> <span class="cls">DataSourceConfig</span> {
+
+    <span class="dec">@Bean</span>
+    <span class="kw">public</span> <span class="cls">DataSource</span> <span class="fn">dataSource</span>() {
+        <span class="cls">HikariConfig</span> config = <span class="kw">new</span> <span class="cls">HikariConfig</span>();
+
+        config.<span class="fn">setJdbcUrl</span>(<span class="str">"jdbc:mysql://localhost:3306/mydb"</span>);
+        config.<span class="fn">setUsername</span>(<span class="str">"user"</span>);
+        config.<span class="fn">setPassword</span>(<span class="str">"pass"</span>);
+
+        <span class="cmt">// Pool sizing — (cpu_cores * 2) + disk_spindles</span>
+        config.<span class="fn">setMaximumPoolSize</span>(<span class="num">10</span>);     <span class="cmt">// max connections per app node</span>
+        config.<span class="fn">setMinimumIdle</span>(<span class="num">10</span>);         <span class="cmt">// keep pool fully warmed</span>
+        config.<span class="fn">setConnectionTimeout</span>(<span class="num">30000</span>); <span class="cmt">// 30s: fail fast if pool exhausted</span>
+        config.<span class="fn">setIdleTimeout</span>(<span class="num">600000</span>);    <span class="cmt">// 10m: close idle extra conns</span>
+        config.<span class="fn">setMaxLifetime</span>(<span class="num">1800000</span>);   <span class="cmt">// 30m: recycle to prevent stale</span>
+        config.<span class="fn">setKeepaliveTime</span>(<span class="num">60000</span>);   <span class="cmt">// 1m: keep-alive ping</span>
+
+        <span class="cmt">// Validate connections before use (prevents stale conn errors)</span>
+        config.<span class="fn">setConnectionTestQuery</span>(<span class="str">"SELECT 1"</span>);
+
+        <span class="cmt">// Pool name for metrics/logging</span>
+        config.<span class="fn">setPoolName</span>(<span class="str">"MainPool"</span>);
+
+        <span class="cmt">// Register with Micrometer for monitoring</span>
+        config.<span class="fn">setMetricRegistry</span>(meterRegistry);
+
+        <span class="kw">return new</span> <span class="cls">HikariDataSource</span>(config);
+    }
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t3-outcome">
+      <div class="ptitle">Out<em>come</em></div>
+      <p class="psub">What you've learned about connection pools and DB proxies.</p>
+      <ul class="ol">
+        <li><strong>Why pools exist</strong> — TCP connection setup is 5–50ms; at 10K RPS that's the entire latency budget. Pools amortize this cost across thousands of requests.</li>
+        <li><strong>Pool sizing formula</strong> — (cores × 2) + spindles. Counterintuitively, more connections ≠ more throughput above a threshold. HikariCP defaults to 10 for a reason.</li>
+        <li><strong>PgBouncer transaction mode</strong> — the sweet spot for PostgreSQL. 1 DB connection serves many clients as long as each transaction is short. Breaks session-level features — understand the tradeoff.</li>
+        <li><strong>ProxySQL R/W splitting</strong> — route SELECT to replicas, INSERT/UPDATE to primary. Multiplexes 5000 app connections → 50 real DB connections. Essential at 100+ app servers.</li>
+        <li><strong>Connection leak → pool exhaustion</strong> — always use context managers / try-finally. A single leaked connection can cascade to a full service outage.</li>
+        <li><strong>Locks hold connections</strong> — a row lock in a transaction holds a pool connection. Long transactions under load = pool exhaustion cascade. Keep transactions tight and fast.</li>
+      </ul>
+    </div>
+
+  </div>
+</div><!-- /topic t3 -->
+
+<!-- ════════════════════════════════════
+     TOPIC 4 — CACHING AT SCALE
+════════════════════════════════════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap" data-for="t4">
+    <div class="stab active" data-s="t4-overview">Overview</div>
+    <div class="stab" data-s="t4-strategies">Cache Strategies</div>
+    <div class="stab" data-s="t4-issues">Scale Issues</div>
+    <div class="stab" data-s="t4-eviction">Eviction Policies</div>
+    <div class="stab" data-s="t4-demo">Interactive Demo</div>
+    <div class="stab" data-s="t4-outcome">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+    <div class="spanel active" id="t4-overview">
+      <div class="ptitle">Caching and their <em>Issues at Scale</em></div>
+      <p class="psub">Caching is the single most impactful performance optimization in distributed systems — and the source of the most subtle bugs. Understanding both sides is essential.</p>
+      <div class="g g4">
+        <div class="card ct-c" style="text-align:center"><div class="snum">100×</div><div class="slbl">Typical read speedup vs DB</div></div>
+        <div class="card ct-g" style="text-align:center"><div class="snum">~1ms</div><div class="slbl">Redis GET latency (p99)</div></div>
+        <div class="card ct-a" style="text-align:center"><div class="snum">80/20</div><div class="slbl">20% keys get 80% of reads</div></div>
+        <div class="card ct-r" style="text-align:center"><div class="snum">3</div><div class="slbl">Invalidation is one of 2 hard problems</div></div>
+      </div>
+      <h3>Where Caches Live</h3>
+      <div class="g g3">
+        <div class="card ct-c"><h4>Client-side Cache</h4><p>In-process memory (HashMap, Guava Cache). Zero network latency. Private per instance — can diverge across servers. Good for static/rarely-changed data (config, feature flags).</p></div>
+        <div class="card ct-g"><h4>Distributed Cache</h4><p>Redis, Memcached. Shared across all servers. Network hop (1–5ms). Can scale horizontally. Source of truth for shared mutable state like sessions, presence, rate limits.</p></div>
+        <div class="card ct-p"><h4>CDN / Edge Cache</h4><p>Cloudflare, Fastly. Geographically distributed. Caches static assets, HTML, API responses near users. Best for content that changes infrequently and is user-agnostic.</p></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t4-strategies">
+      <div class="ptitle">Cache <em>Strategies</em></div>
+      <p class="psub">Different strategies suit different read/write patterns. Choosing the wrong one is a common design mistake.</p>
+      <table>
+        <tr><th>Strategy</th><th>How It Works</th><th>Best For</th><th>Downside</th></tr>
+        <tr><td><strong>Cache-aside</strong> (Lazy)</td><td>App checks cache → miss → fetch DB → populate cache → return</td><td>Read-heavy, irregular access patterns</td><td>Cache miss penalty (2 hops); stale data possible</td></tr>
+        <tr><td><strong>Read-through</strong></td><td>Cache intercepts read; on miss, fetches DB automatically</td><td>Uniform read patterns; simpler app code</td><td>Cold start misses; cache library dependency</td></tr>
+        <tr><td><strong>Write-through</strong></td><td>Write goes to cache AND DB synchronously</td><td>Consistent reads immediately after write</td><td>Write latency = cache + DB; stores data never read</td></tr>
+        <tr><td><strong>Write-behind</strong> (Write-back)</td><td>Write to cache only; async flush to DB later</td><td>Write-heavy; throughput &gt; durability</td><td>Data loss risk on cache crash before flush</td></tr>
+        <tr><td><strong>Refresh-ahead</strong></td><td>Proactively refresh cache before TTL expires</td><td>Predictable access (e.g., homepage)</td><td>Wastes resources refreshing unused keys</td></tr>
+      </table>
+      <div class="call ci"><strong>Most common in practice:</strong> Cache-aside for reads + Write-through for writes on critical paths. Write-behind for analytics/counters where eventual persistence is acceptable.</div>
+    </div>
+
+    <div class="spanel" id="t4-issues">
+      <div class="ptitle">Scale <em>Issues</em></div>
+      <p class="psub">These are the failure modes that bite you in production. Every one of them has a name because it has bitten someone famous first.</p>
+      <div class="g g2">
+        <div class="card ct-r">
+          <h4>🌊 Cache Stampede (Thundering Herd)</h4>
+          <p>A popular key's TTL expires. Hundreds of concurrent requests miss the cache simultaneously → all hit the DB at once → DB overwhelmed → cascade failure.</p>
+          <p><strong>Fix:</strong> Probabilistic Early Expiration (PER), mutex lock on first miss ("cache warming lock"), or background refresh before TTL expires.</p>
+          <div class="call cr" style="font-size:12px;padding:8px 10px">1M RPS on a key that expires every 60s = all 1M requests potentially hitting DB in a 100ms window.</div>
+        </div>
+        <div class="card ct-r">
+          <h4>🎯 Cache Penetration</h4>
+          <p>Attacker (or buggy client) requests keys that don't exist in cache OR DB. Every request hits DB. Cache is bypassed entirely.</p>
+          <p><strong>Fix:</strong> Cache negative results (<code>SET key "NULL" EX 60</code>). Or use a Bloom filter to reject non-existent keys before any lookup.</p>
+        </div>
+        <div class="card ct-a">
+          <h4>🌊 Cache Avalanche</h4>
+          <p>Many cache keys expire at the same time (e.g., set with identical TTL during app restart). Flood of DB requests simultaneously.</p>
+          <p><strong>Fix:</strong> Add jitter to TTLs: <code>TTL = base_ttl + random(0, base_ttl * 0.1)</code>. Staggers expiry across time window.</p>
+        </div>
+        <div class="card ct-a">
+          <h4>⭐ Hot Key (Celebrity Problem)</h4>
+          <p>One key (Justin Bieber's profile) gets 100K reads/s. Even with Redis cluster, that key lives on one shard → that shard becomes a hotspot.</p>
+          <p><strong>Fix:</strong> Replicate hot keys to multiple shards (<code>user:bieber:1</code>, <code>user:bieber:2</code>…). Read from random shard. Or local in-process cache for VIP keys.</p>
+        </div>
+        <div class="card ct-p">
+          <h4>🔄 Cache Inconsistency (Stale Reads)</h4>
+          <p>DB is updated but cache isn't invalidated. Reads return stale data. Worse: two cache nodes have different values during replication lag.</p>
+          <p><strong>Fix:</strong> Short TTL. Active invalidation (publish invalidation event to all nodes). "Cache-aside + write-through" pattern for critical data.</p>
+        </div>
+        <div class="card ct-p">
+          <h4>💾 Cache Warm-up on Restart</h4>
+          <p>After cache restart, all requests miss → DB suddenly sees 10× normal load. Systems can fail or be very slow for minutes post-restart.</p>
+          <p><strong>Fix:</strong> Redis persistence (RDB/AOF). Pre-warm cache from DB snapshot before switching traffic. Blue-green cache deployment.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t4-eviction">
+      <div class="ptitle">Eviction <em>Policies</em></div>
+      <p class="psub">When cache is full, which key gets evicted? The choice dramatically affects hit rate and system behaviour.</p>
+      <table>
+        <tr><th>Policy</th><th>Evicts</th><th>Best For</th><th>Redis Setting</th></tr>
+        <tr><td><strong>LRU</strong> — Least Recently Used</td><td>Oldest accessed key</td><td>General purpose; temporal locality in access patterns</td><td>allkeys-lru</td></tr>
+        <tr><td><strong>LFU</strong> — Least Frequently Used</td><td>Least accessed key over time</td><td>Skewed access (hot keys); avoids evicting popular items</td><td>allkeys-lfu</td></tr>
+        <tr><td><strong>TTL</strong> — Expire soonest</td><td>Key with nearest expiry</td><td>When all keys have explicit TTLs set</td><td>volatile-ttl</td></tr>
+        <tr><td><strong>Random</strong></td><td>Random key</td><td>When access is uniform (rare)</td><td>allkeys-random</td></tr>
+        <tr><td><strong>No eviction</strong></td><td>Returns error on full</td><td>When cache must not lose data (write-back cache)</td><td>noeviction</td></tr>
+      </table>
+      <div class="call cg"><strong>Redis default:</strong> noeviction — it returns an error when full. For a caching use case, almost always set <code>maxmemory-policy allkeys-lru</code> to allow Redis to manage its own memory. Combine with maxmemory limit to prevent OOM.</div>
+      <h3>Redis maxmemory Configuration</h3>
+      <div class="cwrap">
+        <div class="ctop"><span>redis.conf — memory &amp; eviction settings</span><span class="ltag lyml">Config</span></div>
+        <pre><span class="cmt"># Set max memory (leave headroom for OS + Redis overhead)</span>
+maxmemory 12gb
+
+<span class="cmt"># Evict LRU keys when full — best for general caching</span>
+maxmemory-policy allkeys-lru
+
+<span class="cmt"># LFU tuning (if using allkeys-lfu)</span>
+lfu-decay-time 1          <span class="cmt"># minutes for frequency to decay</span>
+lfu-log-factor 10         <span class="cmt"># higher = more precise, more CPU</span>
+
+<span class="cmt"># TTL jitter (application-level — add in your SET calls)</span>
+<span class="cmt"># SET key value EX (base_ttl + random(0, base_ttl/10))</span></pre>
+      </div>
+    </div>
+
+    <div class="spanel" id="t4-demo">
+      <div class="ptitle">Interactive <em>Cache Demo</em></div>
+      <p class="psub">Simulate cache-aside reads with LRU eviction. Watch hit/miss/eviction events in real time.</p>
+      <div class="demo-box">
+        <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span style="margin-left:8px">Cache-Aside + LRU (capacity: 4 slots)</span>
+          <button onclick="cacheRead()" style="margin-left:auto;background:rgba(0,229,255,.08);border:1px solid var(--accent);color:var(--accent);padding:3px 12px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer">🔍 Read Random Key</button>
+          <button onclick="resetCache()" style="margin-left:8px;background:rgba(239,68,68,.08);border:1px solid var(--red);color:var(--red);padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer">↺ Reset</button>
+        </div>
+        <div class="demo-body">
+          <div class="g g2">
+            <div>
+              <h4>Cache State (LRU, cap=4)</h4>
+              <div id="cache-slots" style="display:grid;gap:6px;margin-bottom:12px"></div>
+              <h4>Stats</h4>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;display:grid;gap:4px" id="cache-stats"></div>
+            </div>
+            <div>
+              <h4>Event Log</h4>
+              <div id="cache-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:10px;height:220px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t4-outcome">
+      <div class="ptitle">Out<em>come</em></div>
+      <ul class="ol">
+        <li><strong>Cache strategies map to patterns</strong> — cache-aside for irregular reads, write-through for consistency, write-behind for throughput. Knowing which to use when is a senior-level skill.</li>
+        <li><strong>Cache stampede is the most dangerous failure</strong> — 1M concurrent cache misses on TTL expiry → DB overwhelmed. Mitigate with probabilistic refresh or mutex locks.</li>
+        <li><strong>TTL jitter is a simple but powerful fix</strong> — adding random(0, TTL/10) to every TTL eliminates synchronized mass-expiry (cache avalanche) with one line of code.</li>
+        <li><strong>Hot key = hot shard</strong> — Redis cluster doesn't solve the celebrity problem. Replication of hot keys to multiple virtual shards is necessary for extreme skew.</li>
+        <li><strong>Cache negative results</strong> — cache penetration can take down your DB. Caching <code>NULL</code> for non-existent keys with a short TTL is mandatory at scale.</li>
+        <li><strong>allkeys-lru is the sensible default</strong> — not noeviction. Set maxmemory and let Redis manage its own memory. Surprises on production Redis are usually noeviction hitting memory ceiling.</li>
+      </ul>
+    </div>
+
+  </div>
+</div><!-- /topic t4 -->
+
+<!-- ════════════════════════════════════
+     TOPIC 5 — KAFKA ESSENTIALS
+════════════════════════════════════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap" data-for="t5">
+    <div class="stab active" data-s="t5-overview">Overview</div>
+    <div class="stab" data-s="t5-internals">Internals</div>
+    <div class="stab" data-s="t5-producers">Producers</div>
+    <div class="stab" data-s="t5-consumers">Consumers</div>
+    <div class="stab" data-s="t5-guarantees">Guarantees</div>
+    <div class="stab" data-s="t5-demo">Demo</div>
+    <div class="stab" data-s="t5-outcome">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+    <div class="spanel active" id="t5-overview">
+      <div class="ptitle">Kafka <em>Essentials</em></div>
+      <p class="psub">Apache Kafka is a distributed, append-only commit log used as a message broker, event streaming platform, and decoupling layer. Used in Week 1 to decouple heartbeat writes from MySQL — now we understand why.</p>
+      <div class="g g4">
+        <div class="card ct-c" style="text-align:center"><div class="snum">1M+</div><div class="slbl">Messages/sec per broker</div></div>
+        <div class="card ct-g" style="text-align:center"><div class="snum">ms</div><div class="slbl">End-to-end latency</div></div>
+        <div class="card ct-p" style="text-align:center"><div class="snum">∞</div><div class="slbl">Consumer groups (independent)</div></div>
+        <div class="card ct-a" style="text-align:center"><div class="snum">7+ days</div><div class="slbl">Default message retention</div></div>
+      </div>
+      <h3>Why Kafka and Not a Simple Queue?</h3>
+      <div class="g g2">
+        <div class="card">
+          <h4>Traditional Queue (RabbitMQ)</h4>
+          <ul class="rl">
+            <li>Message consumed → <strong>deleted</strong></li>
+            <li>One consumer group only (by default)</li>
+            <li>Push-based delivery</li>
+            <li>Good for: task queues, RPC, job scheduling</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Kafka</h4>
+          <ul class="rl">
+            <li>Message consumed → <strong>retained</strong> (by time/size)</li>
+            <li>Multiple independent consumer groups</li>
+            <li>Pull-based; consumers control pace</li>
+            <li>Good for: event streaming, log aggregation, decoupling at scale</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t5-internals">
+      <div class="ptitle">Kafka <em>Internals</em></div>
+      <p class="psub">Understanding the data model is key to understanding why Kafka is fast and what its guarantees are.</p>
+      <h3>Core Concepts</h3>
+      <div class="g g3">
+        <div class="card ct-c"><h4>Topic</h4><p>A named stream of events. Think of it as a database table but append-only. Producers write to topics; consumers read from them.</p></div>
+        <div class="card ct-g"><h4>Partition</h4><p>A topic is split into N partitions. Each partition is an ordered, append-only log stored on disk. Partitions enable parallelism — one consumer per partition max.</p></div>
+        <div class="card ct-p"><h4>Offset</h4><p>Each message in a partition has a monotonically increasing offset. Consumers track their offset — this is how Kafka knows what each consumer has read.</p></div>
+        <div class="card ct-a"><h4>Consumer Group</h4><p>Multiple consumers sharing a group ID split partitions among themselves (each partition → one consumer). Multiple groups = independent reads of the same data.</p></div>
+        <div class="card ct-r"><h4>Broker</h4><p>A Kafka server. Each broker holds a subset of partitions. Leader partition handles reads/writes; follower partitions replicate for HA.</p></div>
+        <div class="card"><h4>Replication Factor</h4><p>How many copies of each partition exist across brokers. RF=3 → 1 leader + 2 followers. Survives 2 broker failures before data loss.</p></div>
+      </div>
+      <h3>Architecture Diagram</h3>
+      <div class="diag">
+<svg viewBox="0 0 700 160" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="ark" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker>
+  <marker id="ark2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#22c55e" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="156" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Producer -->
+  <rect x="14" y="30" width="100" height="100" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="64" y="54" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Producers</text>
+  <rect x="22" y="62" width="84" height="22" rx="3" fill="#0e1420" stroke="#1e2d45"/><text x="64" y="77" text-anchor="middle" fill="#5a6a85" font-size="9">App Server 1</text>
+  <rect x="22" y="90" width="84" height="22" rx="3" fill="#0e1420" stroke="#1e2d45"/><text x="64" y="105" text-anchor="middle" fill="#5a6a85" font-size="9">App Server 2</text>
+  <!-- Topic partitions -->
+  <rect x="165" y="14" width="340" height="132" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="335" y="30" text-anchor="middle" fill="#3a4a60" font-size="9" letter-spacing="1">TOPIC: presence.heartbeats</text>
+  <!-- P0 -->
+  <rect x="175" y="38" width="320" height="28" rx="3" fill="#131a2a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="196" y="56" fill="#fcd34d" font-size="9">P0</text>
+  <text x="220" y="53" fill="#5a6a85" font-size="8">[off:0]{uid:42,ts:100} [off:1]{uid:7} [off:2]{uid:42} →</text>
+  <!-- P1 -->
+  <rect x="175" y="74" width="320" height="28" rx="3" fill="#131a2a" stroke="#a78bfa" stroke-width="1"/>
+  <text x="196" y="92" fill="#a78bfa" font-size="9">P1</text>
+  <text x="220" y="89" fill="#5a6a85" font-size="8">[off:0]{uid:99,ts:200} [off:1]{uid:50} →</text>
+  <!-- P2 -->
+  <rect x="175" y="110" width="320" height="28" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="196" y="128" fill="#86efac" font-size="9">P2</text>
+  <text x="220" y="125" fill="#5a6a85" font-size="8">[off:0]{uid:1,ts:300} [off:1]{uid:200} →</text>
+  <!-- Consumer Groups -->
+  <rect x="560" y="14" width="130" height="132" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="625" y="32" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">Consumer Group</text>
+  <text x="625" y="44" text-anchor="middle" fill="#3a4a60" font-size="8">presence-flush</text>
+  <rect x="568" y="50" width="114" height="22" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="625" y="65" text-anchor="middle" fill="#5a6a85" font-size="9">Consumer 1 → P0</text>
+  <rect x="568" y="78" width="114" height="22" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="625" y="93" text-anchor="middle" fill="#5a6a85" font-size="9">Consumer 2 → P1</text>
+  <rect x="568" y="106" width="114" height="22" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="625" y="121" text-anchor="middle" fill="#5a6a85" font-size="9">Consumer 3 → P2</text>
+  <!-- Arrows -->
+  <line x1="116" y1="65" x2="163" y2="52" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#ark)" opacity=".7"/>
+  <line x1="116" y1="101" x2="163" y2="124" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#ark)" opacity=".5"/>
+  <line x1="497" y1="52" x2="558" y2="61" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ark2)" opacity=".7"/>
+  <line x1="497" y1="88" x2="558" y2="89" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ark2)" opacity=".7"/>
+  <line x1="497" y1="124" x2="558" y2="117" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ark2)" opacity=".7"/>
+</svg>
+      </div>
+    </div>
+
+    <div class="spanel" id="t5-producers">
+      <div class="ptitle">Kafka <em>Producers</em></div>
+      <p class="psub">Producer configuration determines throughput, latency, and durability guarantees.</p>
+      <h3>Key Producer Settings</h3>
+      <table>
+        <tr><th>Setting</th><th>What It Does</th><th>Trade-off</th></tr>
+        <tr><td>acks=0</td><td>Fire and forget — no acknowledgment</td><td>Max throughput; possible message loss</td></tr>
+        <tr><td>acks=1</td><td>Leader acknowledges; replicas may not have it yet</td><td>Good throughput; lose message if leader crashes before replication</td></tr>
+        <tr><td>acks=all (−1)</td><td>All in-sync replicas acknowledge</td><td>Max durability; higher latency</td></tr>
+        <tr><td>linger.ms</td><td>Wait N ms to batch more messages before sending</td><td>Higher throughput vs higher latency</td></tr>
+        <tr><td>batch.size</td><td>Max bytes to batch before sending</td><td>Larger = better throughput, more memory</td></tr>
+        <tr><td>compression.type</td><td>lz4/snappy/gzip compression</td><td>Less network, more CPU</td></tr>
+        <tr><td>retries</td><td>Auto-retry on transient errors</td><td>At-least-once delivery (may duplicate)</td></tr>
+      </table>
+      <h3>Partitioning Strategy</h3>
+      <div class="g g3">
+        <div class="card ct-c"><h4>Key-based (Hash)</h4><p>Same key always goes to same partition. Guarantees ordering per key. Use for: user events (key=user_id → all events for user in order).</p></div>
+        <div class="card ct-g"><h4>Round-robin</h4><p>Distribute evenly across partitions. Max throughput. No ordering guarantee across partitions. Use for: high-volume logs where ordering doesn't matter.</p></div>
+        <div class="card ct-p"><h4>Custom Partitioner</h4><p>Write your own logic. E.g., route hot users to dedicated partitions, or shard by region. Adds complexity — use only when needed.</p></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t5-consumers">
+      <div class="ptitle">Kafka <em>Consumers</em></div>
+      <p class="psub">Consumer design determines scalability, fault tolerance, and processing guarantees.</p>
+      <h3>Consumer Group Scaling</h3>
+      <div class="call ci">The maximum parallelism of a consumer group = number of partitions. Adding more consumers than partitions results in idle consumers. Rule: partitions ≥ max consumer instances you'll ever want.</div>
+      <table>
+        <tr><th>Partitions</th><th>Consumers</th><th>Result</th></tr>
+        <tr><td>6</td><td>3</td><td>Each consumer reads 2 partitions</td></tr>
+        <tr><td>6</td><td>6</td><td>Each consumer reads 1 partition (max parallelism)</td></tr>
+        <tr><td>6</td><td>9</td><td>6 active, 3 idle — wasteful</td></tr>
+        <tr><td>6</td><td>1</td><td>1 consumer reads all 6 — sequential, no parallelism</td></tr>
+      </table>
+      <h3>Offset Management & Delivery Semantics</h3>
+      <div class="g g3">
+        <div class="card ct-r"><h4>At-most-once</h4><p>Commit offset before processing. If consumer crashes mid-processing, message is lost (offset already committed).</p></div>
+        <div class="card ct-g"><h4>At-least-once ✓</h4><p>Process first, commit after. Crash before commit → message re-processed. Your handler must be <strong>idempotent</strong>. Most common choice.</p></div>
+        <div class="card ct-p"><h4>Exactly-once</h4><p>Use Kafka transactions + idempotent producer. Highest overhead. Needed for financial systems. Avoid unless truly required.</p></div>
+      </div>
+      <h3>Consumer Lag — The Key Metric</h3>
+      <div class="call cw">Consumer lag = latest partition offset − consumer's committed offset. If lag is growing, your consumers can't keep up. Fix: add partitions + consumers, or optimize processing logic. Alert on lag &gt; 10K messages.</div>
+    </div>
+
+    <div class="spanel" id="t5-guarantees">
+      <div class="ptitle">Kafka <em>Guarantees &amp; When to Use</em></div>
+      <h3>Ordering Guarantees</h3>
+      <div class="g g2">
+        <div class="card ct-g"><h4>Within a Partition</h4><p>Messages are <strong>strictly ordered</strong> by offset. If you publish events with the same key, they land on the same partition → processed in order. This is Kafka's primary ordering guarantee.</p></div>
+        <div class="card ct-r"><h4>Across Partitions</h4><p><strong>No ordering guarantee.</strong> Two messages published milliseconds apart may be processed in any order if they land on different partitions. Design accordingly.</p></div>
+      </div>
+      <h3>When to Use Kafka vs Not</h3>
+      <table>
+        <tr><th>Situation</th><th>Use Kafka?</th><th>Why</th></tr>
+        <tr><td>High-throughput event ingestion (logs, heartbeats)</td><td>✅ Yes</td><td>Kafka excels at 1M+ events/s; durable, replayable</td></tr>
+        <tr><td>Decoupling services (writes → async workers)</td><td>✅ Yes</td><td>Producer/consumer independently scalable, retryable</td></tr>
+        <tr><td>Multiple consumers of same event</td><td>✅ Yes</td><td>Consumer groups read independently; no data copying</td></tr>
+        <tr><td>Simple job queue (email, SMS sending)</td><td>⚠️ RabbitMQ instead</td><td>RabbitMQ simpler, acknowledgment-based, good for tasks</td></tr>
+        <tr><td>Request-response (RPC patterns)</td><td>❌ No</td><td>Kafka is async/fire-forward; not designed for RPC</td></tr>
+        <tr><td>Low-volume, ordered task processing</td><td>❌ No</td><td>Overkill; DB-backed queue (Postgres SKIP LOCKED) is simpler</td></tr>
+      </table>
+    </div>
+
+    <div class="spanel" id="t5-demo">
+      <div class="ptitle">Kafka <em>Interactive Demo</em></div>
+      <p class="psub">Simulate publishing heartbeat events and consuming them. Watch partitions fill and consumer lag update.</p>
+      <div class="demo-box">
+        <div class="demo-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span style="margin-left:8px">presence.heartbeats — 3 partitions, 2 consumers</span>
+          <button onclick="kafkaProduce()" style="margin-left:auto;background:rgba(0,229,255,.08);border:1px solid var(--accent);color:var(--accent);padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer">⚡ Produce 5 Events</button>
+          <button onclick="kafkaConsume()" style="margin-left:8px;background:rgba(34,197,94,.08);border:1px solid var(--green);color:var(--green);padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer">▶ Consume Batch</button>
+        </div>
+        <div class="demo-body">
+          <div class="g g2">
+            <div>
+              <h4>Partitions (producer offsets)</h4>
+              <div id="kafka-partitions" style="display:grid;gap:8px"></div>
+              <h4 style="margin-top:14px">Consumer Group Lag</h4>
+              <div id="kafka-lag" style="font-family:'JetBrains Mono',monospace;font-size:12px;display:grid;gap:5px"></div>
+            </div>
+            <div>
+              <h4>Consumer Output</h4>
+              <div class="consumer-out" id="kafka-out">Waiting for events...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t5-outcome">
+      <div class="ptitle">Out<em>come</em></div>
+      <ul class="ol">
+        <li><strong>Kafka is a log, not a queue</strong> — messages persist after consumption; multiple consumer groups read independently; this is the key architectural insight.</li>
+        <li><strong>Partitions = parallelism ceiling</strong> — max consumers in a group = num partitions. Set partitions generously at topic creation; reducing partitions is painful.</li>
+        <li><strong>Key-based partitioning guarantees order per key</strong> — all heartbeats for user_id=42 land on the same partition, consumed in order, enabling correct last_seen tracking.</li>
+        <li><strong>acks=1 for high-throughput, acks=all for durability</strong> — choose based on what you can afford to lose. For presence heartbeats, acks=1 is fine; for financial events, acks=all.</li>
+        <li><strong>At-least-once + idempotent handlers</strong> — the practical default. Design your consumer (e.g., UPSERT with MAX) to handle duplicate delivery without side effects.</li>
+        <li><strong>Consumer lag is the health metric</strong> — monitor it, alert on growth. Growing lag = consumer can't keep up → add partitions and consumers.</li>
+        <li><strong>Don't use Kafka for everything</strong> — simple job queues → RabbitMQ. Low-volume sequential tasks → DB queue. Kafka overhead is justified only at scale or with multiple consumer groups.</li>
+      </ul>
+    </div>
+
+  </div>
+</div><!-- /topic t5 -->
+
+<!-- ════════════════════════════════════
+     TOPIC 6 — COMM PARADIGMS & LOG STREAMER
+════════════════════════════════════ -->
+<div class="topic" id="t6">
+  <div class="subtabwrap" data-for="t6">
+    <div class="stab active" data-s="t6-overview">Overview</div>
+    <div class="stab" data-s="t6-paradigms">Communication Paradigms</div>
+    <div class="stab" data-s="t6-comparison">Comparison</div>
+    <div class="stab" data-s="t6-logstreamer">Log Streamer Design</div>
+    <div class="stab" data-s="t6-code">Code</div>
+    <div class="stab" data-s="t6-outcome">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+    <div class="spanel active" id="t6-overview">
+      <div class="ptitle">Communication Paradigms &amp; <em>Deployment Log Streamer</em></div>
+      <p class="psub">How services talk to each other — synchronously or asynchronously, push or pull, request-response or event-driven — fundamentally shapes your system's scalability, coupling, and failure modes.</p>
+      <div class="g g3">
+        <div class="card ct-c" style="text-align:center;padding:20px">
+          <div style="font-size:28px;margin-bottom:8px">🔄</div>
+          <h4 style="margin:0 0 6px">Synchronous</h4>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:#fff;margin-bottom:5px">REST / gRPC</div>
+          <p style="font-size:12px;margin:0">Caller waits for response. Tight coupling. Simple to reason about. Fails if callee is down.</p>
+        </div>
+        <div class="card ct-g" style="text-align:center;padding:20px">
+          <div style="font-size:28px;margin-bottom:8px">📡</div>
+          <h4 style="margin:0 0 6px">Asynchronous</h4>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:#fff;margin-bottom:5px">Kafka / Queue</div>
+          <p style="font-size:12px;margin:0">Caller publishes and moves on. Loose coupling. Callee processes at its own pace. Handles bursts.</p>
+        </div>
+        <div class="card ct-p" style="text-align:center;padding:20px">
+          <div style="font-size:28px;margin-bottom:8px">🌊</div>
+          <h4 style="margin:0 0 6px">Streaming</h4>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:#fff;margin-bottom:5px">WebSocket / SSE / gRPC Stream</div>
+          <p style="font-size:12px;margin:0">Persistent connection. Real-time bidirectional or push. Long-lived connection overhead.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t6-paradigms">
+      <div class="ptitle">Communication <em>Paradigms</em></div>
+      <h3>REST (HTTP/1.1, HTTP/2)</h3>
+      <div class="g g2">
+        <div class="card ct-c">
+          <h4>Characteristics</h4>
+          <ul class="rl">
+            <li>Request-response; stateless; text or JSON</li>
+            <li>Human-readable; widely supported</li>
+            <li>HTTP/2 multiplexes multiple requests over one TCP conn</li>
+            <li>Easy to debug, cache, and proxy</li>
+          </ul>
+        </div>
+        <div class="card ct-r">
+          <h4>Limitations</h4>
+          <ul class="rl">
+            <li>One request = one response (no streaming by default)</li>
+            <li>Higher overhead than binary protocols (headers, text encoding)</li>
+            <li>No built-in schema enforcement (OpenAPI is optional)</li>
+          </ul>
+        </div>
+      </div>
+      <h3>gRPC (HTTP/2 + Protobuf)</h3>
+      <div class="g g2">
+        <div class="card ct-g">
+          <h4>Why gRPC</h4>
+          <ul class="rl">
+            <li>Binary serialization (Protobuf) — 3–10× smaller than JSON</li>
+            <li>Strongly typed schema (.proto files) — compile-time contract</li>
+            <li>Supports unary, server-streaming, client-streaming, bidirectional streaming</li>
+            <li>HTTP/2 multiplexing — multiple streams over one connection</li>
+            <li>Built-in deadline propagation and cancellation</li>
+          </ul>
+        </div>
+        <div class="card ct-a">
+          <h4>When Not to Use gRPC</h4>
+          <ul class="rl">
+            <li>Browser clients (limited gRPC-web support)</li>
+            <li>Public APIs (REST is more universally understood)</li>
+            <li>Teams unfamiliar with Protobuf tooling</li>
+          </ul>
+        </div>
+      </div>
+      <h3>WebSocket</h3>
+      <div class="g g2">
+        <div class="card">
+          <h4>How it works</h4>
+          <p>HTTP upgrade → persistent bidirectional TCP connection. Client and server can send messages at any time. Used for: chat, live feeds, multiplayer games, presence indicators.</p>
+          <div class="call cw" style="font-size:12px;padding:8px 10px"><strong>Scaling challenge:</strong> WebSocket connections are stateful. Load balancers need sticky sessions. Each server holds N open connections — harder to scale horizontally than stateless REST.</div>
+        </div>
+        <div class="card">
+          <h4>SSE (Server-Sent Events)</h4>
+          <p>One-way: server pushes events to browser over HTTP. Simpler than WebSocket for unidirectional push (notifications, live dashboards, log streaming).</p>
+          <ul class="rl">
+            <li>Works over plain HTTP (proxies, CDNs work)</li>
+            <li>Automatic reconnect built into browser</li>
+            <li>One direction only (client can't send)</li>
+            <li>Perfect for: deployment log streaming ✓</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t6-comparison">
+      <div class="ptitle">Paradigm <em>Comparison</em></div>
+      <table>
+        <tr><th>Protocol</th><th>Direction</th><th>Latency</th><th>Connection</th><th>Best Use Case</th></tr>
+        <tr><td>REST/HTTP</td><td>Request-Response</td><td>Medium (ms)</td><td>Short-lived</td><td>CRUD APIs, public endpoints</td></tr>
+        <tr><td>gRPC (Unary)</td><td>Request-Response</td><td>Low (binary)</td><td>Multiplexed</td><td>Internal service-to-service</td></tr>
+        <tr><td>gRPC (Streaming)</td><td>Bi-directional</td><td>Very low</td><td>Persistent</td><td>Real-time internal streams</td></tr>
+        <tr><td>WebSocket</td><td>Bi-directional</td><td>Very low</td><td>Persistent stateful</td><td>Chat, gaming, live collaboration</td></tr>
+        <tr><td>SSE</td><td>Server → Client only</td><td>Low</td><td>Persistent, HTTP-based</td><td>Live feeds, log streaming, notifications</td></tr>
+        <tr><td>Kafka</td><td>Async producer → consumer</td><td>Near-real-time</td><td>Broker-mediated</td><td>Event streaming, decoupling, fan-out</td></tr>
+        <tr><td>Webhook</td><td>Server → Client HTTP push</td><td>Medium</td><td>New conn per event</td><td>Third-party event delivery (GitHub, Stripe)</td></tr>
+      </table>
+      <h3>Decision Framework</h3>
+      <div class="flow">
+        <div class="fs"><div class="fl"><div class="fc">?</div><div class="fline"></div></div><div class="fb"><div class="ft">Does the client need real-time push?</div><div class="fd">No → use REST/gRPC. Yes → go to next question.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">?</div><div class="fline"></div></div><div class="fb"><div class="ft">Does the client also need to send data?</div><div class="fd">No (server → client only) → use SSE. Yes (bidirectional) → use WebSocket or gRPC streaming.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">?</div><div class="fline"></div></div><div class="fb"><div class="ft">Is it internal service-to-service?</div><div class="fd">Yes → gRPC streaming. No (browser clients) → WebSocket.</div></div></div>
+        <div class="fs"><div class="fl"><div class="fc">?</div><div class="fline" style="visibility:hidden"></div></div><div class="fb"><div class="ft">Is it a background pipeline (not user-facing)?</div><div class="fd">Yes → Kafka / async queue. No (user-facing, real-time) → WebSocket/SSE.</div></div></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t6-logstreamer">
+      <div class="ptitle">Design: <em>Deployment Log Streamer</em></div>
+      <p class="psub">Stream deployment logs in real-time to the browser — like watching <code>kubectl logs -f</code> or Heroku build logs. The canonical SSE use case.</p>
+      <h3>Requirements</h3>
+      <div class="g g2">
+        <div class="card ct-c">
+          <h4>Functional</h4>
+          <ul class="rl">
+            <li>User initiates a deployment; browser opens a log stream</li>
+            <li>Log lines appear in real-time as the build/deploy runs</li>
+            <li>Reconnect automatically on connection drop</li>
+            <li>Stream terminates when deployment succeeds or fails</li>
+          </ul>
+        </div>
+        <div class="card ct-a">
+          <h4>Non-functional</h4>
+          <ul class="rl">
+            <li>Latency: log line visible in browser &lt;500ms of being written</li>
+            <li>Scale: 10K concurrent deployments, ~100 browser watchers each</li>
+            <li>History: serve last N lines to newly connected viewers</li>
+            <li>No WebSocket (works through corporate proxies)</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Architecture</h3>
+      <div class="diag">
+<svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="arl" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="146" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="14" y="20" width="110" height="110" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="69" y="44" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Build Agent</text>
+  <text x="69" y="60" text-anchor="middle" fill="#5a6a85" font-size="8">Runs deploy script</text>
+  <text x="69" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">Writes stdout/stderr</text>
+  <text x="69" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">line by line</text>
+  <text x="69" y="102" text-anchor="middle" fill="#5a6a85" font-size="8">POST /log/line</text>
+
+  <rect x="180" y="30" width="110" height="90" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="235" y="54" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Redis</text>
+  <text x="235" y="70" text-anchor="middle" fill="#5a6a85" font-size="8">LPUSH deploy:&lt;id&gt;:logs</text>
+  <text x="235" y="84" text-anchor="middle" fill="#5a6a85" font-size="8">PUBLISH deploy:&lt;id&gt;</text>
+  <text x="235" y="98" text-anchor="middle" fill="#5a6a85" font-size="8">Pub/Sub channel</text>
+  <text x="235" y="110" text-anchor="middle" fill="#5a6a85" font-size="8">LRANGE for history</text>
+
+  <rect x="350" y="20" width="120" height="110" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="410" y="44" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">SSE Server</text>
+  <text x="410" y="60" text-anchor="middle" fill="#5a6a85" font-size="8">GET /stream/:id</text>
+  <text x="410" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">Content-Type:</text>
+  <text x="410" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">text/event-stream</text>
+  <text x="410" y="102" text-anchor="middle" fill="#5a6a85" font-size="8">SUB Redis channel</text>
+  <text x="410" y="116" text-anchor="middle" fill="#5a6a85" font-size="8">→ forward to browser</text>
+
+  <rect x="530" y="30" width="150" height="90" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="605" y="54" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Browsers</text>
+  <text x="605" y="70" text-anchor="middle" fill="#5a6a85" font-size="8">EventSource API</text>
+  <text x="605" y="84" text-anchor="middle" fill="#5a6a85" font-size="8">Auto-reconnect</text>
+  <text x="605" y="98" text-anchor="middle" fill="#5a6a85" font-size="8">Last-Event-ID header</text>
+  <text x="605" y="112" text-anchor="middle" fill="#5a6a85" font-size="8">(resume from offset)</text>
+
+  <line x1="126" y1="75" x2="178" y2="75" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#arl)" opacity=".8"/>
+  <text x="152" y="68" text-anchor="middle" fill="#00e5ff" font-size="7.5">log line</text>
+  <line x1="292" y1="75" x2="348" y2="75" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arl)" opacity=".8"/>
+  <text x="320" y="68" text-anchor="middle" fill="#f59e0b" font-size="7.5">PUBLISH</text>
+  <line x1="472" y1="75" x2="528" y2="75" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arl)" opacity=".8"/>
+  <text x="500" y="68" text-anchor="middle" fill="#22c55e" font-size="7.5">SSE push</text>
+</svg>
+      </div>
+      <h3>Why SSE over WebSocket Here</h3>
+      <div class="g g2">
+        <div class="card ct-g"><h4>SSE Advantages</h4><ul class="rl"><li>Works over plain HTTP — no proxy issues in corporate networks</li><li>Browser <code>EventSource</code> API has <strong>built-in auto-reconnect</strong> with <code>Last-Event-ID</code> resume</li><li>Easier load balancing — just sticky session or consistent hash on deploy_id</li></ul></div>
+        <div class="card ct-a"><h4>Why Redis Pub/Sub</h4><ul class="rl"><li>Build agent may be on a different server than the SSE server the browser is connected to</li><li>Redis Pub/Sub broadcasts the log line to all SSE server instances subscribed to that deploy_id channel</li><li>LRANGE provides history for reconnecting browsers</li></ul></div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t6-code">
+      <div class="ptitle">Code — <em>Log Streamer</em></div>
+      <div class="ltabs" id="lt6">
+        <div class="ltab on" data-l3="t6py">🐍 Python (FastAPI SSE)</div>
+        <div class="ltab" data-l3="t6java">☕ Java (Spring WebFlux SSE)</div>
+      </div>
+      <div class="lpanel on" id="t6py">
+        <div class="cwrap">
+          <div class="ctop"><span>log_streamer.py — FastAPI + Redis Pub/Sub SSE</span><span class="ltag lpy">Python</span></div>
+          <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> StreamingResponse
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+<span class="kw">import</span> json, asyncio
+
+app    = <span class="fn">FastAPI</span>()
+redis  = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>, decode_responses=<span class="kw">True</span>)
+
+<span class="dec">@app.get</span>(<span class="str">"/stream/{deploy_id}"</span>)
+<span class="kw">async def</span> <span class="fn">stream_logs</span>(deploy_id: str, last_id: int = <span class="num">0</span>):
+    <span class="str">"""
+    SSE endpoint. Returns text/event-stream.
+    last_id: resume offset for reconnecting clients.
+    """</span>
+    <span class="kw">async def</span> <span class="fn">event_generator</span>():
+        <span class="cmt"># 1. Replay historical log lines for reconnect / new viewer</span>
+        history_key = <span class="str">f"deploy:{deploy_id}:logs"</span>
+        history = <span class="kw">await</span> redis.<span class="fn">lrange</span>(history_key, last_id, <span class="num">-1</span>)
+        <span class="kw">for</span> idx, line <span class="kw">in</span> <span class="fn">enumerate</span>(history, start=last_id):
+            <span class="kw">yield</span> <span class="str">f"id:{idx}\ndata:{line}\n\n"</span>
+            <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="num">0</span>)   <span class="cmt"># yield control to event loop</span>
+
+        <span class="cmt"># 2. Subscribe to live updates via Redis Pub/Sub</span>
+        pubsub = redis.<span class="fn">pubsub</span>()
+        <span class="kw">await</span> pubsub.<span class="fn">subscribe</span>(<span class="str">f"deploy:{deploy_id}"</span>)
+        offset = last_id + <span class="fn">len</span>(history)
+
+        <span class="kw">async for</span> message <span class="kw">in</span> pubsub.<span class="fn">listen</span>():
+            <span class="kw">if</span> message[<span class="str">"type"</span>] == <span class="str">"message"</span>:
+                data = message[<span class="str">"data"</span>]
+                <span class="kw">if</span> data == <span class="str">"DONE"</span>:
+                    <span class="kw">yield</span> <span class="str">f"event:done\ndata:deployment complete\n\n"</span>
+                    <span class="kw">return</span>
+                <span class="kw">yield</span> <span class="str">f"id:{offset}\ndata:{data}\n\n"</span>
+                offset += <span class="num">1</span>
+
+    <span class="kw">return</span> <span class="cls">StreamingResponse</span>(
+        <span class="fn">event_generator</span>(),
+        media_type=<span class="str">"text/event-stream"</span>,
+        headers={
+            <span class="str">"Cache-Control"</span>: <span class="str">"no-cache"</span>,
+            <span class="str">"X-Accel-Buffering"</span>: <span class="str">"no"</span>,   <span class="cmt"># disable nginx buffering</span>
+        }
+    )
+
+<span class="dec">@app.post</span>(<span class="str">"/log/{deploy_id}"</span>)
+<span class="kw">async def</span> <span class="fn">ingest_log</span>(deploy_id: str, line: str):
+    <span class="str">"""Build agent calls this for each log line."""</span>
+    <span class="kw">await</span> redis.<span class="fn">lpush</span>(<span class="str">f"deploy:{deploy_id}:logs"</span>, line)   <span class="cmt"># persist</span>
+    <span class="kw">await</span> redis.<span class="fn">publish</span>(<span class="str">f"deploy:{deploy_id}"</span>, line)        <span class="cmt"># push to live watchers</span>
+    <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">True</span>}</pre>
+        </div>
+        <div class="cwrap">
+          <div class="ctop"><span>browser_client.html — EventSource with auto-reconnect</span><span class="ltag lpy">JavaScript</span></div>
+          <pre><span class="cmt">// Browser auto-reconnects and resumes from last event ID</span>
+<span class="kw">const</span> deployId = <span class="str">"deploy-abc-123"</span>;
+<span class="kw">let</span> lastEventId = <span class="num">0</span>;
+
+<span class="kw">const</span> sse = <span class="kw">new</span> <span class="cls">EventSource</span>(<span class="str">`/stream/${deployId}?last_id=${lastEventId}`</span>);
+
+sse.<span class="fn">onmessage</span> = (event) => {
+  lastEventId = event.lastEventId;
+  document.<span class="fn">getElementById</span>(<span class="str">"log"</span>).innerText += event.data + <span class="str">"\n"</span>;
+};
+
+<span class="cmt">// Custom event type for stream completion</span>
+sse.<span class="fn">addEventListener</span>(<span class="str">"done"</span>, () => {
+  sse.<span class="fn">close</span>();
+  <span class="fn">showSuccess</span>(<span class="str">"Deployment complete ✓"</span>);
+});
+
+sse.<span class="fn">onerror</span> = () => {
+  <span class="cmt">// Browser automatically reconnects with Last-Event-ID header</span>
+  <span class="fn">showReconnecting</span>();
+};</pre>
+        </div>
+      </div>
+      <div class="lpanel" id="t6java">
+        <div class="cwrap">
+          <div class="ctop"><span>LogStreamerController.java — Spring WebFlux SSE</span><span class="ltag ljv">Java</span></div>
+          <pre><span class="dec">@RestController</span>
+<span class="kw">public class</span> <span class="cls">LogStreamerController</span> {
+
+    <span class="kw">private final</span> <span class="cls">ReactiveRedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+
+    <span class="dec">@GetMapping</span>(value=<span class="str">"/stream/{deployId}"</span>, produces=<span class="cls">MediaType</span>.TEXT_EVENT_STREAM_VALUE)
+    <span class="kw">public</span> <span class="cls">Flux</span>&lt;<span class="cls">ServerSentEvent</span>&lt;<span class="cls">String</span>&gt;&gt; <span class="fn">streamLogs</span>(
+            <span class="dec">@PathVariable</span> <span class="cls">String</span> deployId,
+            <span class="dec">@RequestParam</span>(defaultValue=<span class="str">"0"</span>) <span class="kw">int</span> lastId) {
+
+        <span class="cls">String</span> histKey = <span class="str">"deploy:"</span> + deployId + <span class="str">":logs"</span>;
+        <span class="cls">String</span> channel = <span class="str">"deploy:"</span> + deployId;
+
+        <span class="cmt">// Replay history + stream live events</span>
+        <span class="cls">Flux</span>&lt;<span class="cls">String</span>&gt; history = redis.<span class="fn">opsForList</span>()
+            .<span class="fn">range</span>(histKey, lastId, -<span class="num">1</span>);
+
+        <span class="cls">Flux</span>&lt;<span class="cls">String</span>&gt; live = redis.<span class="fn">listenToChannel</span>(channel)
+            .<span class="fn">map</span>(<span class="cls">Message</span>::getMessage);
+
+        <span class="kw">return</span> <span class="cls">Flux</span>.<span class="fn">concat</span>(history, live)
+            .<span class="fn">index</span>()
+            .<span class="fn">map</span>(t -> <span class="cls">ServerSentEvent</span>.&lt;<span class="cls">String</span>&gt;<span class="fn">builder</span>()
+                .id(<span class="cls">String</span>.<span class="fn">valueOf</span>(lastId + t.<span class="fn">getT1</span>()))
+                .data(t.<span class="fn">getT2</span>())
+                .<span class="fn">build</span>());
+    }
+
+    <span class="dec">@PostMapping</span>(<span class="str">"/log/{deployId}"</span>)
+    <span class="kw">public</span> <span class="cls">Mono</span>&lt;<span class="cls">String</span>&gt; <span class="fn">ingest</span>(<span class="dec">@PathVariable</span> <span class="cls">String</span> deployId,
+                                  <span class="dec">@RequestBody</span> <span class="cls">String</span> line) {
+        <span class="cls">String</span> listKey = <span class="str">"deploy:"</span> + deployId + <span class="str">":logs"</span>;
+        <span class="kw">return</span> redis.<span class="fn">opsForList</span>().<span class="fn">leftPush</span>(listKey, line)
+            .<span class="fn">then</span>(redis.<span class="fn">convertAndSend</span>(<span class="str">"deploy:"</span> + deployId, line))
+            .<span class="fn">thenReturn</span>(<span class="str">"ok"</span>);
+    }
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="spanel" id="t6-outcome">
+      <div class="ptitle">Out<em>come</em></div>
+      <ul class="ol">
+        <li><strong>Sync vs async is a coupling decision</strong> — synchronous REST couples caller and callee; if callee is down, caller fails. Async (Kafka/queue) decouples them; callee processes when it can.</li>
+        <li><strong>SSE is underrated</strong> — for server-to-client streaming, SSE beats WebSocket in simplicity: works through proxies, built-in reconnect with Last-Event-ID, plain HTTP.</li>
+        <li><strong>WebSocket when bidirectional is needed</strong> — chat, collaborative editing, live gaming. Requires sticky sessions on load balancer. Stateful servers are harder to scale.</li>
+        <li><strong>gRPC for internal service communication</strong> — 3–10× smaller payload, compile-time type safety, streaming support. Not for public APIs (browser support limited).</li>
+        <li><strong>Redis Pub/Sub as a fan-out layer</strong> — when multiple SSE servers need to push events from one source, Redis Pub/Sub broadcasts to all subscribed instances. Simple and effective.</li>
+        <li><strong>The Log Streamer pattern</strong> — write path (agent → Redis LPUSH + PUBLISH) and read path (browser → SSE server → Redis SUB + LRANGE) are independent. History for late joiners from LRANGE; live updates from Pub/Sub.</li>
+        <li><strong>X-Accel-Buffering: no</strong> — always set this header to prevent Nginx from buffering your SSE stream. A common gotcha that makes SSE appear to not work in production behind a reverse proxy.</li>
+      </ul>
+      <div class="done">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 1 — Foundation Complete ✦</div>
+        <p style="font-size:13px;color:var(--muted)">All 6 Week 1 topics covered. Next: <strong>Week 2 — Databases</strong> · Pessimistic Locking · SQL-backed KV Store · Scaling Relational DBs · NoSQL Trade-offs · Graph DBs · Slack Realtime · Scaling WebSockets</p>
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <span class="hbadge hb-c">Week 1 of 8 Complete</span>
+          <span class="hbadge hb-g">6/6 Topics Done</span>
+          <span class="hbadge hb-p">Week 2 → Databases</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /topic t6 -->
+</div><!-- /topics -->
+
+<script>
+// ── TOP-LEVEL TOPIC SWITCHING ──
+document.querySelectorAll('.ttab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(id).classList.add('active');
+    tab.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  });
+});
+
+// ── SUB-TAB SWITCHING ──
+document.querySelectorAll('.stab').forEach(stab => {
+  stab.addEventListener('click', () => {
+    const sid = stab.dataset.s;
+    const wrap = stab.closest('.subtabwrap');
+    const panels = stab.closest('.topic').querySelectorAll('.spanel');
+    wrap.querySelectorAll('.stab').forEach(s => s.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    stab.classList.add('active');
+    document.getElementById(sid).classList.add('active');
+    stab.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  });
+});
+
+// ── CODE LANG SWITCHER (T3) ──
+document.querySelectorAll('.ltab').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l;
+    if(!l) return;
+    const wrap = lt.closest('.ltabs');
+    wrap.querySelectorAll('.ltab').forEach(x => x.classList.remove('on'));
+    lt.classList.add('on');
+    // find sibling lpanels
+    const container = wrap.closest('.spanel') || wrap.parentElement;
+    container.querySelectorAll('.lpanel').forEach(p => {
+      p.classList.toggle('on', p.id === 't3'+l || p.id === 'lp-'+l);
+    });
+  });
+});
+
+// handle t6 lang tabs separately
+document.querySelectorAll('[data-l3]').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l3;
+    const wrap = lt.closest('.ltabs');
+    wrap.querySelectorAll('[data-l3]').forEach(x => x.classList.remove('on'));
+    lt.classList.add('on');
+    const container = wrap.parentElement;
+    container.querySelectorAll('.lpanel').forEach(p => {
+      p.classList.toggle('on', p.id === l);
+    });
+  });
+});
+
+// ── CACHE DEMO ──
+const CACHE_CAP = 4;
+let cacheMap = new Map(); // key → value, in insertion order (LRU = front)
+let cacheStats = { hits:0, misses:0, evictions:0 };
+const KEYS = ['user:42','user:7','user:99','user:200','user:1','user:55','user:13'];
+
+function cacheRender() {
+  const slots = document.getElementById('cache-slots');
+  if (!slots) return;
+  const entries = [...cacheMap.entries()].reverse(); // MRU first
+  if (entries.length === 0) {
+    slots.innerHTML = '<div class="cache-cell" style="color:var(--muted)">Cache is empty</div>';
+  } else {
+    slots.innerHTML = entries.map(([k,v], i) =>
+      `<div class="cache-cell" style="display:flex;justify-content:space-between">
+        <span>${k}</span><span style="color:var(--accent)">${v}</span>
+        <span style="color:var(--muted);font-size:10px">${i===0?'MRU':'LRU'[i===entries.length-1?0:1]||''}</span>
+      </div>`).join('');
+  }
+  document.getElementById('cache-stats').innerHTML = `
+    <div>Hits: <span style="color:var(--green)">${cacheStats.hits}</span></div>
+    <div>Misses: <span style="color:var(--red)">${cacheStats.misses}</span></div>
+    <div>Evictions: <span style="color:var(--amber)">${cacheStats.evictions}</span></div>
+    <div>Hit Rate: <span style="color:var(--accent)">${cacheStats.hits+cacheStats.misses===0?'—':(100*cacheStats.hits/(cacheStats.hits+cacheStats.misses)).toFixed(1)+'%'}</span></div>`;
+}
+
+function cacheLog(msg, type='default') {
+  const log = document.getElementById('cache-log');
+  if (!log) return;
+  const colors = {hit:'#22c55e', miss:'#ef4444', evict:'#f59e0b', default:'#5a6a85'};
+  const ts = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  log.innerHTML += `<div style="color:${colors[type]||colors.default};margin-bottom:3px">[${ts}] ${msg}</div>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+function cacheRead() {
+  const key = KEYS[Math.floor(Math.random()*KEYS.length)];
+  if (cacheMap.has(key)) {
+    // Move to end (MRU)
+    const val = cacheMap.get(key);
+    cacheMap.delete(key); cacheMap.set(key, val);
+    cacheStats.hits++;
+    cacheLog(`HIT  ${key} → ${val}`, 'hit');
+  } else {
+    cacheStats.misses++;
+    const val = Math.floor(Date.now()/1000);
+    cacheLog(`MISS ${key} → DB fetch → ${val}`, 'miss');
+    if (cacheMap.size >= CACHE_CAP) {
+      const evictKey = cacheMap.keys().next().value; // LRU = first entry
+      cacheMap.delete(evictKey);
+      cacheStats.evictions++;
+      cacheLog(`EVICT LRU key: ${evictKey}`, 'evict');
+    }
+    cacheMap.set(key, val);
+    cacheLog(`SET  ${key} = ${val}`, 'default');
+  }
+  cacheRender();
+}
+
+function resetCache() {
+  cacheMap.clear(); cacheStats = {hits:0,misses:0,evictions:0};
+  document.getElementById('cache-log').innerHTML = '';
+  cacheRender();
+}
+
+// ── KAFKA DEMO ──
+const kafkaState = {
+  partitions: [[], [], []],       // partition messages
+  consumerOffsets: [0, 0],        // consumer 1 reads P0+P1, consumer 2 reads P2
+  partitionOffsets: [0, 0, 0],
+};
+
+function kafkaRender() {
+  const el = document.getElementById('kafka-partitions');
+  if (!el) return;
+  el.innerHTML = kafkaState.partitions.map((p, i) => `
+    <div class="kafka-topic">
+      <span style="color:var(--amber);margin-right:8px">P${i}</span>
+      <span style="color:var(--muted);font-size:10px">offset: ${p.length} |</span>
+      ${p.slice(-3).map(m => `<span class="kafka-msg">${m}</span>`).join('')}
+      ${p.length > 3 ? `<span style="color:var(--muted);font-size:10px">+${p.length-3} more</span>` : ''}
+    </div>`).join('');
+
+  const lagEl = document.getElementById('kafka-lag');
+  if (!lagEl) return;
+  const c1lag = (kafkaState.partitions[0].length + kafkaState.partitions[1].length) - kafkaState.consumerOffsets[0];
+  const c2lag = kafkaState.partitions[2].length - kafkaState.consumerOffsets[1];
+  lagEl.innerHTML = `
+    <div>Consumer 1 (P0+P1): lag=<span style="color:${c1lag>0?'var(--amber)':'var(--green)'}">${c1lag}</span></div>
+    <div>Consumer 2 (P2):    lag=<span style="color:${c2lag>0?'var(--amber)':'var(--green)'}">${c2lag}</span></div>`;
+}
+
+function kafkaProduce() {
+  const users = [42,7,99,200,1,55,13,88,44,6];
+  for (let i=0; i<5; i++) {
+    const uid = users[Math.floor(Math.random()*users.length)];
+    const partition = uid % 3;
+    kafkaState.partitions[partition].push(`u:${uid}`);
+  }
+  kafkaRender();
+}
+
+function kafkaConsume() {
+  const outEl = document.getElementById('kafka-out');
+  if (!outEl) return;
+  let processed = [];
+  // Consumer 1 reads P0 + P1
+  [0,1].forEach(p => {
+    const msgs = kafkaState.partitions[p].slice(kafkaState.consumerOffsets[0]);
+    msgs.forEach(m => { processed.push(`C1←P${p}: ${m}`); });
+    kafkaState.consumerOffsets[0] = kafkaState.partitions[0].length + kafkaState.partitions[1].length;
+  });
+  // Consumer 2 reads P2
+  const msgs2 = kafkaState.partitions[2].slice(kafkaState.consumerOffsets[1]);
+  msgs2.forEach(m => processed.push(`C2←P2: ${m}`));
+  kafkaState.consumerOffsets[1] = kafkaState.partitions[2].length;
+
+  if (processed.length === 0) outEl.textContent = 'No new messages.';
+  else outEl.textContent = processed.join('\n');
+  kafkaRender();
+}
+
+// Init demos
+cacheRender();
+kafkaRender();
+</script>
+</body>
+</html>

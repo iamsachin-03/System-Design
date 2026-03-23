@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Design Master Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #07090f;
+  --s1: #0e1420;
+  --s2: #131c2e;
+  --s3: #192338;
+  --border: #1e2d45;
+  --text: #dde4f0;
+  --muted: #4e6070;
+  --muted2: #6b7fa0;
+  --sidebar-w: 300px;
+  --topbar-h: 56px;
+  --accent: #00d4ff;
+  --a2: #7c3aed;
+  --a3: #10b981;
+  --a4: #f59e0b;
+  --a5: #f43f5e;
+  --a6: #f472b6;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+/* ── TOP BAR ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
+  background: var(--s1); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 20px; z-index: 200;
+}
+
+.hamburger {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--s2); border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; cursor: pointer; transition: all .2s; flex-shrink: 0;
+}
+.hamburger:hover { background: var(--s3); border-color: var(--accent); }
+.hamburger span {
+  display: block; width: 18px; height: 2px;
+  background: var(--muted2); border-radius: 2px; transition: all .3s;
+}
+.hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); background: var(--accent); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); background: var(--accent); }
+
+.topbar-logo {
+  font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+  background: linear-gradient(90deg, var(--accent), var(--a2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+.topbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+.topbar-current {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-current span { color: var(--text); font-weight: 600; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.progress-pill {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 20px;
+  padding: 4px 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted2);
+}
+.progress-pill b { color: var(--accent); }
+
+/* ── SIDEBAR OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px); z-index: 150;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed; top: 0; left: calc(-1 * var(--sidebar-w) - 10px);
+  width: var(--sidebar-w); height: 100vh;
+  background: var(--s1); border-right: 1px solid var(--border);
+  z-index: 300; transition: left .32s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar.open { left: 0; }
+
+.sidebar-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
+  background: linear-gradient(90deg, var(--accent), var(--a2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+}
+.sidebar-subtitle {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted);
+}
+
+.sidebar-search {
+  margin: 12px 16px; position: relative;
+}
+.sidebar-search input {
+  width: 100%; background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px 8px 34px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text);
+  outline: none; transition: border-color .2s;
+}
+.sidebar-search input::placeholder { color: var(--muted); }
+.sidebar-search input:focus { border-color: var(--accent); }
+.sidebar-search .s-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; pointer-events: none;
+}
+
+.sidebar-scroll {
+  flex: 1; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  padding: 8px 0 20px;
+}
+
+.sidebar-category {
+  padding: 8px 20px 4px;
+  font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+  margin-top: 6px;
+}
+
+.sd-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 20px; cursor: pointer;
+  transition: background .15s; position: relative;
+  user-select: none;
+}
+.sd-item:hover { background: var(--s2); }
+.sd-item.active { background: var(--s2); }
+.sd-item.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 0 2px 2px 0;
+}
+
+.sd-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+.sd-info { flex: 1; min-width: 0; }
+.sd-name {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.sd-item.active .sd-name { color: var(--accent); }
+.sd-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+.sd-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  padding: 1px 5px; border-radius: 3px; font-weight: 600;
+}
+
+.tag-must { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.2); }
+.tag-good { background: rgba(245,158,11,.1); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+.tag-easy { background: rgba(16,185,129,.1); color: #34d399; border: 1px solid rgba(16,185,129,.2); }
+.tag-hard { background: rgba(124,58,237,.1); color: #c4b5fd; border: 1px solid rgba(124,58,237,.2); }
+.tag-medium { background: rgba(0,212,255,.08); color: #7dd3fc; border: 1px solid rgba(0,212,255,.18); }
+.tag-coming { background: rgba(100,116,128,.08); color: #64748b; border: 1px solid rgba(100,116,128,.15); }
+
+.sd-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  color: var(--muted); min-width: 22px; text-align: right; flex-shrink: 0;
+}
+
+/* Color accents per category */
+.cat-storage .sd-item.active::before { background: var(--a4); }
+.cat-social   .sd-item.active::before { background: var(--a6); }
+.cat-messaging .sd-item.active::before { background: var(--a3); }
+.cat-streaming .sd-item.active::before { background: var(--a5); }
+.cat-infra     .sd-item.active::before { background: var(--accent); }
+.cat-search    .sd-item.active::before { background: var(--a2); }
+
+/* ── MAIN CONTENT ── */
+.main {
+  position: fixed;
+  top: var(--topbar-h); left: 0; right: 0;
+  bottom: 0; overflow: hidden;
+}
+
+/* Welcome screen */
+.welcome {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 100%; padding: 40px 24px; text-align: center;
+}
+.welcome-icon { font-size: 64px; margin-bottom: 24px; animation: float 3s ease-in-out infinite; }
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.welcome-title {
+  font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800;
+  background: linear-gradient(135deg, #e2e8f0 0%, var(--accent) 50%, var(--a2) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 14px; line-height: 1.2;
+}
+.welcome-sub {
+  font-size: 15px; color: var(--muted2); max-width: 560px;
+  line-height: 1.7; margin-bottom: 32px;
+}
+.welcome-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; max-width: 600px; width: 100%;
+  margin-bottom: 32px;
+}
+@media(max-width:600px) { .welcome-grid { grid-template-columns: repeat(2,1fr); } }
+.welcome-card {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 12px; cursor: pointer; transition: all .2s;
+}
+.welcome-card:hover { border-color: var(--accent); background: var(--s2); transform: translateY(-2px); }
+.welcome-card .wc-icon { font-size: 28px; margin-bottom: 8px; }
+.welcome-card .wc-name {
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+  color: var(--text); line-height: 1.3;
+}
+.welcome-card .wc-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  color: var(--muted); margin-top: 4px;
+}
+.welcome-hint {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0,212,255,.05); border: 1px solid rgba(0,212,255,.15);
+  border-radius: 10px; padding: 12px 18px;
+  font-size: 13px; color: var(--muted2);
+}
+.welcome-hint .hamburger-mini {
+  display: flex; flex-direction: column; gap: 3px; flex-shrink: 0;
+}
+.welcome-hint .hamburger-mini span {
+  display: block; width: 14px; height: 2px;
+  background: var(--accent); border-radius: 2px;
+}
+
+/* Content frame */
+.content-frame {
+  display: none; width: 100%; height: 100%; border: none;
+}
+.content-frame.active { display: block; }
+
+/* Coming soon */
+.coming-soon {
+  display: none; height: 100%;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+  background: var(--bg);
+}
+.coming-soon.active { display: flex; }
+.coming-soon-icon { font-size: 56px; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(.95)} }
+.coming-soon-title {
+  font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text);
+}
+.coming-soon-sub { font-size: 14px; color: var(--muted2); text-align: center; max-width: 400px; }
+.coming-soon-badge {
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+  color: #fbbf24; border-radius: 8px; padding: 6px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+}
+
+/* ── TABS INSIDE SIDEBAR ── */
+.sidebar-tabs {
+  display: flex; gap: 2px; padding: 10px 16px 0;
+  border-bottom: 1px solid var(--border); margin-bottom: 0; flex-shrink: 0;
+}
+.stab {
+  padding: 6px 12px; background: none; border: none;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.stab:hover { color: var(--text); }
+.stab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Stats bar at bottom of sidebar */
+.sidebar-stats {
+  padding: 12px 20px; border-top: 1px solid var(--border);
+  flex-shrink: 0; display: flex; gap: 16px;
+}
+.stat-item { text-align: center; }
+.stat-num { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<div class="topbar">
+  <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="topbar-logo">⚙ SD.io</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-current" id="topbarCurrent">
+    <span>Select a system design</span> to begin
+  </div>
+  <div class="topbar-right">
+    <div class="progress-pill"><b id="completedCount">2</b> / 20 systems</div>
+  </div>
+</div>
+
+<!-- ══ OVERLAY ══ -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">⚙ System Design</div>
+    <div class="sidebar-subtitle">INTERVIEW MASTER GUIDE · 2026</div>
+  </div>
+
+  <div class="sidebar-tabs">
+    <button class="stab active" onclick="filterView('all',this)">All</button>
+    <button class="stab" onclick="filterView('must',this)">🔴 Must</button>
+    <button class="stab" onclick="filterView('good',this)">🟡 Good</button>
+    <button class="stab" onclick="filterView('done',this)">✅ Done</button>
+  </div>
+
+  <div class="sidebar-search">
+    <span class="s-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search systems..." oninput="filterSearch(this.value)">
+  </div>
+
+  <div class="sidebar-scroll" id="sidebarScroll">
+
+    <!-- STORAGE & DB -->
+    <div class="sidebar-category cat-storage" data-cat="storage">🗄 Storage & Database</div>
+    <div class="cat-storage" id="cat-storage">
+
+      <div class="sd-item active" data-id="url_shortener" data-priority="must" data-status="done"
+           onclick="loadSystem(this)" data-file="sd_01_url_shortener_v2.html">
+        <div class="sd-icon">🔗</div>
+        <div class="sd-info">
+          <div class="sd-name">URL Shortener</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-easy">Easy</span>
+            <span class="sd-tag" style="background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2)">✅ Done</span>
+          </div>
+        </div>
+        <div class="sd-num">01</div>
+      </div>
+
+      <div class="sd-item" data-id="pastebin" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">📋</div>
+        <div class="sd-info">
+          <div class="sd-name">Pastebin</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-easy">Easy</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">02</div>
+      </div>
+
+      <div class="sd-item" data-id="dropbox" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">📁</div>
+        <div class="sd-info">
+          <div class="sd-name">Dropbox / Google Drive</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">03</div>
+      </div>
+
+    </div>
+
+    <!-- SOCIAL / FEED -->
+    <div class="sidebar-category cat-social" data-cat="social">👥 Social & Feed</div>
+    <div class="cat-social" id="cat-social">
+
+      <div class="sd-item" data-id="instagram" data-priority="must" data-status="done"
+           onclick="loadSystem(this)" data-file="sd_02_instagram.html">
+        <div class="sd-icon">📸</div>
+        <div class="sd-info">
+          <div class="sd-name">Instagram / Photo Sharing</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag" style="background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2)">✅ Done</span>
+          </div>
+        </div>
+        <div class="sd-num">04</div>
+      </div>
+
+      <div class="sd-item" data-id="twitter" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🐦</div>
+        <div class="sd-info">
+          <div class="sd-name">Twitter / Tweet Feed</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">05</div>
+      </div>
+
+      <div class="sd-item" data-id="facebook_feed" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">📰</div>
+        <div class="sd-info">
+          <div class="sd-name">Facebook News Feed</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">06</div>
+      </div>
+
+    </div>
+
+    <!-- MESSAGING -->
+    <div class="sidebar-category cat-messaging" data-cat="messaging">💬 Messaging</div>
+    <div class="cat-messaging" id="cat-messaging">
+
+      <div class="sd-item" data-id="whatsapp" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">💬</div>
+        <div class="sd-info">
+          <div class="sd-name">WhatsApp / Chat System</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">07</div>
+      </div>
+
+      <div class="sd-item" data-id="notification" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🔔</div>
+        <div class="sd-info">
+          <div class="sd-name">Notification System</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">08</div>
+      </div>
+
+    </div>
+
+    <!-- STREAMING -->
+    <div class="sidebar-category cat-streaming" data-cat="streaming">🎥 Streaming & Media</div>
+    <div class="cat-streaming" id="cat-streaming">
+
+      <div class="sd-item" data-id="youtube" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">▶️</div>
+        <div class="sd-info">
+          <div class="sd-name">YouTube / Video Streaming</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">09</div>
+      </div>
+
+      <div class="sd-item" data-id="netflix" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🎬</div>
+        <div class="sd-info">
+          <div class="sd-name">Netflix / Streaming Platform</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">10</div>
+      </div>
+
+    </div>
+
+    <!-- INFRASTRUCTURE -->
+    <div class="sidebar-category cat-infra" data-cat="infra">🏗 Infrastructure</div>
+    <div class="cat-infra" id="cat-infra">
+
+      <div class="sd-item" data-id="rate_limiter" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🛡</div>
+        <div class="sd-info">
+          <div class="sd-name">Rate Limiter</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">11</div>
+      </div>
+
+      <div class="sd-item" data-id="consistent_hash" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🔄</div>
+        <div class="sd-info">
+          <div class="sd-name">Consistent Hashing</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">12</div>
+      </div>
+
+      <div class="sd-item" data-id="dist_cache" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">⚡</div>
+        <div class="sd-info">
+          <div class="sd-name">Distributed Cache (Redis)</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">13</div>
+      </div>
+
+      <div class="sd-item" data-id="dist_mq" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">📨</div>
+        <div class="sd-info">
+          <div class="sd-name">Distributed Message Queue</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">14</div>
+      </div>
+
+      <div class="sd-item" data-id="api_gateway" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🚪</div>
+        <div class="sd-info">
+          <div class="sd-name">API Gateway / Load Balancer</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">15</div>
+      </div>
+
+    </div>
+
+    <!-- SEARCH & MAPS -->
+    <div class="sidebar-category cat-search" data-cat="search">🔍 Search & Maps</div>
+    <div class="cat-search" id="cat-search">
+
+      <div class="sd-item" data-id="typeahead" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🔍</div>
+        <div class="sd-info">
+          <div class="sd-name">Typeahead Search</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">16</div>
+      </div>
+
+      <div class="sd-item" data-id="uber" data-priority="must" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🚗</div>
+        <div class="sd-info">
+          <div class="sd-name">Uber / Ride Hailing</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-must">MUST</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">17</div>
+      </div>
+
+      <div class="sd-item" data-id="google_maps" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🗺</div>
+        <div class="sd-info">
+          <div class="sd-name">Google Maps</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">18</div>
+      </div>
+
+      <div class="sd-item" data-id="web_crawler" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">🕷</div>
+        <div class="sd-info">
+          <div class="sd-name">Web Crawler</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-medium">Medium</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">19</div>
+      </div>
+
+      <div class="sd-item" data-id="payment" data-priority="good" data-status="coming"
+           onclick="loadSystem(this)" data-file="">
+        <div class="sd-icon">💳</div>
+        <div class="sd-info">
+          <div class="sd-name">Payment System</div>
+          <div class="sd-tags">
+            <span class="sd-tag tag-good">GOOD</span>
+            <span class="sd-tag tag-hard">Hard</span>
+            <span class="sd-tag tag-coming">Soon</span>
+          </div>
+        </div>
+        <div class="sd-num">20</div>
+      </div>
+
+    </div>
+  </div><!-- /scroll -->
+
+  <div class="sidebar-stats">
+    <div class="stat-item"><div class="stat-num">20</div><div class="stat-label">TOTAL</div></div>
+    <div class="stat-item"><div class="stat-num" style="color:#ef4444">12</div><div class="stat-label">MUST DO</div></div>
+    <div class="stat-item"><div class="stat-num" style="color:#f59e0b">8</div><div class="stat-label">GOOD TO DO</div></div>
+    <div class="stat-item"><div class="stat-num" style="color:#10b981">2</div><div class="stat-label">COMPLETED</div></div>
+  </div>
+</div>
+
+<!-- ══ MAIN CONTENT ══ -->
+<div class="main" id="mainArea">
+
+  <!-- Welcome screen -->
+  <div class="welcome" id="welcomeScreen">
+    <div class="welcome-icon">⚙️</div>
+    <div class="welcome-title">System Design<br>Interview Guide</div>
+    <div class="welcome-sub">
+      A complete, interview-ready reference covering 20 system designs — each with Q&A, capacity estimation, HLD/LLD diagrams, API contracts, code in Java & Python, and tradeoffs.
+    </div>
+
+    <div class="welcome-grid">
+      <div class="welcome-card" onclick="loadById('url_shortener')">
+        <div class="wc-icon">🔗</div>
+        <div class="wc-name">URL Shortener</div>
+        <div class="wc-num">#01 · Ready</div>
+      </div>
+      <div class="welcome-card" onclick="loadById('instagram')">
+        <div class="wc-icon">📸</div>
+        <div class="wc-name">Instagram</div>
+        <div class="wc-num">#04 · Ready</div>
+      </div>
+      <div class="welcome-card" onclick="loadById('twitter')" style="opacity:.6;cursor:not-allowed">
+        <div class="wc-icon">🐦</div>
+        <div class="wc-name">Twitter Feed</div>
+        <div class="wc-num">#05 · Coming soon</div>
+      </div>
+      <div class="welcome-card" onclick="loadById('whatsapp')" style="opacity:.6;cursor:not-allowed">
+        <div class="wc-icon">💬</div>
+        <div class="wc-name">WhatsApp</div>
+        <div class="wc-num">#07 · Coming soon</div>
+      </div>
+      <div class="welcome-card" onclick="loadById('youtube')" style="opacity:.6;cursor:not-allowed">
+        <div class="wc-icon">▶️</div>
+        <div class="wc-name">YouTube</div>
+        <div class="wc-num">#09 · Coming soon</div>
+      </div>
+      <div class="welcome-card" onclick="loadById('uber')" style="opacity:.6;cursor:not-allowed">
+        <div class="wc-icon">🚗</div>
+        <div class="wc-name">Uber</div>
+        <div class="wc-num">#17 · Coming soon</div>
+      </div>
+    </div>
+
+    <div class="welcome-hint">
+      <div class="hamburger-mini">
+        <span></span><span></span><span></span>
+      </div>
+      <span>Click the <strong style="color:var(--accent)">☰ menu</strong> top-left to browse all 20 system designs by category</span>
+    </div>
+  </div>
+
+  <!-- Frames for each system design -->
+  <iframe id="frame_url_shortener" class="content-frame" src="" title="URL Shortener"></iframe>
+  <iframe id="frame_instagram"     class="content-frame" src="" title="Instagram"></iframe>
+
+  <!-- Coming soon placeholder -->
+  <div class="coming-soon" id="comingSoon">
+    <div class="coming-soon-icon">🚧</div>
+    <div class="coming-soon-title" id="comingSoonTitle">Coming Soon</div>
+    <div class="coming-soon-sub" id="comingSoonSub">This system design is being built. Say <strong>"post next"</strong> in the chat to add it!</div>
+    <div class="coming-soon-badge">🔜 Next up after you request it</div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+let sidebarOpen = false;
+let currentId   = null;
+let currentFilter = 'all';
+
+// Map file names for systems that are ready
+const FILE_MAP = {
+  url_shortener: 'sd_01_url_shortener_v2.html',
+  instagram:     'sd_02_instagram.html',
+};
+
+const SYSTEM_NAMES = {
+  url_shortener: 'URL Shortener',
+  pastebin:      'Pastebin',
+  dropbox:       'Dropbox / Google Drive',
+  instagram:     'Instagram / Photo Sharing',
+  twitter:       'Twitter / Tweet Feed',
+  facebook_feed: 'Facebook News Feed',
+  whatsapp:      'WhatsApp / Chat System',
+  notification:  'Notification System',
+  youtube:       'YouTube / Video Streaming',
+  netflix:       'Netflix',
+  rate_limiter:  'Rate Limiter',
+  consistent_hash: 'Consistent Hashing',
+  dist_cache:    'Distributed Cache (Redis)',
+  dist_mq:       'Distributed Message Queue',
+  api_gateway:   'API Gateway / Load Balancer',
+  typeahead:     'Typeahead Search',
+  uber:          'Uber / Ride Hailing',
+  google_maps:   'Google Maps',
+  web_crawler:   'Web Crawler',
+  payment:       'Payment System',
+};
+
+// ─── Sidebar ─────────────────────────────────────────
+function toggleSidebar() {
+  sidebarOpen ? closeSidebar() : openSidebar();
+}
+function openSidebar() {
+  sidebarOpen = true;
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('hamburgerBtn').classList.add('open');
+}
+function closeSidebar() {
+  sidebarOpen = false;
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('hamburgerBtn').classList.remove('open');
+}
+
+// ─── Load System ─────────────────────────────────────
+function loadSystem(el) {
+  const id     = el.dataset.id;
+  const file   = el.dataset.file || FILE_MAP[id] || '';
+  const status = el.dataset.status;
+
+  // Update active state in sidebar
+  document.querySelectorAll('.sd-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+
+  // Update topbar
+  document.getElementById('topbarCurrent').innerHTML =
+    `<span>${SYSTEM_NAMES[id] || id}</span>`;
+
+  currentId = id;
+  closeSidebar();
+
+  // Hide welcome
+  document.getElementById('welcomeScreen').style.display = 'none';
+
+  // Hide all frames + coming soon
+  document.querySelectorAll('.content-frame').forEach(f => f.classList.remove('active'));
+  document.getElementById('comingSoon').classList.remove('active');
+
+  if (status === 'coming' || !file) {
+    // Show coming soon
+    const cs = document.getElementById('comingSoon');
+    document.getElementById('comingSoonTitle').textContent = SYSTEM_NAMES[id] || id;
+    document.getElementById('comingSoonSub').innerHTML =
+      `This system design is being built.<br>Say <strong style="color:var(--accent)">"post next"</strong> in the chat to add it!`;
+    cs.classList.add('active');
+    return;
+  }
+
+  // Load iframe
+  const frameId = 'frame_' + id;
+  let frame = document.getElementById(frameId);
+
+  // If frame doesn't exist yet, create it
+  if (!frame) {
+    frame = document.createElement('iframe');
+    frame.id = frameId;
+    frame.className = 'content-frame';
+    frame.title = SYSTEM_NAMES[id] || id;
+    document.getElementById('mainArea').appendChild(frame);
+  }
+
+  // Lazy load — only set src when first needed
+  if (!frame.src || frame.src === window.location.href || frame.src === 'about:blank') {
+    frame.src = file;
+  }
+
+  frame.classList.add('active');
+}
+
+function loadById(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) loadSystem(el);
+}
+
+// ─── Filter ──────────────────────────────────────────
+function filterView(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function filterSearch(query) {
+  applyFilters(query.toLowerCase().trim());
+}
+
+function applyFilters(query = '') {
+  const items = document.querySelectorAll('.sd-item');
+  items.forEach(item => {
+    const name     = item.querySelector('.sd-name').textContent.toLowerCase();
+    const priority = item.dataset.priority;
+    const status   = item.dataset.status;
+
+    const matchesFilter =
+      currentFilter === 'all'  ? true :
+      currentFilter === 'must' ? priority === 'must' :
+      currentFilter === 'good' ? priority === 'good' :
+      currentFilter === 'done' ? status   === 'done' : true;
+
+    const matchesSearch = query === '' || name.includes(query);
+
+    item.style.display = (matchesFilter && matchesSearch) ? 'flex' : 'none';
+  });
+
+  // Hide empty category headers
+  document.querySelectorAll('.sidebar-category').forEach(cat => {
+    const catClass = cat.dataset.cat;
+    const catDiv   = document.getElementById('cat-' + catClass);
+    if (!catDiv) return;
+    const visibleItems = catDiv.querySelectorAll('.sd-item:not([style*="none"])');
+    cat.style.display  = visibleItems.length === 0 ? 'none' : '';
+    catDiv.style.display = visibleItems.length === 0 ? 'none' : '';
+  });
+}
+
+// ─── Keyboard shortcut ───────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Escape') && sidebarOpen) closeSidebar();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    openSidebar();
+    setTimeout(() => document.getElementById('searchInput').focus(), 100);
+  }
+});
+
+// ─── Init ────────────────────────────────────────────
+// Pre-warm the first system so it's ready instantly on first click
+window.addEventListener('load', () => {
+  // Pre-load URL Shortener iframe in background (don't show yet)
+  const f1 = document.getElementById('frame_url_shortener');
+  if (f1 && !f1.src) f1.src = 'sd_01_url_shortener_v2.html';
+});
+</script>
+</body>
+</html>

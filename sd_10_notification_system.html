@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #10 — Notification System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;
+  --accent:#f97316;--a2:#fb923c;--a3:#10b981;--a4:#38bdf8;--a5:#f43f5e;--a6:#a78bfa;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#fdba74;--code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#110b05 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;
+  background:radial-gradient(circle,rgba(249,115,22,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(249,115,22,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#fed7aa 0%,#f97316 50%,#c2410c 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(249,115,22,.07);color:#fed7aa;border:1px solid rgba(249,115,22,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;
+  font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 10px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(249,115,22,.1);color:var(--ecolor);border:1.5px solid rgba(249,115,22,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(249,115,22,.08);color:var(--accent);border:1px solid rgba(249,115,22,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.18);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fed7aa;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--accent)}
+.info-box{background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bae6fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--a4)}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(249,115,22,.1);color:var(--accent);border:1.5px solid rgba(249,115,22,.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}.math-block .result{color:#f97316;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(249,115,22,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--accent)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-del{background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:160px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.class-grid{grid-template-columns:1fr}}
+.cb{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cb-name{background:rgba(249,115,22,.08);padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.cb-fields{padding:12px 18px;border-bottom:1px solid var(--border)}.cb-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .cft{color:#a78bfa}.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(249,115,22,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+/* Channel cards */
+.channel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin:14px 0}
+.ch-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.ch-icon{font-size:22px;margin-bottom:8px}
+.ch-name{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px}
+.ch-detail{font-size:11.5px;color:var(--muted2);line-height:1.5}
+.ch-latency{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>10 / Notification System</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔔</div>
+    <div>
+      <div class="h-title">Notification System</div>
+      <div class="h-desc">Design a scalable notification platform supporting push (APNs/FCM), email, SMS, and in-app notifications — with fan-out for bulk sends, template rendering, user preferences, deduplication, retry with backoff, and at-least-once delivery guarantees.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium</span>
+        <span class="badge b-tag">APNs / FCM</span>
+        <span class="badge b-tag">Fan-out</span>
+        <span class="badge b-tag">Kafka</span>
+        <span class="badge b-tag">Templates</span>
+        <span class="badge b-tag">At-Least-Once</span>
+        <span class="badge b-tag">Idempotency</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══ REQUIREMENTS ══ -->
+<div id="req" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🎯 Clarify Scope</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Notification systems look simple but hide complexity</strong> in fan-out for bulk sends, provider reliability (APNs/FCM can fail), user preferences (opt-outs, quiet hours), deduplication, and guaranteeing every critical notification is delivered exactly once.</div><br>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Which channels — push only, or also email, SMS, in-app?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>1-to-1 (user-triggered) or bulk broadcast (marketing)?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Scale — how many notifications/day?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>User preferences — opt-out, quiet hours, per-channel preferences?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Delivery guarantees — at-least-once, exactly-once, or best-effort?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Templated messages or raw content from callers?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>All 4 channels: push (iOS/Android), email, SMS, in-app</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Both 1-to-1 and bulk broadcast (up to 100M recipients)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>10M notifications/day transactional + 100M/day marketing</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Yes — user preferences, opt-out, quiet hours 10pm–8am</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>At-least-once delivery with idempotency for dedup</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Both: templated (for marketing) and raw content (for transactional)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📡 Notification Channels</div>
+    <div class="sec-body">
+      <div class="channel-grid">
+        <div class="ch-card">
+          <div class="ch-icon">📱</div>
+          <div class="ch-name">iOS Push (APNs)</div>
+          <div class="ch-detail">Apple Push Notification service. HTTP/2 connection. Max 4KB payload. Requires device token.</div>
+          <div class="ch-latency">Latency: ~100-500ms</div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-icon">🤖</div>
+          <div class="ch-name">Android Push (FCM)</div>
+          <div class="ch-detail">Firebase Cloud Messaging. HTTP/2 or XMPP. Max 4KB. Registration token per device.</div>
+          <div class="ch-latency">Latency: ~100-500ms</div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-icon">📧</div>
+          <div class="ch-name">Email (SMTP/SES)</div>
+          <div class="ch-detail">Amazon SES, SendGrid, Mailgun. Templates with HTML/text. Attachments supported. High deliverability requires SPF/DKIM.</div>
+          <div class="ch-latency">Latency: 1–30 seconds</div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-icon">💬</div>
+          <div class="ch-name">SMS (Twilio)</div>
+          <div class="ch-detail">Twilio, AWS SNS SMS. 160 chars per segment. International routing. High cost. Best for OTP, critical alerts.</div>
+          <div class="ch-latency">Latency: 1–10 seconds</div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-icon">🔔</div>
+          <div class="ch-name">In-App</div>
+          <div class="ch-detail">Stored in DB, shown in notification center. Persisted forever. No 3rd party. Badge count on app icon.</div>
+          <div class="ch-latency">Latency: real-time (WS)</div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-icon">💬</div>
+          <div class="ch-name">Web Push</div>
+          <div class="ch-detail">Browser push via Web Push Protocol. Works when browser is closed. Requires user permission. Lower CTR than mobile.</div>
+          <div class="ch-latency">Latency: ~500ms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">✅ Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:12px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Send Notification:</strong> Accept notification request (to user, channel, content), deliver via the appropriate provider(s). Return immediately (async delivery).</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Bulk Broadcast:</strong> Send notification to N users (up to 100M). Fan-out without blocking the caller.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>User Preferences:</strong> Respect per-user opt-outs (e.g., "no marketing emails"), quiet hours, and per-channel preferences.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Retry with Backoff:</strong> Failed deliveries (provider errors, network issues) are retried with exponential backoff. Max 3 retries.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Deduplication:</strong> Each notification has a unique ID. If the same ID is submitted twice, deliver only once.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Delivery Tracking:</strong> Track status per notification: QUEUED → SENDING → DELIVERED | FAILED.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a2);font-weight:700;letter-spacing:.08em;margin-bottom:12px">EXTENDED</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Templates:</strong> Pre-defined templates with variable substitution. Different templates for different languages/regions.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Scheduling:</strong> Send at a specific time (e.g., "send at 9am user's local time")</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Analytics:</strong> Open rates, click rates, opt-out rates per notification campaign</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div><strong>Rate Limiting:</strong> Don't send more than N notifications per user per hour (spam prevention)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">PERFORMANCE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>API response: &lt;100ms (async — just queue the notification)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Push delivery p99: &lt;5 seconds for transactional</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Bulk of 100M: complete fanout within 30 minutes</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">RELIABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>At-least-once delivery: every notification eventually delivered or moved to DLQ</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Idempotent: duplicate sends don't spam users</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Provider failure: fallback to secondary provider (e.g., SendGrid → SES)</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a2);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SCALE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Transactional: 10M/day = ~116/sec avg, ~500/sec peak</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Marketing: 100M/day, sent in batches over 30 min = ~55,000/sec</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a2)"></div><div>Kafka-backed fan-out: infinitely scalable with consumer groups</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a6);font-weight:700;letter-spacing:.08em;margin-bottom:12px">COMPLIANCE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>GDPR: user can opt out of all marketing communications</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>CAN-SPAM: commercial emails must include unsubscribe link</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div>Quiet hours respected (10pm–8am in user's timezone)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Q&A ══ -->
+<div id="qa" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🎙 Phase 1 — Architecture & Asynchronous Design</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · ASYNC PIPELINE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design a notification system. Start by explaining the high-level architecture.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The fundamental principle: <b>the notification system must be fully asynchronous</b>. The caller (e.g., the payment service saying "notify user that payment succeeded") should get a 202 Accepted in &lt;100ms. The actual delivery to APNs/FCM/SMTP happens in the background.<br><br>
+        Why async is essential:<br>
+        <ul>
+          <li>APNs/FCM can take 100-500ms per notification. At 500/sec, you can't do this synchronously.</li>
+          <li>Providers fail. If we call APNs synchronously and it's down, the payment service call blocks/fails.</li>
+          <li>Bulk sends (100M recipients) would block the caller for hours synchronously.</li>
+        </ul>
+        <b>Architecture:</b><br>
+        <ol>
+          <li><b>Notification Service API</b> — accepts notification requests, validates, persists to DB, publishes to Kafka. Returns 202 immediately.</li>
+          <li><b>Kafka</b> — durable message queue. Topic per channel: <code>notifications.push</code>, <code>notifications.email</code>, <code>notifications.sms</code>.</li>
+          <li><b>Channel Workers</b> — Kafka consumers per channel. Read from queue, check user preferences, render template, call provider.</li>
+          <li><b>Providers</b> — APNs (iOS), FCM (Android), SES/SendGrid (email), Twilio (SMS).</li>
+        </ol>
+        The key insight: each channel is independently scalable. If email is slow, add more email workers. Push notifications are fast (APNs is &lt;500ms) while email can take seconds — they shouldn't block each other.
+      </div></div>
+      <div class="tip-box"><strong>💡 Always lead with "fully asynchronous"</strong> for notification systems. The API never blocks on provider calls — this immediately shows you understand the reliability and scalability requirements.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📤 Phase 2 — Fan-out for Bulk Sends</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · FAN-OUT</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A marketing campaign sends a push notification to 100 million users. Walk me through the fan-out.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Sending to 100M users is a fan-out problem. You can't build a single message with 100M recipients and put it in Kafka — that's a 10GB message. The right approach:<br><br>
+        <b>Step 1 — Create campaign record:</b><br>
+        Caller submits: <code>POST /notifications/campaigns</code> with template_id, segment (all_users or specific cohort), scheduled_at. Campaign record created with status <code>PENDING</code>.<br><br>
+        <b>Step 2 — Fan-out Service (Kafka consumer):</b><br>
+        Campaign event published to Kafka. Fan-out Service consumes it and:<br>
+        <ol>
+          <li>Queries User Service to get all users in the segment (paginated, 10,000 at a time)</li>
+          <li>For each batch of 10,000 users, checks user preferences (opt-outs, quiet hours) in batch</li>
+          <li>Creates individual notification messages in Kafka: one message per user (not one message with 100M users)</li>
+          <li>At 55,000 messages/sec, completing 100M in 30 minutes</li>
+        </ol>
+        <b>Kafka topic partitioning:</b> Partition by user_id. This ensures notifications for the same user always go to the same partition — preserving ordering and preventing duplicate delivery from race conditions.<br><br>
+        <b>Worker parallelism:</b> 100 push worker instances each consuming from different Kafka partitions. Each handles ~550 messages/sec. APNs can handle thousands of concurrent connections with HTTP/2 multiplexing — 100 workers × 550/sec = 55,000/sec total.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What happens if the fan-out service crashes mid-way through a 100M batch?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The fan-out service tracks its progress in the campaign record:<br>
+        <code>UPDATE campaigns SET last_processed_user_id = {cursor}, processed_count = {n}</code><br><br>
+        When it restarts (or a replacement consumer picks up the Kafka message), it reads the campaign record, sees the cursor, and resumes from where it left off. No notifications are re-sent to users already processed.<br><br>
+        The user batch processing is idempotent: checking if a user has already received this campaign notification (Redis SET with TTL: <code>SADD notif_sent:{campaign_id} {user_id}</code>) before sending. Even if the fan-out runs twice, each user gets exactly one notification.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚙️ Phase 3 — User Preferences & Quiet Hours</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · PREFERENCES</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you handle user preferences — opt-outs, quiet hours, per-channel settings?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        User preferences form a <b>preference hierarchy</b>:<br><br>
+        <b>1. Global opt-out:</b> User has unsubscribed from all marketing. Never send marketing, regardless of channel.<br>
+        <b>2. Channel opt-out:</b> User opts out of email but keeps push. Per-channel boolean flags.<br>
+        <b>3. Notification type opt-out:</b> User wants order updates but not promotional offers. Per-type preferences.<br>
+        <b>4. Quiet hours:</b> Don't send between 10pm and 8am in the user's timezone.<br><br>
+        <b>Storage:</b> User preference record in PostgreSQL: <code>user_preferences(user_id, channel, type, is_opted_in, quiet_start_hr, quiet_end_hr, timezone)</code>. Cached in Redis (TTL 5 minutes) for fast reads during high-throughput fan-outs.<br><br>
+        <b>Quiet hours enforcement:</b> When a notification is picked up by a channel worker, check if current time is within quiet hours for this user. If yes, <em>delay</em> the notification by scheduling it in a delayed queue (Redis ZSET with score = delivery_timestamp). A scheduler picks up due notifications and re-queues them to the channel worker.<br><br>
+        <b>Notification type priority overrides:</b> Critical notifications (account security, OTP, fraud alerts) <em>bypass</em> quiet hours and marketing opt-outs. The notification request includes a <code>priority</code> field: <code>CRITICAL</code> | <code>TRANSACTIONAL</code> | <code>MARKETING</code>. Only CRITICAL bypasses all user preferences.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔁 Phase 4 — Retry, Idempotency & At-Least-Once</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · RELIABILITY</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>APNs returns an error for 5% of notifications. How do you handle retries without spamming users?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Retry strategy depends on the error type — not all errors are retriable:<br><br>
+        <b>Retriable errors (transient):</b><br>
+        <ul>
+          <li>APNs HTTP 429 (rate limited) → backoff and retry</li>
+          <li>APNs HTTP 500/503 (provider down) → retry with exponential backoff</li>
+          <li>Network timeout → retry after 1s, 2s, 4s, 8s (max 3 retries)</li>
+        </ul>
+        <b>Non-retriable errors (permanent):</b><br>
+        <ul>
+          <li>APNs HTTP 400 with error code <code>BadDeviceToken</code> → device token is invalid, delete it from our database. User may have uninstalled the app.</li>
+          <li>APNs HTTP 410 <code>Unregistered</code> → token expired. Delete token, user re-registers on next app open.</li>
+          <li>SMS number invalid → don't retry.</li>
+        </ul>
+        <b>Idempotency (no duplicate sends):</b><br>
+        Every notification has a unique <code>notification_id</code> (generated by the caller or auto-assigned). Before sending to the provider, the worker checks Redis: <code>SET notif_sent:{notification_id} 1 NX EX 86400</code>. If key already exists → this notification was already sent → skip. The NX ensures only one worker sends even if the Kafka message is processed twice (rebalance, worker restart).
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>After 3 retries, the notification still fails. What happens?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The notification is moved to a <b>Dead Letter Queue (DLQ)</b>. The DLQ is a separate Kafka topic: <code>notifications.dlq</code>. It includes the original message, all error details, retry count, and timestamps.<br><br>
+        The DLQ serves two purposes:<br>
+        <b>1. On-call alerts:</b> A DLQ monitor fires a PagerDuty/Slack alert when DLQ depth exceeds a threshold (e.g., 1000 messages). This indicates a systemic provider issue needing investigation.<br>
+        <b>2. Manual replay:</b> Engineers can inspect DLQ messages, fix the underlying issue (e.g., APNs credentials expired), and replay the messages. This prevents permanent notification loss.<br><br>
+        For <b>transactional notifications</b> (e.g., OTP), failure to deliver after retries should trigger an alternative channel: if push fails, try SMS. This fallback channel logic is configured per notification type.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Phase 5 — Templates & Analytics</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · TEMPLATES</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you handle templated notifications with personalisation?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Templates separate content from code. A marketing team creates templates without deploying code. Key components:<br><br>
+        <b>Template definition:</b><br>
+        <code>{"id": "order_shipped", "channel": "push", "title": "Your order is on its way! 🚚", "body": "Hi {{user.first_name}}, your order #{{order.id}} shipped. Estimated delivery: {{delivery.date}}"}</code><br><br>
+        <b>Rendering:</b> Template Engine (Handlebars/Jinja2) renders the template with a context object at send time. The context comes from the notification request and is enriched from the User Service and Order Service.<br><br>
+        <b>Internationalisation (i18n):</b> Each template has variants per locale: <code>template_id:en-US</code>, <code>template_id:es-MX</code>. The worker fetches the user's preferred language, picks the right template variant. Falls back to <code>en-US</code> if the user's locale isn't translated.<br><br>
+        <b>A/B testing:</b> Templates support variants. Marketing can run A/B tests on subject lines or body copy. The Fan-out Service randomly assigns users to variant A or B (bucketed by <code>hash(user_id) % 2</code>). Analytics tracks open/click rates per variant.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPACITY ══ -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Two different traffic patterns:</strong> (1) Transactional — steady stream, latency-sensitive, (2) Marketing campaigns — bursty, latency-tolerant but must complete within SLA window.</div></div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">1</div><div><div class="step-title">Transactional Notification Rate</div><div class="step-sub">OTPs, order updates, alerts — latency-sensitive</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Given: 10M transactional notifications/day</span>
+
+<span class="label">Average TPS:</span>
+  <span class="label">10M ÷ 86,400                          = </span><span class="val">~116 notifications/sec</span>
+
+<span class="label">Peak (lunch hour, flash sale, 5×):</span>
+  <span class="label">116 × 5                               = </span><span class="val">~580 notifications/sec</span>
+
+<span class="label">Channel breakdown (typical):</span>
+  <span class="label">Push (50%)                            = </span><span class="val">58/sec</span>
+  <span class="label">Email (30%)                           = </span><span class="val">35/sec</span>
+  <span class="label">SMS (10%)                             = </span><span class="val">12/sec</span>
+  <span class="label">In-app (10%)                          = </span><span class="val">12/sec</span>
+
+<span class="label">Workers needed (each handles 100 deliveries/sec):</span>
+  <span class="label">Push workers: 58 ÷ 100               = </span><span class="val">1 worker</span>  <span class="label">(scale up to 10 for peak)</span>
+  <span class="label">Email workers: 35 ÷ 20 (email slower)= </span><span class="val">2 workers</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">2</div><div><div class="step-title">Marketing Campaign Fan-out</div><div class="step-sub">100M notifications, must complete in 30 minutes</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Target: 100 million notifications in 30 minutes</span>
+
+<span class="label">Required throughput:</span>
+  <span class="label">100M ÷ (30 × 60)                      = </span><span class="val">55,556 notifications/sec</span>
+
+<span class="label">APNs throughput per HTTP/2 connection: ~1000 req/sec</span>
+<span class="label">FCM throughput per connection: ~500 req/sec</span>
+
+<span class="label">Push workers needed (FCM as bottleneck):</span>
+  <span class="label">55,556 × 50% push ÷ 500/worker        = </span><span class="val">56 push workers</span>
+
+<span class="label">Fan-out service throughput:</span>
+  <span class="label">Must enqueue 55,556 Kafka messages/sec</span>
+  <span class="label">Kafka can handle 1M+ messages/sec across partitions → trivial</span>
+
+<span class="label">User preference check batch size:</span>
+  <span class="label">Redis batch GET: 10,000 users/batch, ~2ms per batch</span>
+  <span class="label">55,556 users/sec ÷ 10,000/batch × 2ms = </span><span class="val">11ms overhead</span>  <span class="label">negligible</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">3</div><div><div class="step-title">Storage — Notification Log</div><div class="step-sub">Persisting all sent notifications for analytics and retries</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Total notifications/day: 10M transactional + 100M marketing = 110M/day</span>
+
+<span class="label">Per notification record size:</span>
+  <span class="label">notification_id (16B) + user_id (8B) + channel (4B) + status (1B)</span>
+  <span class="label">+ template_id (4B) + content_ref (50B) + timestamps (24B) + metadata (50B)</span>
+  <span class="label">Total                                 ≈ </span><span class="val">~160 bytes</span>
+
+<span class="label">Daily storage:</span>
+  <span class="label">110M × 160B                           = </span><span class="val">~17.6 GB/day</span>
+
+<span class="label">Annual storage (90-day retention for analytics):</span>
+  <span class="label">17.6 GB × 90                          = </span><span class="val">~1.6 TB</span>  <span class="label">(manageable in Cassandra)</span>
+
+<span class="label">User preference cache (Redis):</span>
+  <span class="label">500M users × 50B per pref record      = </span><span class="val">25 GB</span>  <span class="label">Redis, with TTL 5min active</span>
+
+<span class="label">Dedup cache (Redis SET per campaign):</span>
+  <span class="label">Per campaign: 100M user_ids × 8B      = </span><span class="val">800 MB</span>  <span class="label">TTL 24h, 1 campaign at a time</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Transactional TPS (avg/peak)</td><td class="hi">116 / 580</td><td>10M/day, 5× peak</td></tr>
+        <tr><td>Marketing campaign throughput</td><td class="hi">55,556/sec</td><td>100M in 30 min</td></tr>
+        <tr><td>Push workers (marketing peak)</td><td class="hi">~60 workers</td><td>FCM ~500/sec each</td></tr>
+        <tr><td>Notification log storage/day</td><td class="hi">~17.6 GB</td><td>160 bytes/record</td></tr>
+        <tr><td>90-day retention</td><td class="hi">~1.6 TB</td><td>Cassandra</td></tr>
+        <tr><td>User preference cache</td><td class="hi">~25 GB Redis</td><td>5-min TTL for active users</td></tr>
+        <tr><td>Dedup cache per campaign</td><td class="hi">~800 MB</td><td>Redis SET, 24h TTL</td></tr>
+        <tr><td>Kafka topics</td><td class="hi">6 topics × 100 partitions</td><td>Push/Email/SMS/In-app/DLQ/Fan-out</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ API ══ -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 API Design</div>
+    <div class="sec-body"><div class="info-box"><strong>The Notification API always returns 202 Accepted.</strong> It never blocks on delivery. The caller gets back a notification_id to track status asynchronously.</div></div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/notifications</span><span class="api-desc">Send a single notification to one user</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">idempotency_key</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Caller-generated UUID. If the same key is submitted twice, only one notification is delivered. Critical for retries from calling service.</span></div>
+        <div class="frow"><span class="fn">user_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Recipient user ID. System looks up their device tokens, email, phone based on preferences.</span></div>
+        <div class="frow"><span class="fn">channels</span><span class="ft">string[]</span><span class="fo">optional</span><span class="fd"><code>["push", "email", "sms", "in_app"]</code>. If null, system picks based on user preferences and notification type.</span></div>
+        <div class="frow"><span class="fn">template_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Pre-defined template ID. Either this or content must be provided.</span></div>
+        <div class="frow"><span class="fn">template_data</span><span class="ft">object</span><span class="fo">optional</span><span class="fd">Variable values for template substitution: <code>{"order_id": "ORD-123", "amount": "$49.99"}</code></span></div>
+        <div class="frow"><span class="fn">content</span><span class="ft">object</span><span class="fo">optional</span><span class="fd">Raw content (if no template): <code>{"title": "Payment received", "body": "We received your payment of $49.99"}</code></span></div>
+        <div class="frow"><span class="fn">priority</span><span class="ft">enum</span><span class="fo">optional</span><span class="fd"><code>CRITICAL</code> | <code>TRANSACTIONAL</code> | <code>MARKETING</code>. Default: <code>TRANSACTIONAL</code>. CRITICAL bypasses quiet hours and opt-outs.</span></div>
+        <div class="frow"><span class="fn">scheduled_at</span><span class="ft">datetime</span><span class="fo">optional</span><span class="fd">If provided, deliver at this UTC time. For quiet-hours compliance, use user's local time by setting <code>respect_quiet_hours: true</code>.</span></div>
+        <div class="frow"><span class="fn">ttl_seconds</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Max seconds to attempt delivery. If not delivered within TTL, discard (don't send stale OTPs). Default: 86400 (24h).</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 202 — Accepted</div>
+        <div class="frow"><span class="fn">notification_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">System-assigned UUID. Use to track delivery status.</span></div>
+        <div class="frow"><span class="fn">status</span><span class="ft">string</span><span class="fo"></span><span class="fd"><code>QUEUED</code> — notification accepted, delivery in progress.</span></div>
+        <div class="frow"><span class="fn">estimated_delivery_ms</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Estimated ms until delivery (based on queue depth and priority). Push: ~2000ms. Email: ~10000ms.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/notifications/campaigns</span><span class="api-desc">Send to a large segment (bulk broadcast)</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">template_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Template to use for this campaign.</span></div>
+        <div class="frow"><span class="fn">segment</span><span class="ft">object</span><span class="fr">required</span><span class="fd">Target audience: <code>{"type": "ALL_USERS"}</code> or <code>{"type": "COHORT", "cohort_id": "premium_users"}</code> or <code>{"type": "USER_LIST", "user_ids": [...]}</code></span></div>
+        <div class="frow"><span class="fn">channel</span><span class="ft">enum</span><span class="fr">required</span><span class="fd"><code>push</code> | <code>email</code> | <code>sms</code></span></div>
+        <div class="frow"><span class="fn">scheduled_at</span><span class="ft">datetime</span><span class="fo">optional</span><span class="fd">When to start sending. Null = immediately.</span></div>
+        <div class="frow"><span class="fn">send_in_user_timezone</span><span class="ft">boolean</span><span class="fo">optional</span><span class="fd">If true, deliver at <code>scheduled_at</code> in each user's local timezone. "9am everywhere" = 24-hour rolling window.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 202</div>
+        <div class="frow"><span class="fn">campaign_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Use to track campaign progress.</span></div>
+        <div class="frow"><span class="fn">estimated_recipients</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Approximate recipient count before opt-out filtering.</span></div>
+        <div class="frow"><span class="fn">estimated_completion</span><span class="ft">datetime</span><span class="fo"></span><span class="fd">Estimated time when all notifications will be sent.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/notifications/{notification_id}</span><span class="api-desc">Get delivery status</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">status</span><span class="ft">enum</span><span class="fo"></span><span class="fd"><code>QUEUED</code> | <code>SENDING</code> | <code>DELIVERED</code> | <code>FAILED</code> | <code>SKIPPED</code> (user opted out) | <code>EXPIRED</code> (TTL exceeded)</span></div>
+        <div class="frow"><span class="fn">channel_statuses</span><span class="ft">object[]</span><span class="fo"></span><span class="fd">Per-channel breakdown: <code>[{"channel": "push", "status": "DELIVERED", "provider_response": "200", "delivered_at": "..."}]</code></span></div>
+        <div class="frow"><span class="fn">retry_count</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Number of delivery attempts made</span></div>
+        <div class="frow"><span class="fn">error</span><span class="ft">string</span><span class="fo"></span><span class="fd">Error details if status = FAILED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/users/{user_id}/preferences</span><span class="api-desc">Update user notification preferences</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body (upsert)</div>
+        <div class="frow"><span class="fn">global_opt_out</span><span class="ft">boolean</span><span class="fo">optional</span><span class="fd">Opt out of ALL non-critical notifications. GDPR right to unsubscribe.</span></div>
+        <div class="frow"><span class="fn">channel_preferences</span><span class="ft">object</span><span class="fo">optional</span><span class="fd"><code>{"push": true, "email": false, "sms": false}</code> — per-channel opt-in flags.</span></div>
+        <div class="frow"><span class="fn">quiet_hours</span><span class="ft">object</span><span class="fo">optional</span><span class="fd"><code>{"start_hour": 22, "end_hour": 8, "timezone": "America/New_York"}</code></span></div>
+        <div class="frow"><span class="fn">type_preferences</span><span class="ft">object</span><span class="fo">optional</span><span class="fd"><code>{"marketing": false, "order_updates": true, "security": true}</code></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HLD ══ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">👥 Actors</div>
+    <div class="sec-body">
+      <div class="actor-grid">
+        <div class="actor-card"><div class="actor-icon">⚙️</div><div class="actor-name">Calling Service</div><div class="actor-role">Payment service, auth service, etc. Calls Notification API to trigger delivery. Gets 202 immediately.</div></div>
+        <div class="actor-card"><div class="actor-icon">📋</div><div class="actor-name">Notification API</div><div class="actor-role">Accepts requests, validates, checks idempotency, persists to DB, publishes to Kafka. Returns 202.</div></div>
+        <div class="actor-card"><div class="actor-icon">📤</div><div class="actor-name">Fan-out Service</div><div class="actor-role">For campaigns: reads user segments, checks preferences in batch, creates per-user Kafka messages.</div></div>
+        <div class="actor-card"><div class="actor-icon">📱</div><div class="actor-name">Push Worker</div><div class="actor-role">Kafka consumer. Renders template, checks preferences, calls APNs/FCM. Handles retries and token cleanup.</div></div>
+        <div class="actor-card"><div class="actor-icon">📧</div><div class="actor-name">Email Worker</div><div class="actor-role">Kafka consumer. Renders HTML template, calls SES/SendGrid. Tracks bounces/unsubscribes.</div></div>
+        <div class="actor-card"><div class="actor-icon">💬</div><div class="actor-name">SMS Worker</div><div class="actor-role">Kafka consumer. Calls Twilio. Most expensive — only for critical/OTP by default.</div></div>
+        <div class="actor-card"><div class="actor-icon">⏰</div><div class="actor-name">Scheduler</div><div class="actor-role">Scans Redis delayed queue. Picks up due notifications and re-queues to appropriate Kafka topic.</div></div>
+        <div class="actor-card"><div class="actor-icon">📊</div><div class="actor-name">Analytics Service</div><div class="actor-role">Tracks opens, clicks, opt-outs. Processes APNs/FCM delivery receipts. Feeds campaign reporting dashboard.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:560px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+            <marker id="arb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+            <marker id="arp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+            <marker id="aro" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f97316"/></marker>
+          </defs>
+
+          <!-- Input zone -->
+          <rect x="8" y="8" width="120" height="544" rx="10" fill="rgba(167,139,250,.02)" stroke="rgba(167,139,250,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="68" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7c3aed">CALLERS</text>
+          <rect x="18" y="44" width="98" height="36" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="67" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">💳 Payment Svc</text>
+          <text x="67" y="71" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">transactional</text>
+          <rect x="18" y="98" width="98" height="36" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="67" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">📊 Marketing</text>
+          <text x="67" y="125" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">bulk campaigns</text>
+          <rect x="18" y="152" width="98" height="36" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="67" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🔐 Auth Svc</text>
+          <text x="67" y="179" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">OTP, critical</text>
+
+          <!-- API + Core -->
+          <rect x="138" y="8" width="220" height="544" rx="10" fill="rgba(249,115,22,.02)" stroke="rgba(249,115,22,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="248" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f97316">CORE SERVICES</text>
+
+          <rect x="150" y="44" width="196" height="60" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="2"/>
+          <text x="248" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fdba74">📋 Notification API</text>
+          <text x="248" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">validate + dedup check</text>
+          <text x="248" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">persist → Kafka publish</text>
+
+          <rect x="150" y="124" width="196" height="52" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="248" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📤 Fan-out Service</text>
+          <text x="248" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">segment → per-user messages</text>
+          <text x="248" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">batch preference check</text>
+
+          <rect x="150" y="196" width="196" height="42" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="248" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Redis</text>
+          <text x="248" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">idempotency + dedup + prefs</text>
+
+          <rect x="150" y="258" width="196" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="248" y="276" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 PostgreSQL</text>
+          <text x="248" y="290" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">notification log + campaigns</text>
+
+          <rect x="150" y="320" width="196" height="42" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="248" y="338" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">⏰ Scheduler</text>
+          <text x="248" y="352" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">quiet hours + scheduled</text>
+
+          <!-- Kafka -->
+          <rect x="368" y="8" width="200" height="544" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="468" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">KAFKA BUS</text>
+
+          <rect x="380" y="44" width="176" height="40" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="468" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 notifications.push</text>
+          <text x="468" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">100 partitions</text>
+
+          <rect x="380" y="104" width="176" height="40" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="468" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📧 notifications.email</text>
+          <text x="468" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">100 partitions</text>
+
+          <rect x="380" y="164" width="176" height="40" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="468" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">💬 notifications.sms</text>
+          <text x="468" y="196" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">50 partitions</text>
+
+          <rect x="380" y="224" width="176" height="40" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="468" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🔔 notifications.inapp</text>
+          <text x="468" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">50 partitions</text>
+
+          <rect x="380" y="284" width="176" height="40" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="468" y="302" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">💀 notifications.dlq</text>
+          <text x="468" y="316" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">failed after retries</text>
+
+          <!-- Workers + Providers -->
+          <rect x="578" y="8" width="394" height="544" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="775" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">WORKERS + PROVIDERS</text>
+
+          <rect x="590" y="44" width="120" height="40" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="1.5"/>
+          <text x="650" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fdba74">📱 Push Worker</text>
+          <text x="650" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">×60 for campaigns</text>
+
+          <rect x="590" y="104" width="120" height="40" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="1.5"/>
+          <text x="650" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fdba74">📧 Email Worker</text>
+          <text x="650" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">×10-20 workers</text>
+
+          <rect x="590" y="164" width="120" height="40" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="1.5"/>
+          <text x="650" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fdba74">💬 SMS Worker</text>
+          <text x="650" y="196" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">×5-10 workers</text>
+
+          <rect x="590" y="224" width="120" height="40" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="1.5"/>
+          <text x="650" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fdba74">🔔 InApp Worker</text>
+          <text x="650" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">WebSocket push</text>
+
+          <!-- Providers -->
+          <rect x="730" y="44" width="130" height="40" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="795" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🍎 APNs</text>
+          <text x="795" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Apple Push</text>
+
+          <rect x="730" y="96" width="130" height="40" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="795" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🤖 FCM</text>
+          <text x="795" y="126" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Firebase Cloud Msg</text>
+
+          <rect x="730" y="148" width="130" height="40" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="795" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📧 SES/SendGrid</text>
+          <text x="795" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Email</text>
+
+          <rect x="730" y="200" width="130" height="40" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="795" y="216" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📱 Twilio</text>
+          <text x="795" y="230" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SMS</text>
+
+          <!-- Cassandra for in-app -->
+          <rect x="730" y="252" width="130" height="40" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="795" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Cassandra</text>
+          <text x="795" y="282" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">in-app inbox</text>
+
+          <!-- ARROWS -->
+          <line x1="116" y1="62" x2="148" y2="70" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="116" y1="115" x2="148" y2="135" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="346" y1="74" x2="378" y2="64" stroke="#10b981" stroke-width="2" marker-end="url(#arg)"/>
+          <line x1="346" y1="144" x2="378" y2="124" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <line x1="346" y1="184" x2="378" y2="184" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <line x1="556" y1="64" x2="588" y2="64" stroke="#f97316" stroke-width="2" marker-end="url(#aro)"/>
+          <line x1="556" y1="124" x2="588" y2="124" stroke="#f97316" stroke-width="1.5" marker-end="url(#aro)"/>
+          <line x1="556" y1="184" x2="588" y2="184" stroke="#f97316" stroke-width="1.5" marker-end="url(#aro)"/>
+          <line x1="556" y1="244" x2="588" y2="244" stroke="#f97316" stroke-width="1.5" marker-end="url(#aro)"/>
+          <line x1="710" y1="64" x2="728" y2="64" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arb)"/>
+          <line x1="710" y1="80" x2="728" y2="116" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arb)"/>
+          <line x1="710" y1="124" x2="728" y2="168" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arb)"/>
+          <line x1="710" y1="184" x2="728" y2="220" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arb)"/>
+          <line x1="710" y1="244" x2="728" y2="272" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <!-- Fan-out to Kafka -->
+          <line x1="346" y1="150" x2="378" y2="64" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arg)"/>
+
+          <!-- Labels -->
+          <text x="355" y="60" font-family="JetBrains Mono" font-size="8" fill="#f97316">pub to</text>
+          <text x="355" y="70" font-family="JetBrains Mono" font-size="8" fill="#f97316">Kafka</text>
+          <text x="565" y="56" font-family="JetBrains Mono" font-size="8" fill="#f97316">consume</text>
+          <text x="565" y="66" font-family="JetBrains Mono" font-size="8" fill="#f97316">+ render</text>
+
+          <!-- Legend -->
+          <rect x="590" y="380" width="330" height="58" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+          <text x="600" y="396" font-family="JetBrains Mono" font-size="8" fill="#f97316">RETRY FLOW: Worker → 3 attempts → DLQ topic → Alert + manual replay</text>
+          <text x="600" y="410" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">DEDUP: SET notif:{id} NX EX 86400 before calling provider</text>
+          <text x="600" y="424" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">QUIET HOURS: delayed → Redis ZSet → Scheduler → re-queue</text>
+          <text x="600" y="438" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">BAD TOKEN: delete device token from DB, don't retry</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔄 Key Flows</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fdba74">📱 SINGLE PUSH NOTIFICATION FLOW</div>
+          <div class="fs"><div class="fnum">1</div><div>Payment service: <code>POST /notifications</code> with idempotency_key, user_id, template_id, priority=TRANSACTIONAL</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Notification API: check <code>SET notif:{idempotency_key} NX</code> → if exists, return already-queued ID</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Persist to PostgreSQL (status: QUEUED), publish to <code>notifications.push</code> Kafka topic</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Return 202 to payment service — done in &lt;50ms</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Push Worker consumes Kafka message → check user preferences from Redis cache</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Check quiet hours → TRANSACTIONAL bypasses quiet hours</div></div>
+          <div class="fs"><div class="fnum">7</div><div>Look up user's APNs device token from User Service</div></div>
+          <div class="fs"><div class="fnum">8</div><div>Render template with template_data, call APNs HTTP/2</div></div>
+          <div class="fs"><div class="fnum">9</div><div>APNs returns 200 → update PostgreSQL status: DELIVERED. APNs BadDeviceToken → delete token.</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">📊 CAMPAIGN FAN-OUT FLOW</div>
+          <div class="fs"><div class="fnum">1</div><div>Marketing team: <code>POST /notifications/campaigns</code> with template_id, segment=ALL_USERS, channel=push</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Notification API creates campaign record, publishes to <code>notifications.fanout</code> topic. Returns campaign_id.</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Fan-out Service consumes campaign event. Queries User Service: paginated, 10K users at a time.</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Batch check preferences: Redis pipeline GET 10K user prefs → filter opted-out users</div></div>
+          <div class="fs"><div class="fnum">5</div><div>For each opted-in user: create individual Kafka message → <code>notifications.push</code> partitioned by user_id</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Save cursor in campaign record (fault tolerance — resume on crash)</div></div>
+          <div class="fs"><div class="fnum">7</div><div>60 Push Workers consume in parallel. Each handles ~550 messages/sec → 33,000 total/sec</div></div>
+          <div class="fs"><div class="fnum">8</div><div>100M notifications in ~50 minutes. Campaign status updated to COMPLETED.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LLD ══ -->
+<div id="lld" class="panel">
+  <div class="sec">
+    <div class="sec-head">📦 Core Classes</div>
+    <div class="sec-body">
+      <div class="class-grid">
+        <div class="cb">
+          <div class="cb-name">NotificationService</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">notifRepo: <span class="cft">NotificationRepository</span></div>
+            <div class="cf">kafka: <span class="cft">KafkaProducer</span></div>
+            <div class="cf">redis: <span class="cft">RedisClient</span></div>
+            <div class="cf">templateEngine: <span class="cft">TemplateEngine</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">send(req: NotifRequest): NotifResponse</div>
+            <div class="cm2">sendCampaign(req: CampaignRequest): CampaignResponse</div>
+            <div class="cm2">getStatus(notifId): NotifStatus</div>
+            <div class="cm2">checkIdempotency(key): boolean</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">PushWorker</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">apnsClient: <span class="cft">ApnsClient</span></div>
+            <div class="cf">fcmClient: <span class="cft">FcmClient</span></div>
+            <div class="cf">prefService: <span class="cft">PreferenceService</span></div>
+            <div class="cf">tokenRepo: <span class="cft">DeviceTokenRepo</span></div>
+            <div class="cf">MAX_RETRIES: <span class="cft">int</span> = 3</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">onMessage(msg: NotifMessage): void</div>
+            <div class="cm2">sendWithRetry(notif, token): void</div>
+            <div class="cm2">handleApnsError(code, token): void</div>
+            <div class="cm2">moveToDlq(notif, error): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">FanoutService</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">userService: <span class="cft">UserService</span></div>
+            <div class="cf">prefService: <span class="cft">PreferenceService</span></div>
+            <div class="cf">kafka: <span class="cft">KafkaProducer</span></div>
+            <div class="cf">campaignRepo: <span class="cft">CampaignRepository</span></div>
+            <div class="cf">BATCH_SIZE: <span class="cft">int</span> = 10_000</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">onCampaign(event: CampaignEvent): void</div>
+            <div class="cm2">fanoutBatch(campaignId, users): void</div>
+            <div class="cm2">saveCursor(campaignId, lastUserId): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">PreferenceService</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">prefRepo: <span class="cft">PrefRepository</span></div>
+            <div class="cf">redis: <span class="cft">RedisClient</span></div>
+            <div class="cf">CACHE_TTL: <span class="cft">int</span> = 300 seconds</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">isAllowed(userId, channel, type, priority): boolean</div>
+            <div class="cm2">isQuietHours(userId): boolean</div>
+            <div class="cm2">batchGet(userIds): Map&lt;UserId, Prefs&gt;</div>
+            <div class="cm2">update(userId, prefs): void</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🗄 Database Schema</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:420px">
+<pre><code><span class="cm">-- ── PostgreSQL: Notifications ─────────────────────────</span>
+<span class="kw">CREATE TABLE</span> notifications (
+    notification_id  <span class="cls">UUID</span>         <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+    idempotency_key  <span class="cls">VARCHAR</span>(<span class="num">256</span>) <span class="kw">UNIQUE</span>,        <span class="cm">-- caller dedup key</span>
+    user_id          <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+    channel          <span class="cls">ENUM</span>(<span class="str">'push'</span>,<span class="str">'email'</span>,<span class="str">'sms'</span>,<span class="str">'in_app'</span>),
+    priority         <span class="cls">ENUM</span>(<span class="str">'CRITICAL'</span>,<span class="str">'TRANSACTIONAL'</span>,<span class="str">'MARKETING'</span>),
+    template_id      <span class="cls">VARCHAR</span>(<span class="num">100</span>),
+    template_data    <span class="cls">JSONB</span>,
+    rendered_title   <span class="cls">TEXT</span>,
+    rendered_body    <span class="cls">TEXT</span>,
+    status           <span class="cls">ENUM</span>(<span class="str">'QUEUED'</span>,<span class="str">'SENDING'</span>,<span class="str">'DELIVERED'</span>,<span class="str">'FAILED'</span>,<span class="str">'SKIPPED'</span>),
+    retry_count      <span class="cls">INT</span>          <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    last_error       <span class="cls">TEXT</span>,
+    scheduled_at     <span class="cls">TIMESTAMP</span>,
+    queued_at        <span class="cls">TIMESTAMP</span>    <span class="kw">DEFAULT NOW</span>(),
+    delivered_at     <span class="cls">TIMESTAMP</span>,
+    ttl_seconds      <span class="cls">INT</span>          <span class="kw">DEFAULT</span> <span class="num">86400</span>,
+    campaign_id      <span class="cls">UUID</span>                             <span class="cm">-- null for transactional</span>
+);
+<span class="kw">CREATE INDEX</span> idx_notif_user    <span class="kw">ON</span> notifications (user_id, queued_at <span class="kw">DESC</span>);
+<span class="kw">CREATE INDEX</span> idx_notif_status  <span class="kw">ON</span> notifications (status) <span class="kw">WHERE</span> status != <span class="str">'DELIVERED'</span>;
+
+<span class="cm">-- ── PostgreSQL: User Preferences ──────────────────────</span>
+<span class="kw">CREATE TABLE</span> user_notification_prefs (
+    user_id           <span class="cls">BIGINT</span>      <span class="kw">PRIMARY KEY</span>,
+    global_opt_out    <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT FALSE</span>,
+    push_enabled      <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT TRUE</span>,
+    email_enabled     <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT TRUE</span>,
+    sms_enabled       <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT FALSE</span>,
+    marketing_enabled <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT TRUE</span>,
+    quiet_start_hr    <span class="cls">SMALLINT</span>    <span class="kw">DEFAULT</span> <span class="num">22</span>,    <span class="cm">-- 10pm</span>
+    quiet_end_hr      <span class="cls">SMALLINT</span>    <span class="kw">DEFAULT</span> <span class="num">8</span>,     <span class="cm">-- 8am</span>
+    timezone          <span class="cls">VARCHAR</span>(<span class="num">50</span>) <span class="kw">DEFAULT</span> <span class="str">'UTC'</span>,
+    updated_at        <span class="cls">TIMESTAMP</span>
+);
+
+<span class="cm">-- ── PostgreSQL: Device Tokens ──────────────────────────</span>
+<span class="kw">CREATE TABLE</span> device_tokens (
+    token_id     <span class="cls">UUID</span>         <span class="kw">PRIMARY KEY</span>,
+    user_id      <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+    token        <span class="cls">TEXT</span>         <span class="kw">NOT NULL UNIQUE</span>,
+    platform     <span class="cls">ENUM</span>(<span class="str">'ios'</span>,<span class="str">'android'</span>,<span class="str">'web'</span>),
+    is_active    <span class="cls">BOOLEAN</span>      <span class="kw">DEFAULT TRUE</span>,
+    registered   <span class="cls">TIMESTAMP</span>,
+    last_used    <span class="cls">TIMESTAMP</span>
+);
+
+<span class="cm">-- ── Redis Data Structures ─────────────────────────────
+-- Idempotency key (prevents duplicates)
+-- Key: notif_dedup:{idempotency_key}  →  notification_id  EX 86400
+
+-- User preference cache
+-- Key: user_prefs:{user_id}  →  HASH (all pref fields)  EX 300
+
+-- Delayed notifications (quiet hours)
+-- Key: notif_delayed  →  Sorted Set, score = deliver_at_unix, member = notification_id
+
+-- Campaign send tracking (per-user dedup in campaigns)
+-- Key: campaign_sent:{campaign_id}  →  Set of user_ids  EX 86400</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CODE ══ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Notification System — Java Implementation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Notification Service (API layer) ───────────────</span>
+<span class="ann">@RestController</span>
+<span class="kw">public class</span> <span class="cls">NotificationController</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">NotificationService</span> notifSvc;
+
+    <span class="ann">@PostMapping</span>(<span class="str">"/api/v1/notifications"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;<span class="cls">NotifResponse</span>&gt; <span class="fn2">send</span>(
+            <span class="ann">@RequestBody</span> <span class="cls">NotifRequest</span> req) {
+        <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="num">202</span>)
+            .body(notifSvc.send(req));
+    }
+}
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">NotificationService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">NotificationRepository</span>  repo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">NotifMessage</span>&gt; kafka;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt;  redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">TemplateEngine</span>              templates;
+
+    <span class="kw">public</span> <span class="cls">NotifResponse</span> <span class="fn2">send</span>(<span class="cls">NotifRequest</span> req) {
+        <span class="cm">// 1. Idempotency check: return existing if key already seen</span>
+        <span class="cls">String</span> dedupKey = <span class="str">"notif_dedup:"</span> + req.getIdempotencyKey();
+        <span class="cls">String</span> existing  = redis.opsForValue().get(dedupKey);
+        <span class="kw">if</span> (existing != <span class="kw">null</span>) {
+            <span class="kw">return new</span> <span class="cls">NotifResponse</span>(existing, <span class="str">"ALREADY_QUEUED"</span>);
+        }
+
+        <span class="cm">// 2. Render template (if using template_id)</span>
+        <span class="cls">RenderedContent</span> content = req.getTemplateId() != <span class="kw">null</span>
+            ? templates.render(req.getTemplateId(), req.getTemplateData(),
+                               req.getUserLocale())
+            : <span class="cls">RenderedContent</span>.fromRaw(req.getContent());
+
+        <span class="cm">// 3. Persist notification record</span>
+        <span class="cls">Notification</span> notif = <span class="cls">Notification</span>.builder()
+            .notificationId(<span class="cls">UUID</span>.randomUUID().toString())
+            .idempotencyKey(req.getIdempotencyKey())
+            .userId(req.getUserId())
+            .channel(req.getChannel())
+            .priority(req.getPriority())
+            .renderedTitle(content.getTitle())
+            .renderedBody(content.getBody())
+            .status(<span class="str">"QUEUED"</span>)
+            .ttlSeconds(req.getTtlSeconds())
+            .scheduledAt(req.getScheduledAt())
+            .build();
+        repo.save(notif);
+
+        <span class="cm">// 4. Store idempotency key in Redis (24h TTL)</span>
+        redis.opsForValue().set(dedupKey, notif.getNotificationId(),
+            <span class="cls">Duration</span>.ofHours(<span class="num">24</span>));
+
+        <span class="cm">// 5. Publish to appropriate Kafka topic</span>
+        <span class="cls">String</span> topic = <span class="str">"notifications."</span> + req.getChannel().toLowerCase();
+        kafka.send(topic,
+            req.getUserId().toString(), <span class="cm">// key = user_id (same partition = ordering)</span>
+            <span class="kw">new</span> <span class="cls">NotifMessage</span>(notif));
+
+        <span class="kw">return new</span> <span class="cls">NotifResponse</span>(notif.getNotificationId(), <span class="str">"QUEUED"</span>);
+    }
+}
+
+<span class="cm">// ── 2. Push Worker ────────────────────────────────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">PushWorker</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">ApnsClient</span>          apns;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">FcmClient</span>           fcm;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">PreferenceService</span>   prefs;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">DeviceTokenRepo</span>     tokens;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">NotificationRepo</span>    repo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">NotifMessage</span>&gt; kafka;
+
+    <span class="kw">private static final int</span>    MAX_RETRIES = <span class="num">3</span>;
+    <span class="kw">private static final long</span>[] BACKOFF_MS  = {<span class="num">1000</span>, <span class="num">4000</span>, <span class="num">16000</span>}; <span class="cm">// 1s, 4s, 16s</span>
+
+    <span class="ann">@KafkaListener</span>(topics = <span class="str">"notifications.push"</span>,
+                   groupId = <span class="str">"push-workers"</span>, concurrency = <span class="str">"60"</span>)
+    <span class="kw">public void</span> <span class="fn2">onMessage</span>(<span class="cls">NotifMessage</span> msg) {
+        <span class="cls">Notification</span> notif = msg.getNotification();
+
+        <span class="cm">// 1. Check TTL — discard stale notifications (e.g., old OTPs)</span>
+        <span class="kw">if</span> (<span class="cls">Instant</span>.now().isAfter(
+                notif.getQueuedAt().plusSeconds(notif.getTtlSeconds()))) {
+            repo.updateStatus(notif.getNotificationId(), <span class="str">"EXPIRED"</span>);
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// 2. Check user preferences (cached in Redis)</span>
+        <span class="kw">if</span> (!prefs.isAllowed(notif.getUserId(), <span class="str">"push"</span>,
+                             notif.getPriority())) {
+            repo.updateStatus(notif.getNotificationId(), <span class="str">"SKIPPED"</span>);
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// 3. Check quiet hours (CRITICAL bypasses)</span>
+        <span class="kw">if</span> (notif.getPriority() != <span class="cls">Priority</span>.CRITICAL
+                && prefs.isQuietHours(notif.getUserId())) {
+            <span class="cm">// Delay: put in Redis delayed queue, scheduler will re-queue</span>
+            <span class="fn2">scheduleForAfterQuietHours</span>(notif);
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// 4. Get device tokens for this user</span>
+        <span class="cls">List</span>&lt;<span class="cls">DeviceToken</span>&gt; userTokens = tokens.getActiveTokens(notif.getUserId());
+        <span class="kw">if</span> (userTokens.isEmpty()) {
+            repo.updateStatus(notif.getNotificationId(), <span class="str">"SKIPPED"</span>);
+            <span class="kw">return</span>;
+        }
+
+        <span class="cm">// 5. Send to each device with retry</span>
+        <span class="kw">for</span> (<span class="cls">DeviceToken</span> token : userTokens) {
+            <span class="fn2">sendWithRetry</span>(notif, token, <span class="num">0</span>);
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">sendWithRetry</span>(<span class="cls">Notification</span> notif,
+                                  <span class="cls">DeviceToken</span> token,
+                                  <span class="kw">int</span> attempt) {
+        <span class="kw">try</span> {
+            <span class="cls">PushResult</span> result = token.getPlatform().equals(<span class="str">"ios"</span>)
+                ? apns.send(token.getToken(), notif)
+                : fcm.send(token.getToken(), notif);
+
+            <span class="kw">if</span> (result.isSuccess()) {
+                repo.updateStatus(notif.getNotificationId(), <span class="str">"DELIVERED"</span>);
+
+            } <span class="kw">else if</span> (result.isPermanentFailure()) {
+                <span class="cm">// BadDeviceToken, Unregistered — delete token, don't retry</span>
+                tokens.deactivate(token.getTokenId());
+                repo.updateStatus(notif.getNotificationId(), <span class="str">"FAILED"</span>);
+
+            } <span class="kw">else if</span> (attempt &lt; MAX_RETRIES) {
+                <span class="cm">// Transient error — retry with exponential backoff</span>
+                <span class="cls">Thread</span>.sleep(BACKOFF_MS[attempt]);
+                <span class="fn2">sendWithRetry</span>(notif, token, attempt + <span class="num">1</span>);
+
+            } <span class="kw">else</span> {
+                <span class="cm">// Max retries exhausted — send to DLQ</span>
+                repo.updateStatus(notif.getNotificationId(), <span class="str">"FAILED"</span>,
+                    result.getErrorMessage(), MAX_RETRIES);
+                kafka.send(<span class="str">"notifications.dlq"</span>,
+                    <span class="kw">new</span> <span class="cls">DlqMessage</span>(notif, result.getErrorMessage()));
+            }
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) {
+            <span class="kw">if</span> (attempt &lt; MAX_RETRIES) {
+                <span class="fn2">sendWithRetry</span>(notif, token, attempt + <span class="num">1</span>);
+            } <span class="kw">else</span> {
+                kafka.send(<span class="str">"notifications.dlq"</span>,
+                    <span class="kw">new</span> <span class="cls">DlqMessage</span>(notif, e.getMessage()));
+            }
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">scheduleForAfterQuietHours</span>(<span class="cls">Notification</span> notif) {
+        <span class="cls">Instant</span> quietEnd = prefs.getQuietHoursEnd(notif.getUserId());
+        redis.opsForZSet().add(<span class="str">"notif_delayed"</span>,
+            notif.getNotificationId(),
+            (<span class="kw">double</span>) quietEnd.toEpochMilli());
+    }
+}
+
+<span class="cm">// ── 3. Fan-out Service ────────────────────────────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">FanoutService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">UserService</span>         userSvc;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">PreferenceService</span>   prefs;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">NotifMessage</span>&gt; kafka;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">CampaignRepository</span> campaigns;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt;  redis;
+
+    <span class="kw">private static final int</span> BATCH_SIZE = <span class="num">10_000</span>;
+
+    <span class="ann">@KafkaListener</span>(topics = <span class="str">"notifications.fanout"</span>)
+    <span class="kw">public void</span> <span class="fn2">onCampaign</span>(<span class="cls">CampaignEvent</span> event) {
+        <span class="cls">Campaign</span> campaign = campaigns.findById(event.getCampaignId());
+        <span class="cls">String</span>   cursor   = campaign.getLastProcessedUserId(); <span class="cm">// resume on crash</span>
+
+        <span class="kw">while</span> (<span class="kw">true</span>) {
+            <span class="cm">// Fetch next batch of users (paginated)</span>
+            <span class="cls">List</span>&lt;<span class="kw">long</span>&gt; userIds = userSvc.getUsersInSegment(
+                event.getSegment(), cursor, BATCH_SIZE);
+            <span class="kw">if</span> (userIds.isEmpty()) <span class="kw">break</span>; <span class="cm">// done</span>
+
+            <span class="cm">// Batch check preferences (one Redis pipeline call)</span>
+            <span class="cls">Map</span>&lt;<span class="cls">Long</span>, <span class="cls">UserPrefs</span>&gt; prefMap = prefs.batchGet(userIds);
+
+            <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; eligibleUsers = userIds.stream()
+                .filter(uid -> {
+                    <span class="cls">UserPrefs</span> p = prefMap.get(uid);
+                    <span class="kw">return</span> p != <span class="kw">null</span>
+                        && !p.isGlobalOptOut()
+                        && p.isChannelEnabled(event.getChannel())
+                        && p.isMarketingEnabled();
+                })
+                .collect(<span class="cls">Collectors</span>.toList());
+
+            <span class="cm">// Create individual Kafka messages for eligible users</span>
+            eligibleUsers.forEach(uid -> {
+                <span class="cm">// Skip if already sent in this campaign (resume safety)</span>
+                <span class="kw">if</span> (redis.opsForSet().isMember(
+                        <span class="str">"campaign_sent:"</span> + event.getCampaignId(),
+                        uid.toString())) {
+                    <span class="kw">return</span>;
+                }
+                kafka.send(<span class="str">"notifications."</span> + event.getChannel(),
+                    uid.toString(),
+                    <span class="kw">new</span> <span class="cls">NotifMessage</span>(<span class="fn2">buildNotif</span>(event, uid)));
+                redis.opsForSet().add(
+                    <span class="str">"campaign_sent:"</span> + event.getCampaignId(),
+                    uid.toString());
+            });
+
+            <span class="cm">// Save cursor for fault tolerance</span>
+            cursor = <span class="cls">String</span>.valueOf(userIds.get(userIds.size() - <span class="num">1</span>));
+            campaigns.updateCursor(event.getCampaignId(), cursor,
+                campaign.getProcessedCount() + userIds.size());
+        }
+        campaigns.updateStatus(event.getCampaignId(), <span class="str">"COMPLETED"</span>);
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Notification System — Python Implementation
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> asyncio, uuid, time, logging
+<span class="kw">from</span> typing <span class="kw">import</span> Optional, List, Dict
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime, timezone
+
+logger = logging.getLogger(__name__)
+
+
+<span class="cm"># ── 1. Notification Service ───────────────────────────</span>
+<span class="kw">class</span> <span class="cls">NotificationService</span>:
+    <span class="str">"""
+    Accepts notification requests, checks idempotency,
+    persists, and publishes to Kafka. Always returns fast.
+    """</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, db, kafka, redis, template_engine):
+        self.db        = db
+        self.kafka     = kafka
+        self.redis     = redis
+        self.templates = template_engine
+
+    <span class="kw">async def</span> <span class="fn2">send</span>(self, req: dict) -> dict:
+        <span class="str">"""POST /api/v1/notifications handler"""</span>
+        <span class="cm"># 1. Idempotency check</span>
+        dedup_key = f<span class="str">"notif_dedup:{req['idempotency_key']}"</span>
+        existing  = <span class="kw">await</span> self.redis.get(dedup_key)
+        <span class="kw">if</span> existing:
+            <span class="kw">return</span> {<span class="str">"notification_id"</span>: existing, <span class="str">"status"</span>: <span class="str">"ALREADY_QUEUED"</span>}
+
+        <span class="cm"># 2. Render template</span>
+        <span class="kw">if</span> req.get(<span class="str">"template_id"</span>):
+            content = <span class="kw">await</span> self.templates.render(
+                req[<span class="str">"template_id"</span>], req.get(<span class="str">"template_data"</span>, {}),
+                req.get(<span class="str">"locale"</span>, <span class="str">"en-US"</span>))
+        <span class="kw">else</span>:
+            content = req.get(<span class="str">"content"</span>, {})
+
+        <span class="cm"># 3. Persist</span>
+        notif_id = str(uuid.uuid4())
+        notif = {
+            <span class="str">"notification_id"</span>: notif_id,
+            <span class="str">"idempotency_key"</span>: req[<span class="str">"idempotency_key"</span>],
+            <span class="str">"user_id"</span>:         req[<span class="str">"user_id"</span>],
+            <span class="str">"channel"</span>:         req.get(<span class="str">"channel"</span>, <span class="str">"push"</span>),
+            <span class="str">"priority"</span>:        req.get(<span class="str">"priority"</span>, <span class="str">"TRANSACTIONAL"</span>),
+            <span class="str">"title"</span>:           content.get(<span class="str">"title"</span>),
+            <span class="str">"body"</span>:            content.get(<span class="str">"body"</span>),
+            <span class="str">"status"</span>:          <span class="str">"QUEUED"</span>,
+            <span class="str">"ttl_seconds"</span>:     req.get(<span class="str">"ttl_seconds"</span>, <span class="num">86400</span>),
+            <span class="str">"queued_at"</span>:       datetime.now(timezone.utc).isoformat(),
+        }
+        <span class="kw">await</span> self.db.insert(<span class="str">"notifications"</span>, notif)
+
+        <span class="cm"># 4. Cache idempotency key</span>
+        <span class="kw">await</span> self.redis.setex(dedup_key, <span class="num">86400</span>, notif_id)
+
+        <span class="cm"># 5. Publish to Kafka</span>
+        topic = f<span class="str">"notifications.{req.get('channel', 'push')}"</span>
+        <span class="kw">await</span> self.kafka.send(
+            topic,
+            key=str(req[<span class="str">"user_id"</span>]),  <span class="cm"># partition by user_id</span>
+            value=notif
+        )
+        <span class="kw">return</span> {<span class="str">"notification_id"</span>: notif_id, <span class="str">"status"</span>: <span class="str">"QUEUED"</span>}
+
+
+<span class="cm"># ── 2. Push Worker ────────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">PushWorker</span>:
+    <span class="str">"""
+    Kafka consumer for notifications.push topic.
+    Handles APNs (iOS) and FCM (Android) delivery.
+    Retry with exponential backoff. Dead letter queue on exhaustion.
+    """</span>
+    MAX_RETRIES = <span class="num">3</span>
+    BACKOFF_SEC = [<span class="num">1</span>, <span class="num">4</span>, <span class="num">16</span>]  <span class="cm"># exponential backoff</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, apns_client, fcm_client, prefs_service,
+                  token_repo, notif_repo, kafka):
+        self.apns      = apns_client
+        self.fcm       = fcm_client
+        self.prefs     = prefs_service
+        self.tokens    = token_repo
+        self.notifs    = notif_repo
+        self.kafka     = kafka
+
+    <span class="kw">async def</span> <span class="fn2">on_message</span>(self, msg: dict):
+        notif = msg
+        user_id = notif[<span class="str">"user_id"</span>]
+
+        <span class="cm"># 1. TTL check — discard stale notifications</span>
+        queued_at = datetime.fromisoformat(notif[<span class="str">"queued_at"</span>])
+        ttl_sec   = notif.get(<span class="str">"ttl_seconds"</span>, <span class="num">86400</span>)
+        age_sec   = (datetime.now(timezone.utc) - queued_at).total_seconds()
+        <span class="kw">if</span> age_sec > ttl_sec:
+            <span class="kw">await</span> self.notifs.update_status(notif[<span class="str">"notification_id"</span>], <span class="str">"EXPIRED"</span>)
+            <span class="kw">return</span>
+
+        <span class="cm"># 2. User preferences check</span>
+        allowed = <span class="kw">await</span> self.prefs.is_allowed(
+            user_id, <span class="str">"push"</span>, notif.get(<span class="str">"priority"</span>))
+        <span class="kw">if not</span> allowed:
+            <span class="kw">await</span> self.notifs.update_status(notif[<span class="str">"notification_id"</span>], <span class="str">"SKIPPED"</span>)
+            <span class="kw">return</span>
+
+        <span class="cm"># 3. Quiet hours (CRITICAL bypasses)</span>
+        <span class="kw">if</span> notif.get(<span class="str">"priority"</span>) != <span class="str">"CRITICAL"</span>:
+            in_quiet = <span class="kw">await</span> self.prefs.is_quiet_hours(user_id)
+            <span class="kw">if</span> in_quiet:
+                <span class="kw">await</span> self._delay_until_quiet_end(notif)
+                <span class="kw">return</span>
+
+        <span class="cm"># 4. Get device tokens</span>
+        device_tokens = <span class="kw">await</span> self.tokens.get_active(user_id)
+        <span class="kw">if not</span> device_tokens:
+            <span class="kw">await</span> self.notifs.update_status(notif[<span class="str">"notification_id"</span>], <span class="str">"SKIPPED"</span>)
+            <span class="kw">return</span>
+
+        <span class="cm"># 5. Send to each device</span>
+        tasks = [self._send_with_retry(notif, t) <span class="kw">for</span> t <span class="kw">in</span> device_tokens]
+        <span class="kw">await</span> asyncio.gather(*tasks, return_exceptions=<span class="kw">True</span>)
+
+    <span class="kw">async def</span> <span class="fn2">_send_with_retry</span>(self, notif: dict, token: dict,
+                                  attempt: int = <span class="num">0</span>):
+        platform = token.get(<span class="str">"platform"</span>)
+        <span class="kw">try</span>:
+            <span class="kw">if</span> platform == <span class="str">"ios"</span>:
+                result = <span class="kw">await</span> self.apns.send(token[<span class="str">"token"</span>], notif)
+            <span class="kw">else</span>:
+                result = <span class="kw">await</span> self.fcm.send(token[<span class="str">"token"</span>], notif)
+
+            <span class="kw">if</span> result[<span class="str">"success"</span>]:
+                <span class="kw">await</span> self.notifs.update_status(
+                    notif[<span class="str">"notification_id"</span>], <span class="str">"DELIVERED"</span>)
+
+            <span class="kw">elif</span> result.get(<span class="str">"permanent_failure"</span>):
+                <span class="cm"># BadDeviceToken / Unregistered — delete token</span>
+                <span class="kw">await</span> self.tokens.deactivate(token[<span class="str">"token_id"</span>])
+                <span class="kw">await</span> self.notifs.update_status(
+                    notif[<span class="str">"notification_id"</span>], <span class="str">"FAILED"</span>)
+
+            <span class="kw">elif</span> attempt < self.MAX_RETRIES:
+                <span class="kw">await</span> asyncio.sleep(self.BACKOFF_SEC[attempt])
+                <span class="kw">await</span> self._send_with_retry(notif, token, attempt + <span class="num">1</span>)
+
+            <span class="kw">else</span>:
+                <span class="kw">await</span> self._move_to_dlq(notif, result.get(<span class="str">"error"</span>))
+
+        <span class="kw">except Exception as</span> e:
+            <span class="kw">if</span> attempt < self.MAX_RETRIES:
+                <span class="kw">await</span> asyncio.sleep(self.BACKOFF_SEC[attempt])
+                <span class="kw">await</span> self._send_with_retry(notif, token, attempt + <span class="num">1</span>)
+            <span class="kw">else</span>:
+                <span class="kw">await</span> self._move_to_dlq(notif, str(e))
+
+    <span class="kw">async def</span> <span class="fn2">_move_to_dlq</span>(self, notif: dict, error: str):
+        <span class="kw">await</span> self.notifs.update_status(
+            notif[<span class="str">"notification_id"</span>], <span class="str">"FAILED"</span>, error=error)
+        <span class="kw">await</span> self.kafka.send(<span class="str">"notifications.dlq"</span>,
+            key=str(notif[<span class="str">"user_id"</span>]),
+            value={**notif, <span class="str">"error"</span>: error, <span class="str">"failed_at"</span>: time.time()})
+
+
+<span class="cm"># ── 3. Preference Service with Cache ──────────────────</span>
+<span class="kw">class</span> <span class="cls">PreferenceService</span>:
+    <span class="str">"""
+    Checks user notification preferences.
+    Cached in Redis (TTL 5 min) to handle bulk campaigns.
+    Batch GET for fan-out efficiency.
+    """</span>
+    CACHE_TTL = <span class="num">300</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, db, redis):
+        self.db    = db
+        self.redis = redis
+
+    <span class="kw">async def</span> <span class="fn2">is_allowed</span>(self, user_id: int, channel: str,
+                           priority: str) -> bool:
+        prefs = <span class="kw">await</span> self._get_cached(user_id)
+        <span class="kw">if not</span> prefs:
+            <span class="kw">return True</span>  <span class="cm"># fail open</span>
+
+        <span class="cm"># CRITICAL always goes through</span>
+        <span class="kw">if</span> priority == <span class="str">"CRITICAL"</span>:
+            <span class="kw">return True</span>
+
+        <span class="kw">if</span> prefs.get(<span class="str">"global_opt_out"</span>):
+            <span class="kw">return False</span>
+
+        <span class="kw">if not</span> prefs.get(f<span class="str">"{channel}_enabled"</span>, <span class="kw">True</span>):
+            <span class="kw">return False</span>
+
+        <span class="kw">if</span> priority == <span class="str">"MARKETING"</span> <span class="kw">and not</span> prefs.get(<span class="str">"marketing_enabled"</span>, <span class="kw">True</span>):
+            <span class="kw">return False</span>
+
+        <span class="kw">return True</span>
+
+    <span class="kw">async def</span> <span class="fn2">batch_get</span>(self, user_ids: List[int]) -> Dict[int, dict]:
+        <span class="str">"""Efficient batch preference lookup for fan-out. One pipeline call."""</span>
+        pipe = self.redis.pipeline()
+        <span class="kw">for</span> uid <span class="kw">in</span> user_ids:
+            pipe.hgetall(f<span class="str">"user_prefs:{uid}"</span>)
+        results = <span class="kw">await</span> pipe.execute()
+
+        prefs_map = {}
+        missing   = []
+        <span class="kw">for</span> uid, prefs <span class="kw">in</span> zip(user_ids, results):
+            <span class="kw">if</span> prefs:
+                prefs_map[uid] = prefs
+            <span class="kw">else</span>:
+                missing.append(uid)
+
+        <span class="cm"># Batch-fetch missing from DB</span>
+        <span class="kw">if</span> missing:
+            db_prefs = <span class="kw">await</span> self.db.batch_get_prefs(missing)
+            <span class="kw">for</span> uid, p <span class="kw">in</span> db_prefs.items():
+                prefs_map[uid] = p
+                <span class="cm"># Cache in Redis</span>
+                self.redis.hmset(f<span class="str">"user_prefs:{uid}"</span>, p)
+                self.redis.expire(f<span class="str">"user_prefs:{uid}"</span>, self.CACHE_TTL)
+
+        <span class="kw">return</span> prefs_map
+
+    <span class="kw">async def</span> <span class="fn2">_get_cached</span>(self, user_id: int) -> Optional[dict]:
+        cached = <span class="kw">await</span> self.redis.hgetall(f<span class="str">"user_prefs:{user_id}"</span>)
+        <span class="kw">if</span> cached:
+            <span class="kw">return</span> cached
+        prefs = <span class="kw">await</span> self.db.get_prefs(user_id)
+        <span class="kw">if</span> prefs:
+            <span class="kw">await</span> self.redis.hmset(f<span class="str">"user_prefs:{user_id}"</span>, prefs)
+            <span class="kw">await</span> self.redis.expire(f<span class="str">"user_prefs:{user_id}"</span>, self.CACHE_TTL)
+        <span class="kw">return</span> prefs
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRADEOFFS ══ -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Design Tradeoffs</div>
+    <div class="sec-body"><div class="warn-box"><strong>Notification systems hide subtle tradeoffs</strong> between delivery guarantees, user experience, and cost. Over-sending annoys users; under-sending loses conversions.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📬 Delivery Guarantee: At-Least-Once vs Exactly-Once vs Best-Effort</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ At-Least-Once + Idempotency</div><p>Use Kafka (durable, replayable) + Redis SET NX dedup check before each provider call. Worker failure means Kafka redelivers → dedup prevents double send. Industry standard. Simple to implement correctly.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Exactly-Once (distributed txn)</div><p>Two-phase commit between DB and Kafka. Massive complexity. Kafka's exactly-once semantics help but don't cover provider failures. A provider can accept the call and then fail before confirming — you never know if the notification was actually sent. In practice, at-least-once + idempotency is "exactly-once enough."</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Best-Effort (fire and forget)</div><p>Write to DB, call provider synchronously, don't retry. Simple. But: 5% of APNs calls fail transiently. At 10M/day, that's 500K lost notifications. For OTPs and payment confirmations, this is completely unacceptable. Only viable for truly unimportant notifications (marketing impressions).</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📤 Fan-out: Pre-compute vs Lazy</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Fan-out at send time (Kafka)</div><p>Campaign triggers fan-out service that creates individual per-user Kafka messages. Worker pool scales independently. Natural backpressure via Kafka consumer lag. Resumable on failure (cursor tracking). Standard pattern for all major notification platforms.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Pre-computed targeting lists</div><p>Before campaign launch, pre-compute the full list of recipients (filtered for opt-outs) and store as a list. Workers consume from the list. Pro: faster start. Con: list is stale (user may opt out between list generation and delivery), takes more storage upfront.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Synchronous fan-out in API</div><p>The caller's API request blocks while you create 100M Kafka messages. At 100K messages/sec, that's 1000 seconds (16 minutes) of blocking. Request times out. Caller retries. Duplicate campaign. Never synchronously fan-out in the request path.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🚫 Provider Failure: Single Provider vs Multi-Provider Fallback</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Primary + Fallback provider</div><p>Primary: SendGrid for email. Fallback: SES. If SendGrid returns 5xx for 30s, circuit breaker opens, all email routes to SES automatically. Recovery: circuit half-opens after 60s, test with a small % of traffic. Full recovery when error rate normalises.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Single provider</div><p>Simpler. SendGrid has 99.9% uptime → ~8.7 hours downtime/year. For email, this is acceptable. For SMS (OTP), a 1-hour outage during a popular login window is catastrophic. Single provider is only acceptable for non-critical channels (marketing email).</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Per-channel fallback logic</div><p>Push: APNs has no real fallback — if APNs is down, try FCM only for dual-platform users, or fall back to email/SMS for the message. SMS: Twilio primary → AWS SNS fallback. Email: SendGrid → SES. Design the fallback per channel's criticality and what alternatives are available.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">😴 Quiet Hours: Delay vs Drop vs Override</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Delay to window end (scheduled queue)</div><p>Notifications sent during quiet hours are scheduled to deliver at 8am user local time. Stored in Redis ZSET: score = delivery_timestamp. Scheduler picks up due notifications. User gets notification when they wake up — better UX than receiving it at 2am.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Drop silently</div><p>If notification arrives during quiet hours, discard. Simple, no delay queue needed. But: user misses potentially important transactional notifications (flight delay, package delivery). Only acceptable for pure marketing where the notification is time-sensitive (flash sale at 2am — irrelevant by 8am anyway).</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 TTL + quiet hours interaction</div><p>Edge case: notification has TTL=1h, but quiet hours mean it won't be delivered for 6 hours. Should we drop it? Check TTL against quiet hours end time: if TTL expires before quiet hours end, either override quiet hours (if TRANSACTIONAL) or drop (if MARKETING). Always check TTL at actual delivery time, not just enqueue time.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

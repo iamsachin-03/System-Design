@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #15 — Distributed Message Queue (Kafka)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#fb923c;--a2:#f97316;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fed7aa;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#0d0a06 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;background:radial-gradient(circle,rgba(251,146,60,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(251,146,60,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ffedd5 0%,#fb923c 50%,#c2410c 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(251,146,60,.07);color:#fed7aa;border:1px solid rgba(251,146,60,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(251,146,60,.1);color:var(--ecolor);border:1.5px solid rgba(251,146,60,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(251,146,60,.08);color:var(--accent);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.18);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fed7aa;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--accent)}
+.info-box{background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-left:3px solid var(--a6);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bae6fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--a6)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(251,146,60,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:580px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:700px){.three-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(251,146,60,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#fb923c;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+/* Kafka-specific viz */
+.offset-row{display:flex;gap:2px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.msg-box{height:36px;min-width:44px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;flex-direction:column;gap:1px}
+.m-committed{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7}
+.m-current{background:rgba(251,146,60,.25);border:2px solid #fb923c;color:#fed7aa}
+.m-future{background:rgba(30,45,69,.6);border:1px solid var(--border);color:var(--muted)}
+.partition-box{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.p-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Messaging Systems › <span>15 / Distributed Message Queue</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">📨</div>
+    <div>
+      <div class="h-title">Distributed Message Queue (Kafka)</div>
+      <div class="h-desc">Design a distributed message queue that handles millions of messages per second with durability, at-least-once delivery, consumer groups, and replay. Master the Kafka internals that every senior engineer interview expects: partitions, offsets, replication, consumer groups, and exactly-once semantics.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Partitions</span>
+        <span class="badge b-tag">Offsets</span>
+        <span class="badge b-tag">Consumer Groups</span>
+        <span class="badge b-tag">ISR Replication</span>
+        <span class="badge b-tag">Log Compaction</span>
+        <span class="badge b-tag">Exactly-Once</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('concepts',this)">🧠 Core Concepts</button>
+  <button class="nbtn" onclick="show('internals',this)">⚙️ Kafka Internals</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- CORE CONCEPTS -->
+<div id="concepts" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🧠 Why a Message Queue? The Core Problem</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Message queues decouple producers from consumers.</strong> The payment service doesn't need to wait for the email service, analytics service, and fraud service all to finish processing before it can respond to the user. They each consume the payment event independently at their own pace.</div>
+      <br>
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fda4af">❌ WITHOUT A QUEUE — TIGHT COUPLING</div>
+          <div class="fs"><div class="fnum">1</div><div>Payment service calls Email service (HTTP) → waits 200ms</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Payment service calls Analytics (HTTP) → waits 500ms</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Payment service calls Fraud (HTTP) → waits 100ms</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Total: 800ms before user gets a response!</div></div>
+          <div class="fs"><div class="fnum">5</div><div>If Email is down → payment fails too. Fatal coupling.</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#a7f3d0">✅ WITH A QUEUE — DECOUPLED</div>
+          <div class="fs"><div class="fnum">1</div><div>Payment service publishes "payment_completed" to Kafka → 5ms</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Returns 200 OK to user immediately</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Email, Analytics, Fraud each consume independently</div></div>
+          <div class="fs"><div class="fnum">4</div><div>If Email is slow → doesn't affect payment latency</div></div>
+          <div class="fs"><div class="fnum">5</div><div>If Email is down → messages wait in queue, delivered when it recovers</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📖 Key Terminology</div>
+    <div class="sec-body">
+      <div class="three-col">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">CORE ENTITIES</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Topic:</strong> Named stream of messages. E.g., <code>payments</code>, <code>user-events</code>. Like a database table but for events.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Partition:</strong> A topic is split into N partitions. Each partition is an ordered, append-only log. Parallelism unit.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Offset:</strong> Sequential integer assigned to each message within a partition. 0, 1, 2, 3... Consumer tracks which offset it has processed.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Broker:</strong> A Kafka server. Stores partitions and serves producers/consumers.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">PRODUCER SIDE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Producer:</strong> Publishes messages to a topic. Chooses which partition via key hash or round-robin.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Partition key:</strong> Determines which partition a message goes to. Same key → same partition → ordered delivery for that key.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>acks:</strong> Durability setting. <code>acks=0</code> (fire-and-forget), <code>acks=1</code> (leader ack), <code>acks=all</code> (all replicas ack).</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Batch:</strong> Producer batches messages before sending for throughput.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">CONSUMER SIDE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div><strong>Consumer Group:</strong> N consumers sharing a topic. Each partition assigned to exactly one consumer. Parallelism = min(consumers, partitions).</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div><strong>Committed offset:</strong> The offset the consumer has durably acknowledged. On restart, resumes from here.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div><strong>Lag:</strong> Latest offset minus committed offset. Measures how far behind a consumer is.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a6)"></div><div><strong>Rebalance:</strong> Consumer group reconfigures when a consumer joins or leaves.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📊 Offset Visualisation — Partition as Append-Only Log</div>
+    <div class="sec-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:16px">Each partition is an immutable, append-only log. Messages get sequential offsets. Consumers maintain their own read pointer (committed offset) — they can replay by resetting it.</p>
+
+      <div class="partition-box">
+        <div class="p-head">TOPIC: payments — PARTITION 0</div>
+        <div class="offset-row">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-right:6px;width:60px">offset →</span>
+          <div class="msg-box m-committed"><span>0</span><span style="font-size:7px">pay_101</span></div>
+          <div class="msg-box m-committed"><span>1</span><span style="font-size:7px">pay_102</span></div>
+          <div class="msg-box m-committed"><span>2</span><span style="font-size:7px">pay_103</span></div>
+          <div class="msg-box m-committed"><span>3</span><span style="font-size:7px">pay_104</span></div>
+          <div class="msg-box m-current"><span>4</span><span style="font-size:7px">pay_105</span></div>
+          <div class="msg-box m-future"><span>5</span><span style="font-size:7px">pay_106</span></div>
+          <div class="msg-box m-future"><span>6</span><span style="font-size:7px">pay_107</span></div>
+          <div class="msg-box m-future"><span>7</span><span style="font-size:7px">pay_108</span></div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-left:6px">→ LEO=8</span>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:10px;flex-wrap:wrap">
+          <div style="display:flex;gap:6px;align-items:center"><div class="msg-box m-committed" style="width:16px;height:16px;border-radius:3px;min-width:16px;font-size:0"></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6ee7b7">Committed (email-consumer: offset=3)</span></div>
+          <div style="display:flex;gap:6px;align-items:center"><div class="msg-box m-current" style="width:16px;height:16px;border-radius:3px;min-width:16px;font-size:0"></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#fed7aa">Processing now (fraud-consumer: offset=4)</span></div>
+          <div style="display:flex;gap:6px;align-items:center"><div class="msg-box m-future" style="width:16px;height:16px;border-radius:3px;min-width:16px;font-size:0"></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2)">Not yet consumed</span></div>
+        </div>
+        <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2)">
+          Key insight: two different consumer groups (email, fraud) each maintain independent offsets. Email is at 3, fraud is at 4. Both reading the SAME data independently. This is why Kafka enables fan-out to multiple consumers without duplicating data.
+        </div>
+      </div>
+
+      <div class="partition-box">
+        <div class="p-head">TOPIC: payments — PARTITION 1 (different shard, different consumer)</div>
+        <div class="offset-row">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-right:6px;width:60px">offset →</span>
+          <div class="msg-box m-committed"><span>0</span><span style="font-size:7px">pay_201</span></div>
+          <div class="msg-box m-committed"><span>1</span><span style="font-size:7px">pay_202</span></div>
+          <div class="msg-box m-future"><span>2</span><span style="font-size:7px">pay_203</span></div>
+          <div class="msg-box m-future"><span>3</span><span style="font-size:7px">pay_204</span></div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-left:6px">→ LEO=4</span>
+        </div>
+        <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2)">
+          Partition 0 and Partition 1 are independent logs. A consumer group assigns one consumer to each partition, enabling parallel processing of the topic.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KAFKA INTERNALS -->
+<div id="internals" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚙️ Replication — ISR (In-Sync Replicas)</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Kafka's durability guarantee comes from ISR replication.</strong> Every partition has one leader and N-1 followers. Writes go to leader. Followers pull from leader. A replica is "in-sync" if it's within the configured lag threshold.</div>
+      <br>
+      <div class="diag">
+        <svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:300px">
+          <defs>
+            <marker id="ao" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fb923c"/></marker>
+            <marker id="ag" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ab" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+          </defs>
+
+          <!-- Producer -->
+          <rect x="10" y="110" width="100" height="50" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="60" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📤 Producer</text>
+          <text x="60" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">acks=all</text>
+
+          <!-- Broker 1 (Leader) -->
+          <rect x="160" y="60" width="140" height="160" rx="8" fill="#131c2e" stroke="#fb923c" stroke-width="2.5"/>
+          <text x="230" y="85" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Broker 1</text>
+          <rect x="172" y="95" width="116" height="35" rx="5" fill="rgba(251,146,60,.15)" stroke="rgba(251,146,60,.4)" stroke-width="1"/>
+          <text x="230" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">LEADER</text>
+          <text x="230" y="123" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">partition 0</text>
+          <text x="230" y="155" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">✓ writes here first</text>
+          <text x="230" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">✓ serves reads</text>
+          <text x="230" y="181" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">✓ tracks ISR set</text>
+          <text x="230" y="207" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">ISR=[1,2,3]</text>
+
+          <!-- Broker 2 (Follower, ISR) -->
+          <rect x="340" y="30" width="140" height="120" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="410" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Broker 2</text>
+          <rect x="352" y="65" width="116" height="35" rx="5" fill="rgba(16,185,129,.1)" stroke="rgba(16,185,129,.3)" stroke-width="1"/>
+          <text x="410" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">FOLLOWER (ISR)</text>
+          <text x="410" y="93" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">partition 0 replica</text>
+          <text x="410" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">✓ in sync (&lt;10ms lag)</text>
+          <text x="410" y="133" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">✓ eligible for leader</text>
+
+          <!-- Broker 3 (Follower, ISR) -->
+          <rect x="340" y="180" width="140" height="100" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="410" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Broker 3</text>
+          <rect x="352" y="215" width="116" height="35" rx="5" fill="rgba(16,185,129,.1)" stroke="rgba(16,185,129,.3)" stroke-width="1"/>
+          <text x="410" y="230" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">FOLLOWER (ISR)</text>
+          <text x="410" y="243" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">partition 0 replica</text>
+          <text x="410" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">✓ in sync</text>
+
+          <!-- Consumer -->
+          <rect x="570" y="110" width="130" height="50" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="635" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📥 Consumer</text>
+          <text x="635" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">reads from leader</text>
+
+          <!-- Arrows -->
+          <line x1="110" y1="135" x2="158" y2="135" stroke="#fb923c" stroke-width="2" marker-end="url(#ao)"/>
+          <text x="132" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">write</text>
+
+          <line x1="300" y1="100" x2="338" y2="78" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ag)"/>
+          <text x="312" y="80" font-family="JetBrains Mono" font-size="8" fill="#10b981">replicate</text>
+
+          <line x1="300" y1="170" x2="338" y2="232" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ag)"/>
+          <text x="300" y="212" font-family="JetBrains Mono" font-size="8" fill="#10b981">replicate</text>
+
+          <line x1="302" y1="135" x2="568" y2="135" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ab)"/>
+          <text x="435" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">read</text>
+
+          <!-- ACK flow -->
+          <text x="160" y="270" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">acks=all: producer waits for ALL ISR replicas to confirm</text>
+          <text x="160" y="283" font-family="JetBrains Mono" font-size="8" fill="#4e6070">acks=1: waits for leader only | acks=0: fire and forget</text>
+        </svg>
+      </div>
+      <br>
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fed7aa">📝 WRITE PATH (acks=all)</div>
+          <div class="fs"><div class="fnum">1</div><div>Producer sends message to <strong>leader</strong> broker for partition</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Leader appends to its local log (sequential disk write)</div></div>
+          <div class="fs"><div class="fnum">3</div><div>ISR followers <strong>pull</strong> the new data from leader (fetch request)</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Each follower appends to its log, sends ACK to leader</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Leader waits for ALL ISR replicas to ACK, then responds to producer</div></div>
+          <div class="fs"><div class="fnum">6</div><div>High Water Mark (HWM) advances — message is now visible to consumers</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">🔁 LEADER ELECTION (broker fails)</div>
+          <div class="fs"><div class="fnum">1</div><div>Broker 1 (leader) crashes. ZooKeeper / KRaft detects it.</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Controller selects new leader from ISR — only ISR members eligible (guaranteed to have all committed data)</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Broker 2 becomes new leader. Updates partition metadata in ZooKeeper.</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Producer/consumer clients refresh metadata, reconnect to new leader</div></div>
+          <div class="fs"><div class="fnum">5</div><div>If ISR has only 1 member: choose between data loss (elect non-ISR) or availability loss (wait for ISR member to come back). Controlled by <code>unclean.leader.election.enable</code>.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">👥 Consumer Groups — Parallel Consumption</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>The consumer group model is Kafka's load-balancing mechanism.</strong> Each partition is assigned to exactly one consumer in the group. To increase parallelism: add consumers (up to the partition count) or add partitions.</div>
+      <br>
+      <div class="diag">
+        <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:280px">
+          <defs>
+            <marker id="aw" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+          </defs>
+          <!-- Topic partitions -->
+          <rect x="10" y="10" width="240" height="260" rx="10" fill="rgba(251,146,60,.02)" stroke="rgba(251,146,60,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="130" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">TOPIC: payments (6 partitions)</text>
+          <rect x="20" y="38" width="220" height="32" rx="5" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="130" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Partition 0</text>
+          <text x="130" y="64" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">msgs 0..1M</text>
+          <rect x="20" y="80" width="220" height="32" rx="5" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="130" y="94" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Partition 1</text>
+          <text x="130" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">msgs 0..800K</text>
+          <rect x="20" y="122" width="220" height="32" rx="5" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="130" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Partition 2</text>
+          <text x="130" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">msgs 0..1.2M</text>
+          <rect x="20" y="164" width="220" height="32" rx="5" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="130" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Partition 3</text>
+          <rect x="20" y="206" width="220" height="32" rx="5" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="130" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Partition 4</text>
+          <rect x="20" y="248" width="220" height="16" rx="5" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="130" y="259" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Partition 5</text>
+
+          <!-- Consumer Group A (3 consumers) -->
+          <rect x="280" y="10" width="180" height="260" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="370" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">Consumer Group: analytics</text>
+          <rect x="290" y="38" width="160" height="66" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="370" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Consumer A-1</text>
+          <text x="370" y="69" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">owns P0, P1</text>
+          <text x="370" y="81" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">offset[P0]=1M, [P1]=800K</text>
+          <text x="370" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2 partitions assigned</text>
+
+          <rect x="290" y="122" width="160" height="66" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="370" y="139" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Consumer A-2</text>
+          <text x="370" y="153" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">owns P2, P3</text>
+          <text x="370" y="165" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">offset[P2]=1.2M</text>
+
+          <rect x="290" y="206" width="160" height="58" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="370" y="223" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Consumer A-3</text>
+          <text x="370" y="237" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">owns P4, P5</text>
+
+          <!-- Consumer Group B (email, 6 consumers) -->
+          <rect x="490" y="10" width="200" height="260" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="590" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">Consumer Group: email</text>
+          <rect x="500" y="38" width="180" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="590" y="53" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">E-1 → P0 | offset=990K</text>
+          <rect x="500" y="76" width="180" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="590" y="91" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">E-2 → P1 | offset=780K</text>
+          <rect x="500" y="114" width="180" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="590" y="129" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">E-3 → P2 | offset=1.1M</text>
+          <rect x="500" y="152" width="180" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="590" y="167" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">E-4 → P3 | offset=500K</text>
+          <rect x="500" y="190" width="180" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="590" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">E-5 → P4 | offset=200K</text>
+          <rect x="500" y="228" width="180" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+          <text x="590" y="243" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">E-6 → P5 | offset=400K</text>
+
+          <!-- Connection lines (simplified) -->
+          <line x1="240" y1="54" x2="288" y2="70" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+          <line x1="240" y1="96" x2="288" y2="70" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+          <line x1="240" y1="138" x2="288" y2="154" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+          <line x1="240" y1="180" x2="288" y2="154" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+          <line x1="240" y1="222" x2="288" y2="234" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+          <line x1="240" y1="256" x2="288" y2="234" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+        </svg>
+      </div>
+      <div class="warn-box" style="margin-top:14px"><strong>Key rule:</strong> Each partition assigned to exactly ONE consumer per group. Adding a 7th consumer to the email group (which has 6 partitions) = idle consumer — no partition left to assign. Adding partitions first unlocks more parallelism.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🗜 Log Compaction vs Log Deletion</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fed7aa">🗑 LOG DELETION (time/size based)</div>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.7;margin-bottom:10px">Default Kafka retention. Delete old log segments after a time or size threshold (e.g., 7 days or 100 GB). Messages older than the window are gone forever.</p>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8">
+            <div>[0:pay_101] [1:pay_102] [2:pay_103] [3:pay_104] ←keep</div>
+            <div style="color:#f43f5e">[segment deleted: &gt;7 days old]</div>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin-top:8px">Use for: event streams, logs, metrics — where old data has no value</p>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">🗜 LOG COMPACTION (key-based)</div>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.7;margin-bottom:10px">Keep only the latest value per key. Old values for same key are removed. The log always represents the "current state" — like a changelog for a database table.</p>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8">
+            <div>Before: [user:1:v1][user:2:v1][user:1:v2][user:1:v3]</div>
+            <div style="color:#6ee7b7">After:  [user:2:v1][user:1:v3] ← latest values only</div>
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin-top:8px">Use for: database changelogs, user profiles, inventory state — where only the current value matters. Used by Kafka Connect (CDC), Kafka Streams (KTable)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Q&A -->
+<div id="qa" class="panel">
+  <div class="sec">
+    <div class="sec-head">💬 Phase 1 — Core Architecture</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · FUNDAMENTALS</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design a distributed message queue. Start with the architecture.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        A distributed message queue needs to solve four problems: <b>durability</b> (messages survive broker failures), <b>scalability</b> (handle millions of msgs/sec), <b>ordering</b> (at least within a partition), and <b>replay</b> (consumers can re-read old messages).<br><br>
+        <b>The core architecture:</b><br>
+        <ol>
+          <li><b>Topics + Partitions:</b> A topic is sharded into N partitions. Each partition is an ordered, append-only log on disk. This gives us horizontal write scalability — producers write to different partitions in parallel.</li>
+          <li><b>Brokers:</b> Each partition is hosted on a broker. With replication factor 3, each partition has 1 leader and 2 follower replicas on different brokers.</li>
+          <li><b>Offsets:</b> Each message within a partition gets a sequential offset. Consumers track which offset they've processed — this is how we enable replay, at-least-once delivery, and independent consumer groups.</li>
+          <li><b>Consumer Groups:</b> Each partition assigned to exactly one consumer per group. Adding consumers scales up consumption proportionally to partition count.</li>
+        </ol>
+        Why append-only logs? Disk sequential writes are extremely fast (&gt;500 MB/s on HDD). By writing sequentially, Kafka can sustain millions of messages/sec while maintaining durability.
+      </div></div>
+      <div class="tip-box"><strong>💡 Mention "append-only log + offsets"</strong> early — this is the key insight that makes Kafka different from traditional queues like RabbitMQ. Messages aren't deleted on consumption; the consumer's offset tracks progress.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔁 Phase 2 — Delivery Guarantees</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · DELIVERY SEMANTICS</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What delivery guarantees can you provide? At-most-once, at-least-once, exactly-once?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        These are orthogonal on the producer side and consumer side:<br><br>
+        <b>Producer side:</b><br>
+        <ul>
+          <li><code>acks=0</code>: At-most-once. No acknowledgment. Message may be lost. Fastest. Use for high-throughput metrics where some loss is acceptable.</li>
+          <li><code>acks=1</code>: At-least-once (from leader only). Leader ACKs before replication. If leader crashes before replication, message lost. Moderate.</li>
+          <li><code>acks=all</code>: At-least-once (durable). All ISR replicas ACK. No data loss on leader failure. Slowest but safest.</li>
+        </ul>
+        <b>Consumer side (the tricky part):</b><br>
+        <ul>
+          <li><b>At-most-once:</b> Commit offset BEFORE processing. If the consumer crashes after commit but before processing, the message is skipped.</li>
+          <li><b>At-least-once:</b> Commit offset AFTER processing. If the consumer crashes after processing but before committing, the message is reprocessed. This is the most common and correct default — make your consumer idempotent.</li>
+        </ul>
+        <b>Exactly-once:</b> Requires the Kafka Transactions API. Producer uses <code>transactional.id</code>. Consumer uses <code>isolation.level=read_committed</code>. Both produce and commit offset in one atomic transaction. Expensive (~2-3× throughput reduction). Only worth it for financial transactions, de-duplication-critical pipelines.
+      </div></div>
+
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Consumer crashes mid-batch. What happens with at-least-once delivery?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The consumer processes messages 100-150 without committing. It crashes at message 130. On restart, it resumes from the last committed offset — say 99. It reprocesses messages 100–130.<br><br>
+        These messages are processed twice. For at-least-once to be correct, processing must be <b>idempotent</b> — applying the same operation twice gives the same result as applying it once.<br><br>
+        Examples of idempotent operations:<br>
+        <ul>
+          <li><code>UPDATE users SET email = 'a@b.com' WHERE id = 123</code> — safe to run twice</li>
+          <li><code>INSERT INTO events ... ON CONFLICT DO NOTHING</code> — second insert is ignored</li>
+        </ul>
+        Non-idempotent (dangerous with at-least-once):<br>
+        <ul>
+          <li><code>INSERT INTO payments (amount) VALUES (100)</code> — duplicate payment!</li>
+          <li>Send welcome email — user gets 2 emails</li>
+        </ul>
+        The solution: use a <b>deduplication key</b>. Store the message's offset or a unique event ID in the target database. Check for existence before processing: if already processed, skip.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📐 Phase 3 — Partitioning Strategy</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · PARTITIONING</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you decide which partition a message goes to? When does ordering matter?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Partitioning determines both ordering guarantees and parallelism:<br><br>
+        <b>Key-based partitioning:</b> <code>partition = hash(key) % num_partitions</code>. All messages with the same key go to the same partition → they're processed in order. Essential when operations on an entity must be sequential.<br><br>
+        Example: user_id as key → all events for user 123 go to partition 2 → the consumer processing partition 2 sees user 123's events in order: "account created → email verified → first purchase". If these went to different partitions and different consumers, you might process "first purchase" before "account created".<br><br>
+        <b>Round-robin (no key):</b> Messages distributed evenly across all partitions. Best for maximum throughput with no ordering requirements. Example: log messages, metrics.<br><br>
+        <b>Custom partitioner:</b> Route VIP users to dedicated partitions for priority processing. Route by region. Implement any business logic.<br><br>
+        <b>Critical tradeoff:</b> More partitions = more parallelism but more overhead (more OS file handles, more ZooKeeper nodes, slower rebalancing). Rule of thumb: start with 3× the expected peak consumer count. Don't over-partition.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Phase 4 — Why Is Kafka Fast?</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · PERFORMANCE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Kafka handles millions of messages per second. What makes it so fast?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Kafka's performance comes from four design decisions that work together:<br><br>
+        <b>1. Sequential disk I/O:</b> Kafka always appends to the end of a log. Sequential writes on a modern HDD: ~500 MB/s. Random writes: ~100 KB/s. By making writes sequential, Kafka makes HDD writes as fast as RAM writes in some scenarios. The OS also aggressively caches sequential disk pages in the page cache.<br><br>
+        <b>2. Zero-copy sendfile:</b> Normally to send data to a network socket: disk → kernel buffer → user space → kernel socket buffer → network. Zero-copy: disk → kernel buffer → network (using the <code>sendfile()</code> system call). Eliminates one expensive kernel-to-user-space copy. Kafka uses this for consumer reads.<br><br>
+        <b>3. Batching:</b> Producer batches messages before sending. Instead of 1000 network round trips for 1000 messages, one round trip sends all 1000 as a batch. Amortises network and disk overhead massively.<br><br>
+        <b>4. Compression:</b> Entire batches are compressed (lz4, gzip, snappy). Text messages compress 5-10×. Less network bandwidth, less disk space. The consumer decompresses the entire batch.<br><br>
+        Together, these let Kafka achieve 500K-1M messages/sec on a single commodity broker.
+      </div></div>
+      <div class="tip-box"><strong>💡 "Sequential disk I/O + zero-copy sendfile"</strong> is the answer interviewers are fishing for when they ask about Kafka performance. These two points alone distinguish strong candidates.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔄 Phase 5 — Consumer Lag & Backpressure</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · OPERATIONS</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Consumers are falling behind — consumer lag is growing. What do you do?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Consumer lag = latest offset − committed offset. A growing lag means the consumer is consuming slower than producers are producing. I'd diagnose and fix in order:<br><br>
+        <b>1. Diagnose first:</b> Is the bottleneck CPU-bound (processing), I/O-bound (DB writes), or network-bound? Check consumer CPU, downstream DB latency, network throughput.<br><br>
+        <b>2. Add more consumers (if partitions allow it):</b> If we have 6 partitions and 3 consumers, adding 3 more consumers instantly doubles consumption throughput — each consumer handles fewer partitions. This is the first lever.<br><br>
+        <b>3. Add more partitions (then consumers):</b> If consumers == partitions (ceiling hit), add more partitions. <em>Caution</em>: adding partitions means previously key-ordered messages may reroute. Do this carefully for key-partitioned topics.<br><br>
+        <b>4. Optimise the consumer:</b> Batch database writes instead of one-by-one. Use async processing (fire-and-forget for idempotent operations). Tune <code>max.poll.records</code> (fetch larger batches).<br><br>
+        <b>5. Use consumer groups strategically:</b> Separate slow consumers (reporting) from fast consumers (alerting) into different groups. The slow group falls behind without affecting the fast group.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CAPACITY -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Kafka is throughput-bounded, not storage-bounded</strong> in most systems. The critical questions are: how much bandwidth per broker, how many partitions, and how many brokers for your peak throughput.</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🧮 Step-by-Step Sizing</div>
+    <div class="sec-body">
+      <div class="math-block">
+<span class="label">Given: 1 million messages/sec peak, avg message size 1 KB</span>
+
+<span class="label">Raw ingress bandwidth:</span>
+  <span class="label">1M msg/sec × 1 KB                    = </span><span class="val">1 GB/s</span>
+
+<span class="label">With replication factor 3 (data written 3×):</span>
+  <span class="label">1 GB/s × 3                            = </span><span class="val">3 GB/s total write I/O</span>
+
+<span class="label">Single broker capacity (commodity server, 10 GbE NIC):</span>
+  <span class="label">Network ceiling (50% utilisation):   ~600 MB/s write + 600 MB/s read</span>
+  <span class="label">Practical write limit per broker:     ~300 MB/s (with headroom)</span>
+
+<span class="label">Brokers needed for writes:</span>
+  <span class="label">3 GB/s ÷ 300 MB/s                     = </span><span class="val">~10 brokers</span>
+
+<span class="label">Partitions (rule: 3-10 per broker, max consumer parallelism):</span>
+  <span class="label">10 brokers × 6 partitions/broker      = </span><span class="val">60 partitions</span>  <span class="label">→ max 60 consumers/group</span>
+
+<span class="label">Storage (7-day retention):</span>
+  <span class="label">1 GB/s × 86,400 sec × 7 days         = </span><span class="val">604 TB</span>  <span class="label">raw</span>
+  <span class="label">With 5:1 compression (lz4):           ~</span><span class="val">121 TB</span>  <span class="label">compressed</span>
+  <span class="label">÷ 10 brokers                          = </span><span class="val">12 TB per broker</span>  <span class="label">(standard HDD)</span>
+
+<span class="result">→ 10 brokers, 60 partitions, 12 TB storage each = handles 1M msg/sec with 7-day retention</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary Table</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Peak throughput</td><td class="hi">1M msgs/sec</td><td>1 KB avg message</td></tr>
+        <tr><td>Raw ingress bandwidth</td><td class="hi">1 GB/s</td><td>Before replication</td></tr>
+        <tr><td>Total write I/O (RF=3)</td><td class="hi">3 GB/s</td><td>Across all brokers</td></tr>
+        <tr><td>Brokers needed</td><td class="hi">10</td><td>300 MB/s each</td></tr>
+        <tr><td>Partitions</td><td class="hi">60</td><td>Max 60 parallel consumers</td></tr>
+        <tr><td>Storage per broker (7d)</td><td class="hi">12 TB</td><td>With 5× compression</td></tr>
+        <tr><td>End-to-end latency (p99)</td><td class="hi">&lt;10ms</td><td>Producer → consumer</td></tr>
+        <tr><td>Replication factor</td><td class="hi">3</td><td>Tolerates 2 broker failures</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- API -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 API Design — Producer and Consumer</div>
+    <div class="sec-body"><div class="info-box"><strong>Kafka has a binary TCP protocol,</strong> not REST. For system design interviews, describe the logical API (produce/consume/commit) and the key configuration parameters that control durability and throughput tradeoffs.</div></div>
+  </div>
+
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden">
+    <div style="padding:13px 20px;background:rgba(0,0,0,.15);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent)">📤 PRODUCER API</div>
+    <div style="padding:18px 20px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;margin-bottom:14px">
+        <div style="color:#6ee7b7;margin-bottom:6px">// Core produce operation</div>
+        <div>produce(topic, partition_key, value, headers?) → RecordMetadata</div>
+        <div style="color:#4e6070;margin-top:8px;margin-bottom:14px">// Returns: {topic, partition, offset, timestamp} on success</div>
+        <div style="color:#6ee7b7;margin-bottom:6px">// Key configuration parameters:</div>
+        <div>acks           = all        <span style="color:#4e6070">// 0|1|all — durability vs latency</span></div>
+        <div>retries        = 3          <span style="color:#4e6070">// retry on transient failures</span></div>
+        <div>retry.backoff  = 100ms</div>
+        <div>batch.size     = 16 KB      <span style="color:#4e6070">// max batch size before flush</span></div>
+        <div>linger.ms      = 5          <span style="color:#4e6070">// wait up to 5ms to fill a batch</span></div>
+        <div>compression    = lz4        <span style="color:#4e6070">// compress entire batch</span></div>
+        <div>idempotent     = true       <span style="color:#4e6070">// exactly-once at producer level</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden">
+    <div style="padding:13px 20px;background:rgba(0,0,0,.15);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent)">📥 CONSUMER API</div>
+    <div style="padding:18px 20px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;margin-bottom:14px">
+        <div style="color:#6ee7b7;margin-bottom:6px">// Subscribe to a topic (consumer group balances partitions)</div>
+        <div>subscribe(topics[])                    → void</div>
+        <div style="margin-top:8px;color:#6ee7b7;margin-bottom:6px">// Poll for messages (blocking, returns when records available or timeout)</div>
+        <div>poll(timeout_ms)                       → ConsumerRecords</div>
+        <div style="color:#4e6070;margin-bottom:14px">// Each record: {topic, partition, offset, key, value, headers, timestamp}</div>
+        <div style="color:#6ee7b7;margin-bottom:6px">// Commit offset (at-least-once: call AFTER processing)</div>
+        <div>commitSync(offsets)                    → void  <span style="color:#4e6070">// blocks until committed</span></div>
+        <div>commitAsync(offsets, callback)         → void  <span style="color:#4e6070">// non-blocking</span></div>
+        <div style="margin-top:12px;color:#6ee7b7;margin-bottom:6px">// Seek (replay from specific offset)</div>
+        <div>seek(partition, offset)                → void  <span style="color:#4e6070">// replay from offset 0 = full replay</span></div>
+        <div>seekToBeginning(partitions[])          → void</div>
+        <div style="margin-top:12px;color:#6ee7b7;margin-bottom:6px">// Key configuration:</div>
+        <div>group.id              = "payment-processor"</div>
+        <div>auto.offset.reset     = earliest    <span style="color:#4e6070">// or latest</span></div>
+        <div>enable.auto.commit    = false       <span style="color:#4e6070">// manual commit for at-least-once</span></div>
+        <div>max.poll.records      = 500         <span style="color:#4e6070">// batch size per poll</span></div>
+        <div>isolation.level       = read_committed <span style="color:#4e6070">// for exactly-once</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HLD -->
+<div id="hld" class="panel">
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:500px">
+          <defs>
+            <marker id="ao2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fb923c"/></marker>
+            <marker id="ag2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ab2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+            <marker id="ap2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+          </defs>
+
+          <!-- Producers zone -->
+          <rect x="8" y="8" width="140" height="484" rx="10" fill="rgba(251,146,60,.02)" stroke="rgba(251,146,60,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="78" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">PRODUCERS</text>
+          <rect x="18" y="40" width="120" height="42" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+          <text x="78" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fed7aa">💳 Payment Svc</text>
+          <text x="78" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">acks=all</text>
+          <rect x="18" y="100" width="120" height="42" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="1"/>
+          <text x="78" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fed7aa">🛒 Order Svc</text>
+          <text x="78" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">batch + lz4</text>
+          <rect x="18" y="160" width="120" height="42" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="1"/>
+          <text x="78" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fed7aa">📱 User Events</text>
+          <text x="78" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">acks=1, high vol</text>
+
+          <!-- Kafka Cluster zone -->
+          <rect x="158" y="8" width="500" height="484" rx="10" fill="rgba(251,146,60,.02)" stroke="rgba(251,146,60,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="408" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">KAFKA CLUSTER (10 brokers)</text>
+
+          <!-- ZooKeeper/KRaft -->
+          <rect x="170" y="38" width="120" height="52" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="230" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">🗂 KRaft / ZK</text>
+          <text x="230" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">cluster metadata</text>
+          <text x="230" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">leader election</text>
+
+          <!-- Broker 1 -->
+          <rect x="310" y="38" width="155" height="220" rx="8" fill="#131c2e" stroke="#fb923c" stroke-width="2"/>
+          <text x="387" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">Broker 1 (leader P0,P1)</text>
+          <rect x="320" y="68" width="135" height="40" rx="5" fill="rgba(251,146,60,.1)" stroke="rgba(251,146,60,.3)"/>
+          <text x="387" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">Partition 0 (leader)</text>
+          <text x="387" y="97" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">log: /data/p0/000.log</text>
+          <rect x="320" y="116" width="135" height="40" rx="5" fill="rgba(251,146,60,.1)" stroke="rgba(251,146,60,.3)"/>
+          <text x="387" y="131" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">Partition 1 (leader)</text>
+          <text x="387" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">log: /data/p1/000.log</text>
+          <rect x="320" y="164" width="135" height="40" rx="5" fill="rgba(16,185,129,.05)" stroke="rgba(16,185,129,.2)"/>
+          <text x="387" y="179" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">Partition 2 (follower)</text>
+          <text x="387" y="193" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">replica from Broker 2</text>
+          <text x="387" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">NVMe SSD, 12 TB</text>
+          <text x="387" y="245" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ISR: [1,2,3]</text>
+
+          <!-- Broker 2 -->
+          <rect x="480" y="38" width="155" height="220" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="557" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Broker 2 (leader P2)</text>
+          <rect x="490" y="68" width="135" height="40" rx="5" fill="rgba(16,185,129,.1)" stroke="rgba(16,185,129,.3)"/>
+          <text x="557" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">Partition 2 (leader)</text>
+          <rect x="490" y="116" width="135" height="40" rx="5" fill="rgba(251,146,60,.05)" stroke="rgba(251,146,60,.2)"/>
+          <text x="557" y="131" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">Partition 0 (follower)</text>
+          <text x="557" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">replica from Broker 1</text>
+          <rect x="490" y="164" width="135" height="40" rx="5" fill="rgba(251,146,60,.05)" stroke="rgba(251,146,60,.2)"/>
+          <text x="557" y="179" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">Partition 1 (follower)</text>
+
+          <!-- Broker N -->
+          <rect x="170" y="100" width="120" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="230" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Broker 3..10</text>
+          <text x="230" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">remaining partitions</text>
+
+          <!-- Page cache highlight -->
+          <rect x="310" y="268" width="325" height="36" rx="5" fill="rgba(56,189,248,.05)" stroke="rgba(56,189,248,.15)"/>
+          <text x="472" y="282" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">OS Page Cache: hot data in RAM — consumer reads served from cache (zero disk I/O)</text>
+          <text x="472" y="295" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">sendfile() zero-copy: page cache → NIC directly (no user-space copy)</text>
+
+          <!-- Consumers zone -->
+          <rect x="668" y="8" width="284" height="484" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="810" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">CONSUMER GROUPS</text>
+
+          <!-- Analytics group -->
+          <rect x="678" y="38" width="264" height="160" rx="8" fill="rgba(16,185,129,.03)" stroke="rgba(16,185,129,.15)" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="810" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">Group: analytics (3 consumers)</text>
+          <rect x="688" y="64" width="80" height="48" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1"/>
+          <text x="728" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">C-A1</text>
+          <text x="728" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">P0, P1</text>
+          <text x="728" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lag=0</text>
+          <rect x="778" y="64" width="80" height="48" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1"/>
+          <text x="818" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">C-A2</text>
+          <text x="818" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">P2, P3</text>
+          <text x="818" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lag=0</text>
+          <rect x="868" y="64" width="64" height="48" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1"/>
+          <text x="900" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">C-A3</text>
+          <text x="900" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">P4,P5</text>
+          <text x="900" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ DB</text>
+          <text x="810" y="155" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">offset stored in __consumer_offsets topic</text>
+          <text x="810" y="167" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">commitSync() after each batch</text>
+          <text x="810" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Elasticsearch / Data Warehouse</text>
+
+          <!-- Email group -->
+          <rect x="678" y="215" width="264" height="120" rx="8" fill="rgba(56,189,248,.03)" stroke="rgba(56,189,248,.15)" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="810" y="233" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">Group: email (6 consumers, 1 per partition)</text>
+          <text x="810" y="260" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">C-E1..E6, each owns 1 partition</text>
+          <text x="810" y="275" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">Max parallelism: 1 consumer per partition</text>
+          <text x="810" y="290" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Email provider (SES/SendGrid)</text>
+          <text x="810" y="308" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">idempotency_key = msg offset</text>
+          <text x="810" y="320" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ prevents duplicate emails on retry</text>
+
+          <!-- DLQ -->
+          <rect x="678" y="356" width="264" height="60" rx="8" fill="rgba(244,63,94,.03)" stroke="rgba(244,63,94,.2)" stroke-width="1"/>
+          <text x="810" y="378" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb7185">💀 Dead Letter Topic</text>
+          <text x="810" y="393" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">failed messages after max retries</text>
+          <text x="810" y="407" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ alerting + manual replay</text>
+
+          <!-- Arrows -->
+          <line x1="138" y1="61" x2="308" y2="88" stroke="#fb923c" stroke-width="1.5" marker-end="url(#ao2)"/>
+          <line x1="138" y1="121" x2="308" y2="105" stroke="#fb923c" stroke-width="1.5" marker-end="url(#ao2)"/>
+          <line x1="465" y1="100" x2="478" y2="100" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#ag2)"/>
+          <line x1="635" y1="100" x2="676" y2="100" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ab2)"/>
+          <line x1="635" y1="145" x2="676" y2="260" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ab2)"/>
+          <text x="150" y="56" font-family="JetBrains Mono" font-size="8" fill="#fb923c">produce</text>
+          <text x="645" y="93" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">consume</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CODE -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Kafka Producer + Consumer — Java (Spring Kafka / plain)
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Producer — At-Least-Once with idempotency ──────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">PaymentEventProducer</span> {
+
+    <span class="kw">private final</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>, <span class="cls">PaymentEvent</span>&gt; kafka;
+
+    <span class="cm">// Producer config (set in application.yml or Properties):</span>
+    <span class="cm">// acks=all, retries=3, enable.idempotence=true (exactly-once at producer)
+    // batch.size=16384, linger.ms=5, compression.type=lz4</span>
+
+    <span class="kw">public</span> <span class="cls">CompletableFuture</span>&lt;<span class="cls">SendResult</span>&lt;<span class="cls">String</span>, <span class="cls">PaymentEvent</span>&gt;&gt;
+            <span class="fn2">publishPaymentCompleted</span>(<span class="cls">PaymentEvent</span> event) {
+
+        <span class="cm">// Partition key = user_id → all events for same user → same partition
+        // Guarantees ordering: debit before credit for same user</span>
+        <span class="kw">return</span> kafka.send(<span class="str">"payments"</span>, event.getUserId(), event)
+            .whenComplete((result, ex) -> {
+                <span class="kw">if</span> (ex != <span class="kw">null</span>) {
+                    <span class="cm">// Log and alert — producer retries automatically (3 retries)</span>
+                    log.error(<span class="str">"Failed to publish payment event: {}"</span>,
+                        event.getPaymentId(), ex);
+                } <span class="kw">else</span> {
+                    <span class="cm">// Record metadata: which partition and offset this message landed at</span>
+                    log.debug(<span class="str">"Published to {}-{} offset {}"</span>,
+                        result.getRecordMetadata().topic(),
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset());
+                }
+            });
+    }
+}
+
+<span class="cm">// ── 2. Consumer — At-Least-Once with manual commit ────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">PaymentEventConsumer</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">EmailService</span>   emailSvc;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">DedupeStore</span>    dedupeStore; <span class="cm">// Redis/DB for idempotency</span>
+
+    <span class="cm">// enable.auto.commit=false — we commit manually AFTER processing
+    // This gives at-least-once: if we crash after processing but before commit,
+    // we reprocess on restart. Make processing idempotent!</span>
+    <span class="ann">@KafkaListener</span>(
+        topics = <span class="str">"payments"</span>,
+        groupId = <span class="str">"email-notifications"</span>,
+        containerFactory = <span class="str">"manualAckContainerFactory"</span>
+    )
+    <span class="kw">public void</span> <span class="fn2">onPayment</span>(<span class="cls">List</span>&lt;<span class="cls">ConsumerRecord</span>&lt;<span class="cls">String</span>, <span class="cls">PaymentEvent</span>&gt;&gt; records,
+                           <span class="cls">Acknowledgment</span> ack) {
+
+        <span class="kw">for</span> (<span class="cls">ConsumerRecord</span>&lt;<span class="cls">String</span>, <span class="cls">PaymentEvent</span>&gt; record : records) {
+            <span class="cls">String</span>       dedupeKey = record.topic() + <span class="str">":"</span>
+                                      + record.partition() + <span class="str">":"</span>
+                                      + record.offset(); <span class="cm">// unique per message</span>
+
+            <span class="cm">// IDEMPOTENCY CHECK: skip if already processed</span>
+            <span class="kw">if</span> (dedupeStore.exists(dedupeKey)) {
+                log.info(<span class="str">"Skipping duplicate message at offset {}"</span>, record.offset());
+                <span class="kw">continue</span>;
+            }
+
+            <span class="kw">try</span> {
+                <span class="cm">// Process the message</span>
+                <span class="cls">PaymentEvent</span> event = record.value();
+                emailSvc.sendPaymentConfirmation(event);
+
+                <span class="cm">// Mark as processed BEFORE committing</span>
+                dedupeStore.mark(dedupeKey, <span class="cls">Duration</span>.ofDays(<span class="num">7</span>));
+
+            } <span class="kw">catch</span> (<span class="cls">RetryableException</span> e) {
+                <span class="cm">// Don't ack — message will be retried</span>
+                log.warn(<span class="str">"Retryable failure, not committing"</span>, e);
+                <span class="kw">return</span>;
+            } <span class="kw">catch</span> (<span class="cls">Exception</span> e) {
+                <span class="cm">// Non-retryable — send to DLQ and continue</span>
+                <span class="fn2">sendToDlq</span>(record, e);
+            }
+        }
+
+        <span class="cm">// Commit AFTER successful processing of all records in batch</span>
+        ack.acknowledge(); <span class="cm">// commits the highest offset in this batch</span>
+    }
+
+    <span class="kw">private void</span> <span class="fn2">sendToDlq</span>(<span class="cls">ConsumerRecord</span>&lt;?, ?&gt; record, <span class="cls">Exception</span> e) {
+        <span class="cm">// Publish to dead letter topic for manual investigation</span>
+        kafka.send(<span class="str">"payments.dlq"</span>,
+            <span class="kw">new</span> <span class="cls">DlqMessage</span>(record.key(), record.value(), e.getMessage(),
+                           record.topic(), record.partition(), record.offset()));
+    }
+}
+
+<span class="cm">// ── 3. Consumer Lag Monitor ───────────────────────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">ConsumerLagMonitor</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaAdmin</span>          admin;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">AlertService</span>        alerts;
+
+    <span class="ann">@Scheduled</span>(fixedDelay = <span class="num">30_000</span>) <span class="cm">// check every 30s</span>
+    <span class="kw">public void</span> <span class="fn2">checkLag</span>() {
+        <span class="cm">// Kafka AdminClient: list consumer group offsets vs end offsets</span>
+        <span class="cls">Map</span>&lt;<span class="cls">TopicPartition</span>, <span class="cls">Long</span>&gt; endOffsets =
+            admin.listEndOffsets(<span class="str">"payments"</span>);
+        <span class="cls">Map</span>&lt;<span class="cls">TopicPartition</span>, <span class="cls">OffsetAndMetadata</span>&gt; committed =
+            admin.listConsumerGroupOffsets(<span class="str">"email-notifications"</span>);
+
+        <span class="kw">long</span> totalLag = <span class="num">0</span>;
+        <span class="kw">for</span> (<span class="kw">var</span> entry : endOffsets.entrySet()) {
+            <span class="cls">OffsetAndMetadata</span> c = committed.get(entry.getKey());
+            <span class="kw">long</span> lag = (c != <span class="kw">null</span>)
+                ? entry.getValue() - c.offset()
+                : entry.getValue();
+            totalLag += lag;
+
+            <span class="kw">if</span> (lag &gt; <span class="num">10_000</span>) { <span class="cm">// threshold: 10K messages behind</span>
+                alerts.fire(<span class="str">"HIGH_LAG"</span>, entry.getKey(), lag);
+            }
+        }
+        metrics.gauge(<span class="str">"kafka.consumer.total_lag"</span>, totalLag);
+    }
+}
+</code></pre>
+        </div>
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Kafka Producer + Consumer — Python (confluent-kafka)
+# pip install confluent-kafka
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">from</span> confluent_kafka <span class="kw">import</span> Producer, Consumer, KafkaError, KafkaException
+<span class="kw">from</span> confluent_kafka.admin <span class="kw">import</span> AdminClient, NewTopic
+<span class="kw">import</span> json, logging, time
+<span class="kw">from</span> typing <span class="kw">import</span> Callable, Optional
+
+logger = logging.getLogger(__name__)
+
+
+<span class="cm"># ── 1. Producer ───────────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">PaymentEventProducer</span>:
+    <span class="str">"""
+    Publishes payment events to Kafka.
+    Uses acks=all + idempotence for at-least-once with no duplicates at producer.
+    Batching (linger.ms=5) + lz4 compression for throughput.
+    """</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, brokers: str):
+        self._producer = Producer({
+            <span class="str">'bootstrap.servers'</span>:  brokers,
+            <span class="str">'acks'</span>:               <span class="str">'all'</span>,          <span class="cm"># wait for all ISR</span>
+            <span class="str">'retries'</span>:            <span class="num">3</span>,
+            <span class="str">'retry.backoff.ms'</span>:   <span class="num">100</span>,
+            <span class="str">'enable.idempotence'</span>: <span class="kw">True</span>,         <span class="cm"># no duplicates at producer</span>
+            <span class="str">'compression.type'</span>:   <span class="str">'lz4'</span>,        <span class="cm"># compress batch</span>
+            <span class="str">'linger.ms'</span>:          <span class="num">5</span>,             <span class="cm"># wait 5ms to fill batch</span>
+            <span class="str">'batch.size'</span>:         <span class="num">16384</span>,        <span class="cm"># 16 KB batch</span>
+        })
+
+    <span class="kw">def</span> <span class="fn2">publish_payment</span>(self, event: dict) -> None:
+        <span class="str">"""
+        Publish payment event. Partition by user_id for ordering.
+        Async — delivery_report callback fires when broker ACKs.
+        """</span>
+        key   = str(event[<span class="str">'user_id'</span>]).encode()
+        value = json.dumps(event).encode()
+
+        <span class="kw">try</span>:
+            self._producer.produce(
+                topic=<span class="str">'payments'</span>,
+                key=key,
+                value=value,
+                on_delivery=self._delivery_report
+            )
+            <span class="cm"># poll() to trigger delivery callbacks and keep internal queue drained</span>
+            self._producer.poll(<span class="num">0</span>)
+
+        <span class="kw">except</span> BufferError:
+            <span class="cm"># Internal queue full — flush and retry</span>
+            logger.warning(<span class="str">"Producer queue full, flushing"</span>)
+            self._producer.flush()
+            self._producer.produce(topic=<span class="str">'payments'</span>, key=key, value=value,
+                                   on_delivery=self._delivery_report)
+
+    <span class="kw">def</span> <span class="fn2">_delivery_report</span>(self, err, msg) -> None:
+        <span class="kw">if</span> err:
+            logger.error(f<span class="str">"Delivery failed: {err}"</span>)
+        <span class="kw">else</span>:
+            logger.debug(f<span class="str">"Delivered to {msg.topic()}-{msg.partition()} "
+                         f"offset={msg.offset()}"</span>)
+
+    <span class="kw">def</span> <span class="fn2">flush</span>(self):
+        <span class="str">"""Wait for all messages to be delivered before shutdown."""</span>
+        self._producer.flush(timeout=<span class="num">30</span>)
+
+
+<span class="cm"># ── 2. Consumer — At-Least-Once with manual commit ────</span>
+<span class="kw">class</span> <span class="cls">PaymentEventConsumer</span>:
+    <span class="str">"""
+    Consumes payment events with at-least-once semantics.
+    Manual offset commit AFTER processing.
+    Idempotency check prevents duplicate side effects on retry.
+    """</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, brokers: str, group_id: str,
+                  process_fn: Callable, dedupe_store):
+        self._consumer = Consumer({
+            <span class="str">'bootstrap.servers'</span>:       brokers,
+            <span class="str">'group.id'</span>:                group_id,
+            <span class="str">'auto.offset.reset'</span>:       <span class="str">'earliest'</span>,  <span class="cm"># start from beginning</span>
+            <span class="str">'enable.auto.commit'</span>:      <span class="kw">False</span>,        <span class="cm"># manual commit!</span>
+            <span class="str">'max.poll.interval.ms'</span>:    <span class="num">300000</span>,       <span class="cm"># 5 min max processing time</span>
+            <span class="str">'session.timeout.ms'</span>:      <span class="num">30000</span>,
+        })
+        self._process    = process_fn
+        self._dedupe     = dedupe_store
+        self._running    = <span class="kw">True</span>
+
+    <span class="kw">def</span> <span class="fn2">run</span>(self, topics: list[str]) -> None:
+        <span class="str">"""Main consumer loop. Blocks until shutdown()."""</span>
+        self._consumer.subscribe(
+            topics,
+            on_assign=self._on_assign,
+            on_revoke=self._on_revoke
+        )
+
+        <span class="kw">try</span>:
+            <span class="kw">while</span> self._running:
+                <span class="cm"># Poll up to 500ms. Returns None on timeout.</span>
+                msg = self._consumer.poll(timeout=<span class="num">0.5</span>)
+                <span class="kw">if</span> msg <span class="kw">is None</span>:
+                    <span class="kw">continue</span>
+
+                <span class="kw">if</span> msg.error():
+                    <span class="kw">if</span> msg.error().code() == KafkaError.PARTITION_EOF:
+                        <span class="kw">continue</span>  <span class="cm"># caught up — not an error</span>
+                    <span class="kw">raise</span> KafkaException(msg.error())
+
+                self._process_message(msg)
+
+        <span class="kw">finally</span>:
+            <span class="cm"># Commit any pending offsets before graceful shutdown</span>
+            self._consumer.commit(asynchronous=<span class="kw">False</span>)
+            self._consumer.close()
+
+    <span class="kw">def</span> <span class="fn2">_process_message</span>(self, msg) -> None:
+        <span class="cm"># Unique key for idempotency: topic:partition:offset</span>
+        dedupe_key = f<span class="str">"{msg.topic()}:{msg.partition()}:{msg.offset()}"</span>
+
+        <span class="kw">if</span> self._dedupe.exists(dedupe_key):
+            logger.info(f<span class="str">"Skipping duplicate at offset {msg.offset()}"</span>)
+        <span class="kw">else</span>:
+            <span class="kw">try</span>:
+                event = json.loads(msg.value())
+                self._process(event)
+                self._dedupe.mark(dedupe_key, ttl_days=<span class="num">7</span>)
+
+            <span class="kw">except Exception as</span> e:
+                logger.error(f<span class="str">"Processing failed for offset {msg.offset()}: {e}"</span>)
+                self._send_to_dlq(msg, e)
+
+        <span class="cm"># Commit AFTER processing (at-least-once)
+        # store_offsets() stages for next commitSync
+        # We commit synchronously here for simplicity; use async in prod</span>
+        self._consumer.store_offsets(msg)
+        self._consumer.commit(asynchronous=<span class="kw">False</span>)
+
+    <span class="kw">def</span> <span class="fn2">_on_assign</span>(self, consumer, partitions) -> None:
+        logger.info(f<span class="str">"Assigned partitions: {[p.partition for p in partitions]}"</span>)
+
+    <span class="kw">def</span> <span class="fn2">_on_revoke</span>(self, consumer, partitions) -> None:
+        <span class="cm"># Commit before rebalance to avoid reprocessing</span>
+        consumer.commit(asynchronous=<span class="kw">False</span>)
+        logger.info(f<span class="str">"Revoked partitions: {[p.partition for p in partitions]}"</span>)
+
+    <span class="kw">def</span> <span class="fn2">shutdown</span>(self): self._running = <span class="kw">False</span>
+    <span class="kw">def</span> <span class="fn2">_send_to_dlq</span>(self, msg, err): pass  <span class="cm"># publish to payments.dlq</span>
+
+
+<span class="cm"># ── 3. Usage ──────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">process_payment</span>(event: dict):
+    <span class="str">"""Idempotent processing: safe to call multiple times."""</span>
+    <span class="cm"># Use ON CONFLICT DO NOTHING for idempotent DB writes</span>
+    db.execute(
+        <span class="str">"INSERT INTO payment_confirmations (payment_id, user_id, amount, ts)"</span>
+        <span class="str">" VALUES (%s,%s,%s,%s) ON CONFLICT (payment_id) DO NOTHING"</span>,
+        (event[<span class="str">'payment_id'</span>], event[<span class="str">'user_id'</span>],
+         event[<span class="str">'amount'</span>], event[<span class="str">'timestamp'</span>])
+    )
+    <span class="cm"># Send email — idempotency_key prevents duplicate emails</span>
+    ses.send_email(to=event[<span class="str">'email'</span>],
+                   idempotency_key=event[<span class="str">'payment_id'</span>])
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADEOFFS -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Key Tradeoffs</div>
+    <div class="sec-body"><div class="warn-box"><strong>Most Kafka tuning is durability vs throughput vs latency.</strong> Every parameter trades off one against the others. Know these tradeoffs cold — interviewers ask them directly.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔒 acks Setting: 0 vs 1 vs all</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head" style="color:#10b981">acks=all (safest)</div><p>All ISR replicas must acknowledge. <strong>No data loss even if leader fails.</strong> Latency: +10–50ms (waits for follower replication). Use for: payments, orders, any transactional data where losing a message is unacceptable.</p></div>
+      <div class="to-col"><div class="to-col-head" style="color:#f59e0b">acks=1 (default)</div><p>Only leader acknowledges. Fast (+1ms). <strong>Risk: if leader crashes before replication, message lost.</strong> Acceptable for: logs, non-critical notifications, cases where slight data loss is OK.</p></div>
+      <div class="to-col"><div class="to-col-head" style="color:#f43f5e">acks=0 (fire-and-forget)</div><p>No acknowledgment. Fastest possible. <strong>No durability guarantee at all.</strong> Use only for: high-volume metrics, analytics events where some loss is acceptable and throughput is everything.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔁 Delivery Semantics: At-Most-Once vs At-Least-Once vs Exactly-Once</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-alt">At-Most-Once</div><p>Commit offset BEFORE processing. If crash occurs, message is skipped — never processed. Use for: ephemeral metrics, low-value events where loss is acceptable. Never for transactions.</p></div>
+      <div class="to-col"><div class="to-col-head tc-pick">✅ At-Least-Once (recommended)</div><p>Commit offset AFTER processing. On crash, messages are reprocessed. Make processing idempotent. Industry default for most Kafka pipelines. Low complexity, high reliability, works for 95% of use cases.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">Exactly-Once (EOS)</div><p>Kafka Transactions API. Producer + consumer offset committed atomically. 2–3× throughput reduction. High complexity. Only for: financial ledgers, inventory counts, de-duplication-critical pipelines where idempotent processing is impossible.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📊 Partition Count: Few vs Many</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Start with 3× expected peak consumers</div><p>Rule: partitions = 3× peak consumer count. Gives headroom to scale consumers 3× without adding partitions. Each partition maps to one file handle, one thread. Start conservative — easier to add partitions than to remove (adding re-routes key-partitioned data).</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">Too few partitions</div><p>Bottleneck if consumer count approaches partition count. Can't increase parallelism without repartitioning. For a topic with 3 partitions and 3 consumers at 100% CPU: only option is add partitions (disruptive) or optimise each consumer.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">Too many partitions</div><p>More OS file handles, more memory for ISR tracking, slower rebalancing on consumer failure. Kafka recommends 4000 partitions per broker max. At 200K partitions cluster-wide, ZooKeeper/KRaft becomes a bottleneck. Over-partitioning is a common mistake in early designs.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🆚 Kafka vs RabbitMQ vs SQS</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Kafka — high throughput + replay</div><p>Append-only log. Messages retained for days/weeks. Multiple consumer groups read independently. Replay from offset 0. Best for: event sourcing, analytics pipelines, audit logs, stream processing. 1M+ msgs/sec per cluster.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">RabbitMQ — routing flexibility</div><p>Push-based. Rich routing (exchanges, bindings). Messages deleted on ACK. Best for: task queues, RPC-style patterns, complex routing rules. Lower throughput (~50K msgs/sec). Easier to set up for simple use cases.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">SQS — managed, simple</div><p>AWS fully managed. No servers to operate. At-least-once. DLQ built-in. Best for: simple task queues, Lambda triggers, low-ops teams. Limited: 10 msgs per batch, no ordering (FIFO queue has limits), no replay, no consumer groups. Not for analytics pipelines.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #1 — URL Shortener | Complete Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--s3:#192338;
+  --border:#1e2d45;--border2:#243450;
+  --accent:#00d4ff;--a2:#7c3aed;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#38bdf8;
+  --code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(160deg,#07090f 0%,#0b1220 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-120px;right:-60px;width:400px;height:400px;
+  background:radial-gradient(circle,rgba(0,212,255,0.04) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px;letter-spacing:.02em}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(0,212,255,.25))}
+.h-right{}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#e2e8f0 60%,#7dd3fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:.03em}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-easy{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.22)}
+.b-tag{background:rgba(0,212,255,.07);color:#7dd3fc;border:1px solid rgba(0,212,255,.18)}
+
+/* ── NAV ── */
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;gap:0;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 20px;background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;
+  letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── LAYOUT ── */
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:24px 20px}.hero{padding:28px 20px}.nav{padding:0 12px}}
+.panel{display:none}.panel.active{display:block}
+
+/* ── SECTION ── */
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;
+  margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;
+  display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sec-head .ic{font-size:15px;font-style:normal}
+.sec-body{padding:26px}
+.sub-head{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+  color:var(--a4);text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:14px;margin-top:4px;display:flex;align-items:center;gap:8px}
+.sub-head::before{content:'';width:3px;height:14px;background:var(--a4);border-radius:2px}
+
+/* ── Q&A ── */
+.qa-pair{margin-bottom:22px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;
+  flex-shrink:0;margin-top:2px;letter-spacing:.02em}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(56,189,248,.1);color:var(--ecolor);border:1.5px solid rgba(56,189,248,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;
+  font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}
+.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}
+.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:6px}
+.bubble ul li{margin-bottom:5px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:6px}
+.bubble ol li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(0,212,255,.08);color:var(--accent);
+  border:1px solid rgba(0,212,255,.2);border-radius:6px;padding:3px 10px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+  letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);
+  border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;
+  font-size:12.5px;color:#86efac;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);
+  border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;
+  font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--a4)}
+.info-box{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
+  border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;
+  font-size:12.5px;color:#93c5fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+
+/* ── REQ ── */
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-box{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.rq-box h4{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.rq-box.fn h4{color:var(--a3)}.rq-box.nf h4{color:var(--a4)}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;
+  color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot-fn{width:6px;height:6px;border-radius:50%;background:var(--a3);flex-shrink:0;margin-top:5px}
+.rq-dot-nf{width:6px;height:6px;border-radius:50%;background:var(--a4);flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+
+/* ── CAPACITY TABLES ── */
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,.1);
+  color:var(--accent);border:1.5px solid rgba(0,212,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;
+  padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  line-height:2;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .eq{color:#c3e88d}.math-block .val{color:#f78c6c;font-weight:700}
+.math-block .label{color:#64748b}
+.math-block .result{color:#00d4ff;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;vertical-align:top}
+.math-table td.hi{color:#fbbf24;font-weight:700}
+.math-table td.ans{color:#34d399;font-weight:700}
+.math-table tr:hover td{background:rgba(255,255,255,.015)}
+
+/* ── CODE ── */
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;
+  border-right:1px solid var(--border);letter-spacing:.02em}
+.ctab:hover{color:var(--text)}
+.ctab.active{background:rgba(0,212,255,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:520px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}
+code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}
+.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}
+.cls{color:#ffcb6b}.ann{color:#89ddff}.ret{color:#f87171}
+.prop{color:#aed0f5}
+
+/* ── TRADEOFFS ── */
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:10px}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}
+.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+
+/* ── DIAGRAM ── */
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;
+  padding:28px;overflow-x:auto;text-align:center}
+.diag svg{max-width:100%;height:auto}
+
+/* ── API CONTRACT ── */
+.api-endpoint{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-method{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;
+  font-size:11px;font-weight:700;letter-spacing:.04em}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-del{background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-body{padding:0}
+.api-section{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}
+.api-section:last-child{border-bottom:none}
+.api-section-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+  color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.field-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.field-name{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:140px;flex-shrink:0}
+.field-type{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.field-req{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.field-opt{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.field-desc{color:#8899b0;line-height:1.5}
+.status-row{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.status-code{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;min-width:50px}
+.s-201{color:#34d399}.s-200{color:#34d399}.s-302{color:#7dd3fc}.s-400{color:#fbbf24}
+.s-404{color:#f87171}.s-409{color:#f87171}.s-410{color:#f87171}.s-429{color:#fb923c}
+.s-500{color:#f43f5e}
+.status-desc{color:#8899b0;line-height:1.5}
+
+/* ── ACTORS ── */
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+
+/* ── CLASS TABLE ── */
+.class-block{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.class-name-bar{background:rgba(0,212,255,.08);padding:10px 18px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+  color:var(--accent);border-bottom:1px solid var(--border)}
+.class-fields{padding:12px 18px;border-bottom:1px solid var(--border)}
+.class-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .ft{color:#a78bfa}
+.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="crumb">System Design › Storage & DB › <span>01 / URL Shortener</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔗</div>
+    <div class="h-right">
+      <div class="h-title">URL Shortener</div>
+      <div class="h-desc">Design a production-grade URL shortening service like bit.ly or TinyURL — handling 100M+ URL creations and 10B+ redirects daily, with analytics, custom aliases, and sub-10ms redirect latency.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-easy">🟢 Easy–Medium</span>
+        <span class="badge b-tag">Base62</span>
+        <span class="badge b-tag">Cache</span>
+        <span class="badge b-tag">NoSQL</span>
+        <span class="badge b-tag">Kafka</span>
+        <span class="badge b-tag">Counter Service</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══════════════════════════════════════════════════════
+     REQUIREMENTS
+══════════════════════════════════════════════════════ -->
+<div id="req" class="panel active">
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🎯</span> Step 1 — Clarify Scope First (Always!)</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Interview strategy:</strong> Never jump into design. Spend 3–5 minutes asking clarifying questions. This shows you think before you act, and helps avoid designing the wrong system. The interviewer may give hints through their answers.</div>
+      <br>
+      <div class="sub-head">Questions you MUST ask</div>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask the interviewer</div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Scale:</strong> How many URLs created per day? How many redirects?</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Features:</strong> Custom aliases? URL expiry? Analytics?</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Users:</strong> Do we need user accounts? Private vs public URLs?</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Consistency:</strong> Is eventual consistency OK or do we need strong consistency?</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Availability:</strong> What's the SLA? 99.9%? 99.99%?</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Geography:</strong> Single region or multi-region global?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumed Answers</div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div>100M URL creations/day, 10B redirects/day</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div>Custom alias: optional. Expiry: yes (default 1 year). Analytics: yes (click counts, geo)</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div>User accounts: optional (nice-to-have)</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div>Eventual consistency is OK for analytics</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div>99.99% availability required</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div>Single region for now, multi-region later</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">✅</span> Functional Requirements</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Functional = What the system does.</strong> These are user-facing features that the system must support.</div>
+      <br>
+      <div style="display:grid;gap:12px">
+
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE (Must Have)</div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>URL Creation:</strong> User provides a long URL → system returns a unique short URL (e.g., <code>short.ly/abc123</code>)</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Redirect:</strong> When a user visits the short URL → system redirects them to the original long URL</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>URL Expiry:</strong> Short URLs automatically expire after a configurable TTL (default: 1 year). Return 410 Gone after expiry.</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Custom Alias:</strong> User can optionally provide their own short key (e.g., <code>short.ly/my-campaign</code>). Must be unique.</div></div>
+        </div>
+
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">EXTENDED (Should Have)</div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>Analytics:</strong> Track click count, timestamp, country, device type, referrer per short URL</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>URL Deduplication:</strong> If same long URL is submitted twice, return the same short URL</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>Delete / Deactivate:</strong> URL owner can deactivate a short URL</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>Bulk Creation:</strong> API endpoint to create multiple short URLs in one request (for enterprise)</div></div>
+        </div>
+
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:.08em;margin-bottom:12px">OUT OF SCOPE (Nice to Have)</div>
+          <div class="rq-item"><div style="width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:5px"></div><div>A/B testing (split traffic between two URLs)</div></div>
+          <div class="rq-item"><div style="width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:5px"></div><div>Password-protected links</div></div>
+          <div class="rq-item"><div style="width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:5px"></div><div>QR code generation</div></div>
+          <div class="rq-item"><div style="width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:5px"></div><div>Link preview / metadata (Open Graph)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">⚡</span> Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Non-Functional = How well the system performs.</strong> These are quality attributes — speed, reliability, scale, security.</div>
+      <br>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">PERFORMANCE</div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Redirect latency:</strong> p99 &lt; 10ms (p50 &lt; 2ms via cache)</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Creation latency:</strong> p99 &lt; 200ms</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Throughput:</strong> Handle 116,000 redirect req/sec average, 350,000 peak</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">RELIABILITY</div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Availability:</strong> 99.99% uptime = max ~52 min downtime/year</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Durability:</strong> Zero URL data loss — 3× replication minimum</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>No key collision:</strong> Every short key must be globally unique</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SCALABILITY</div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>Horizontal scale:</strong> No single point of failure — all services stateless and scalable</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>Storage:</strong> ~18 TB/year URL data — must scale to 90 TB over 5 years</div></div>
+          <div class="rq-item"><div class="rq-dot-nf"></div><div><strong>Read-heavy:</strong> System is 100:1 read-to-write — optimise read path</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a5);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SECURITY</div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Malware protection:</strong> Scan URLs against Google Safe Browsing API at creation time</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Rate limiting:</strong> Max 100 URL creations/min per IP to prevent abuse</div></div>
+          <div class="rq-item"><div class="rq-dot-fn"></div><div><strong>Private key space:</strong> Short keys must not be guessable/sequential (prevent enumeration)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /req -->
+
+<!-- ══════════════════════════════════════════════════════
+     Q&A INTERVIEW
+══════════════════════════════════════════════════════ -->
+<div id="qa" class="panel">
+
+  <!-- PHASE 1 -->
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🎙</span> Phase 1 — Requirements Clarification (First 5 mins)</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · REQUIREMENTS</div>
+
+      <div class="qa-pair">
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            Design a URL shortener like bit.ly. Go ahead.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Before I start designing, I'd like to ask a few clarifying questions to make sure we're solving the right problem. Is that okay?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>Sure, go ahead.</div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            A few things I want to understand:
+            <ol>
+              <li><b>Scale:</b> How many URL creations per day are we expecting? How many redirects?</li>
+              <li><b>Features:</b> Do we need analytics — like tracking click counts or geo-location?</li>
+              <li><b>Custom alias:</b> Can users pick their own short key, like <code>short.ly/my-promo</code>?</li>
+              <li><b>Expiry:</b> Should URLs expire after some time?</li>
+              <li><b>Availability:</b> What uptime SLA are we targeting?</li>
+            </ol>
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            100 million URL creations per day. Assume 100:1 read-to-write ratio. Yes to analytics. Custom alias is optional. Default TTL is 1 year. 99.99% availability.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Perfect. So with a 100:1 read-to-write ratio, we're looking at roughly <b>10 billion redirects per day</b>. This is a <em>heavily read-skewed system</em>. The core challenges are:<br><br>
+            <b>1.</b> Generating a <em>unique, short, non-guessable key</em> at scale without collisions<br>
+            <b>2.</b> Serving redirects with <em>ultra-low latency</em> — under 10ms p99<br>
+            <b>3.</b> Storing 18+ TB of URL data efficiently<br>
+            <b>4.</b> Async analytics without impacting redirect performance<br><br>
+            Shall I proceed with these assumptions?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>Yes, sounds good.</div>
+        </div>
+      </div>
+      <div class="tip-box"><strong>💡 Why this works:</strong> Restating the problem back shows the interviewer you understood correctly. Flagging "heavily read-skewed" shows you already know the design direction — optimise for reads, not writes.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🔑</span> Phase 2 — Key Generation Deep Dive</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · CORE ALGORITHM</div>
+
+      <div class="qa-pair">
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            Let's start with the most interesting part — how do you generate the short key? Walk me through your options.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            There are three main approaches. Let me walk through each with their tradeoffs:<br><br>
+            <b>Option 1 — Hash the long URL (MD5/SHA256):</b><br>
+            Take MD5 of the long URL → get a 128-bit hash → base62-encode it → take first 6 characters. The problem is <em>hash collisions</em> — two different URLs could produce the same first 6 chars. You'd need a retry loop (take next 6 chars), which adds complexity and unpredictability.<br><br>
+            <b>Option 2 — Base62 of an auto-incrementing ID:</b><br>
+            A counter service generates unique sequential IDs. We convert each ID to Base62. 6 characters = 62⁶ ≈ 56.8 billion unique keys. Zero collision risk. Predictable. My preferred approach.<br><br>
+            <b>Option 3 — Pre-generated Key Service (KGS):</b><br>
+            A dedicated service pre-generates billions of random keys offline and stores them in a "not-used" table. When a URL is created, grab one key and move it to a "used" table. Simple for the app layer, but adds DB overhead and an extra service to maintain.<br><br>
+            <b>I'll go with Option 2 (Base62 + counter)</b> as the primary strategy. It's simple, collision-free, and fast.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            Interesting. But sequential IDs mean attackers can enumerate all URLs — <code>abc001</code>, <code>abc002</code>, etc. How do you handle that?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Great point. Sequential IDs are guessable. A few solutions:<br><br>
+            <b>1. Shuffle the ID before encoding:</b> XOR the ID with a secret mask before Base62 encoding. E.g., <code>id XOR 0x3F4A9B2C</code>. The mapping is reversible for lookups, but output looks random.<br>
+            <b>2. Use a random salt per ID:</b> Generate a UUID for each URL, take the first 64 bits, encode in Base62. Not sequential.<br>
+            <b>3. Feistel Cipher / Format-Preserving Encryption:</b> Encrypt the sequential ID using a secret key while preserving the output length. This is the cleanest approach — IDs are internally sequential but externally look random and are non-enumerable.<br><br>
+            For simplicity, I'll go with <b>Option 1 (XOR masking)</b> — easy to implement, no performance overhead.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            The counter service sounds like a single point of failure. What if it goes down?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Right. The counter service needs to be highly available. Here's my approach:<br><br>
+            <b>Range-based allocation:</b> Each app server requests a block of 1 million IDs from the counter service at startup (e.g., Server A: IDs 1–1M, Server B: IDs 1M–2M). The app server then allocates IDs locally from its range — no network call per request. When the range is nearly exhausted, it pre-fetches the next range in the background.<br><br>
+            The counter service itself is backed by <b>ZooKeeper</b> (strong consistency, leader election) or a simple Redis INCR operation with persistence. Even if the counter service has a brief outage, existing app servers can continue serving from their pre-allocated ranges for ~1M requests.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            What happens if an app server crashes after getting a range but before using all the IDs?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Those IDs are simply wasted — they're never allocated to any URL. That's acceptable. With 62⁶ ≈ 56.8 billion total keys, wasting a few million IDs per server crash is negligible. We'd need ~1000 servers crashing every day for 100 years to exhaust even 1% of the key space. The simplicity trade-off is worth it.
+          </div>
+        </div>
+      </div>
+      <div class="tip-box"><strong>💡 Pattern:</strong> When an interviewer points out a flaw (sequential IDs are guessable), they want to see how you think under pressure. Don't get defensive — present multiple solutions and justify your choice.</div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🗄</span> Phase 3 — Storage & Database Choice</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · DATA LAYER</div>
+
+      <div class="qa-pair">
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            What database would you use, and why?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Let me think about the access patterns first, then pick the right tool:<br><br>
+            <b>Access patterns:</b><br>
+            <ul>
+              <li>Primary: <code>GET short_key → long_url</code> — simple key lookup</li>
+              <li>Secondary: <code>GET long_url → short_key</code> — dedup check on creation</li>
+              <li>Low write rate (1,200/sec), very high read rate (116,000/sec)</li>
+              <li>No complex joins, no multi-row transactions needed</li>
+            </ul>
+            <br>
+            This access pattern is <em>perfectly suited for a key-value store</em>. I'd use <b>Cassandra</b>:<br>
+            <ul>
+              <li>Designed for massive scale (handles 18+ TB easily across a few nodes)</li>
+              <li>Auto-sharding via consistent hashing on <code>short_key</code></li>
+              <li>Configurable replication (RF=3 for 3× data redundancy)</li>
+              <li>Tunable consistency — we can use eventual consistency for reads (fast) and quorum for writes (safe)</li>
+              <li>Built-in TTL support — we can set <code>expires_at</code> and Cassandra auto-deletes expired rows</li>
+            </ul>
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            Why not MySQL or PostgreSQL? It works fine for many systems.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-i">YOU</div>
+            MySQL could work at small scale. The problem comes at 90 TB over 5 years. SQL databases require manual sharding (painful to operate), and their ACID guarantees add overhead we don't need for a simple key-value pattern. The cost of <em>not needing ACID</em> in this system but paying its performance price is unnecessary.<br><br>
+            That said — for a startup with low scale (&lt;10M URLs), I'd absolutely start with PostgreSQL and add Cassandra later. Never over-engineer early.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            How does your caching strategy work?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            URL access follows the <b>Zipf/Pareto distribution</b> — roughly 20% of URLs get 80% of traffic (the viral / popular ones). So caching just the hot URLs gives massive benefit.<br><br>
+            <b>Two-level caching:</b><br>
+            <b>L1 — In-process cache</b> (per app server): A small LRU cache of ~1,000 entries in the app server's heap. Zero network hop — serves in microseconds. For viral links with millions of hits/hour, this is critical.<br>
+            <b>L2 — Redis cluster</b>: Distributed cache with ~10GB capacity (enough for ~20M URLs at 500B each). Cache hit returns the long URL in ~1ms. LRU eviction policy. TTL aligned with URL expiry.<br><br>
+            <b>Cache write strategy — Write-through:</b> When a new URL is created, we immediately write to both Cassandra AND Redis. This ensures the cache is warm from the very first redirect request.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            What's your expected cache hit rate?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            With 20M hot URLs cached (20% of daily creates), and assuming Pareto distribution, I'd estimate <b>~90–95% cache hit rate</b>. This means only 5–10% of redirects hit Cassandra, reducing DB read load from 116K req/sec to ~7K req/sec. Cassandra handles that trivially.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="sec">
+    <div class="sec-head"><span class="ic">↪️</span> Phase 4 — Redirect Flow & 301 vs 302</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · CORE FLOWS</div>
+
+      <div class="qa-pair">
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            Walk me through the exact redirect flow end-to-end. And should you use HTTP 301 or 302?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            <b>Redirect flow step by step:</b><br>
+            <ol>
+              <li>User visits <code>https://short.ly/abc123</code> in browser</li>
+              <li>DNS resolves to our <b>Anycast Load Balancer</b> (closest edge)</li>
+              <li>LB routes request to a stateless <b>Redirect Service</b> instance</li>
+              <li>Service checks <b>L1 (in-process cache)</b> → hit: returns redirect immediately</li>
+              <li>L1 miss → checks <b>Redis (L2 cache)</b> → hit (~95% of time): returns redirect</li>
+              <li>Redis miss → queries <b>Cassandra</b>, warms both caches, returns redirect</li>
+              <li>In parallel (non-blocking): emit <code>ClickEvent</code> to <b>Kafka</b> for analytics</li>
+              <li>Browser follows redirect to the long URL</li>
+            </ol>
+            <br>
+            <b>301 vs 302 — this is a classic tradeoff question:</b><br><br>
+            <b>301 Permanent Redirect:</b> Browser caches the redirect permanently. Subsequent visits go <em>directly</em> to the long URL — never hitting our server again. Pros: saves server load. Cons: we lose all analytics after the first visit. We can't update the destination URL. We can't deactivate it.<br><br>
+            <b>302 Temporary Redirect:</b> Browser does NOT cache it. Every redirect hits our server. Pros: we see every click, can update destination, can deactivate. Cons: slightly more load on us — but with Redis, each redirect is just a ~1ms cache lookup. Totally worth it.<br><br>
+            <b>Decision: Use 302.</b> The analytics requirement makes 301 a non-starter.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            What if there's a sudden viral spike — a celebrity tweets your short link and 1 million people click it in 10 minutes?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            This is the <b>"thundering herd" / hot key problem</b>. Even with Redis, if all 1M requests converge on a single Redis key in a single shard, that shard can become a bottleneck.<br><br>
+            Solutions I'd layer together:<br>
+            <b>1. Local in-process cache (L1):</b> Each app server caches the top ~1,000 URLs in-process. For a viral link, after the first request, subsequent requests on that same server never even touch Redis — served from RAM in microseconds.<br>
+            <b>2. Redis key replication:</b> For detected hot keys, replicate the value across multiple Redis slots: <code>abc123:0</code>, <code>abc123:1</code>, ..., <code>abc123:9</code>. Requests randomly pick a slot. 10× read distribution.<br>
+            <b>3. Auto-scaling:</b> Our redirect services are stateless and behind an auto-scaling group. Kubernetes HPA can scale from 50 → 200 instances in under 2 minutes based on CPU/RPS metrics.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="sec">
+    <div class="sec-head"><span class="ic">📈</span> Phase 5 — Analytics, Expiry & Edge Cases</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · EDGE CASES</div>
+
+      <div class="qa-pair">
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            How do you handle analytics without slowing down the redirect?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            The redirect must be fast — we should <em>never</em> write analytics synchronously in the redirect path. Here's the async design:<br><br>
+            1. Redirect service fires a <b>non-blocking event</b> to a local in-memory queue after sending the 302 response (fire-and-forget — the user already got their redirect)<br>
+            2. A background thread batches events and publishes them to <b>Kafka</b> (topic: <code>click-events</code>)<br>
+            3. A separate <b>Analytics Consumer</b> service reads from Kafka, aggregates click counts per URL per hour, and writes to <b>ClickHouse</b> (columnar DB optimised for aggregations)<br>
+            4. Analytics dashboard queries ClickHouse<br><br>
+            If Kafka is down temporarily, events are buffered in the local queue. We lose at most a few seconds of analytics data — acceptable for eventual consistency.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            How do you handle expired URLs?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Two-pronged strategy:<br><br>
+            <b>Lazy expiry (primary):</b> When a redirect request comes in, check <code>expires_at &lt; current_time</code>. If expired, return <code>410 Gone</code>. No background scan needed for the hot path. Also set Redis TTL equal to URL TTL — expired keys auto-evict from cache.<br><br>
+            <b>Active cleanup (background):</b> A nightly Spark/batch job scans Cassandra for expired URLs and hard-deletes them, reclaiming storage and freeing short keys for potential reuse. Cassandra's built-in TTL feature can also handle this automatically at the storage layer.
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            What about malicious URLs — someone shortening a phishing link?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            Abuse prevention is important. Layered approach:<br><br>
+            <b>At creation time:</b><br>
+            1. Check URL against <b>Google Safe Browsing API</b> — free, covers known phishing, malware, deceptive sites<br>
+            2. Blocklist of known malicious domains in Redis (O(1) set lookup)<br>
+            3. Rate limit by IP: max 100 URL creations/min (Redis token bucket)<br><br>
+            <b>At redirect time:</b><br>
+            4. Show a <b>safe browsing interstitial</b> warning page for flagged URLs (like Google does) before redirecting<br>
+            5. URLs reported by users → reviewed by trust & safety team → deactivated if confirmed malicious
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-i">IR</div>
+          <div class="bubble i"><div class="who who-i">INTERVIEWER</div>
+            Last one — how would you make this globally available with low latency worldwide?
+          </div>
+        </div>
+        <div class="qa-line">
+          <div class="av av-e">ME</div>
+          <div class="bubble e"><div class="who who-e">YOU</div>
+            For global deployment, I'd use a <b>multi-region active-active</b> setup:<br><br>
+            1. Deploy redirect services in multiple regions (US, EU, APAC) behind <b>Anycast routing</b> — users automatically hit the nearest region<br>
+            2. Each region has its own Redis cluster — redirect latency is now &lt;5ms globally<br>
+            3. Cassandra replication is cross-region (multi-datacenter replication) — eventual consistency between regions<br>
+            4. URL creation can go to any region — Cassandra's LWW (Last Write Wins) conflict resolution handles concurrent creates<br>
+            5. For custom aliases, use a global lock (Zookeeper / Paxos) to prevent duplicate alias creation across regions<br><br>
+            The key insight: <em>reads don't need global consistency</em> — if a user in India sees a URL 100ms after creation by a user in the US, that's totally fine. But we must never serve stale data for a deactivated/expired URL.
+          </div>
+        </div>
+      </div>
+      <div class="tip-box"><strong>💡 Strong finish:</strong> When wrapping up, proactively mention what you'd do with more time: monitoring (Datadog dashboards), circuit breakers (Hystrix), chaos engineering tests, SLA dashboards. This shows production mindset.</div>
+    </div>
+  </div>
+
+</div><!-- /qa -->
+
+<!-- ══════════════════════════════════════════════════════
+     CAPACITY ESTIMATION
+══════════════════════════════════════════════════════ -->
+<div id="cap" class="panel">
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">📊</span> Capacity Planning — Step by Step</div>
+    <div class="sec-body">
+      <div class="warn-box"><strong>Interview tip:</strong> Always think out loud when doing capacity math. Round liberally (3.15B → 4B). Interviewers care about your reasoning process, not exact numbers. Show your work.</div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">1</div>
+      <div><div class="step-title">Understand the Character Set (Base62)</div>
+      <div class="step-sub">How many unique short keys can we generate?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Short URL keys are made of alphanumeric characters. Let's figure out how many characters are available and how many unique keys we can make.</p>
+      <div class="math-block">
+<span class="label">Character set breakdown:</span>
+  <span class="eq">Lowercase letters (a–z)   =</span> <span class="val">26</span>
+  <span class="eq">Uppercase letters (A–Z)   =</span> <span class="val">26</span>
+  <span class="eq">Digits (0–9)              =</span> <span class="val">10</span>
+                                           ────
+  <span class="eq">Total characters per slot =</span> <span class="val">62</span>
+
+<span class="label">Unique keys for key length N:</span>
+  <span class="eq">Total unique keys         = 62</span><span class="val">ᴺ</span>
+      </div>
+      <table class="math-table">
+        <tr><th>Key Length (N)</th><th>Unique Keys</th><th>Enough for?</th><th>Verdict</th></tr>
+        <tr><td>4</td><td>14,776,336</td><td>~40 days at 100 TPS</td><td style="color:#f87171">❌ Too small</td></tr>
+        <tr><td>5</td><td>916,132,832</td><td>~2.5 years at 100 TPS</td><td style="color:#fbbf24">⚠️ Borderline</td></tr>
+        <tr><td>6</td><td class="hi">56,800,235,584</td><td>~18 years at 100 TPS</td><td style="color:#34d399">✅ Good</td></tr>
+        <tr><td>7</td><td>3,521,614,606,208</td><td>~1,117 years at 100 TPS</td><td style="color:#34d399">✅ Overkill</td></tr>
+      </table>
+      <div class="info-box" style="margin-top:14px"><strong>Conclusion:</strong> A 6-character Base62 key gives us ~56.8 billion unique short URLs — sufficient for 18 years at 100 write TPS.</div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">2</div>
+      <div><div class="step-title">Traffic Estimation — Writes per Second</div>
+      <div class="step-sub">How many URL creations happen per second?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Start from the given: <b>100 requests per second (TPS)</b> write rate.</p>
+      <div class="math-block">
+<span class="label">Given:</span>
+  <span class="eq">Write rate  =</span> <span class="val">100</span> <span class="label">URL creations per second</span>
+
+<span class="label">This is our baseline write TPS. But let's also account for peak:</span>
+  <span class="eq">Peak factor = 3×  →  Peak write TPS =</span> <span class="val">300</span> <span class="label">creations/sec</span>
+
+<span class="label">100:1 read ratio means:</span>
+  <span class="eq">Read rate   = 100 × 100 =</span> <span class="val">10,000</span> <span class="label">redirects per second (avg)</span>
+  <span class="eq">Peak reads  = 3 × 10,000 =</span> <span class="val">30,000</span> <span class="label">redirects per second</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">3</div>
+      <div><div class="step-title">URLs Written Per Year — Full Breakdown</div>
+      <div class="step-sub">Step-by-step: seconds → minutes → hours → days → year</div></div>
+    </div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Starting from 100 writes/second, expand step by step:</span>
+
+  <span class="eq">Per minute  = 100 × 60                  =</span> <span class="val">6,000</span>       <span class="label">URLs/min</span>
+  <span class="eq">Per hour    = 6,000 × 60                =</span> <span class="val">360,000</span>     <span class="label">URLs/hour</span>
+  <span class="eq">Per day     = 360,000 × 24              =</span> <span class="val">8,640,000</span>   <span class="label">URLs/day ≈ 8.6M/day</span>
+  <span class="eq">Per year    = 8,640,000 × 365           =</span> <span class="val">3,153,600,000</span> <span class="label">≈ 3.15 Billion/year</span>
+
+<span class="label">── Conservative rounding for safety ──────────────────────</span>
+  <span class="eq">We round up 3.15B → </span><span class="result">4 Billion/year</span>
+  <span class="label">(Handles growth, burst, and gives buffer for future scale)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">4</div>
+      <div><div class="step-title">URLs Over Y Years — Generalise the Formula</div>
+      <div class="step-sub">How long until we run out of short keys?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">General formula:</span>
+  <span class="eq">Total URLs in Y years  = 4 Billion × Y</span>
+
+<span class="label">We need key space ≥ total URLs:</span>
+  <span class="eq">62ᴺ ≥ 4 × Y × 10⁹</span>
+
+<span class="label">Testing for Y = 10 years:</span>
+  <span class="eq">Required space = 4 × 10 × 10⁹ =</span> <span class="val">40 Billion</span>
+
+  <span class="eq">62⁵ =</span> <span class="val">916 Million</span>   <span class="label">❌ 916M &lt; 40B — too small!</span>
+  <span class="eq">62⁶ =</span> <span class="val">56.8 Billion</span>  <span class="label">✅ 56.8B &gt; 40B — sufficient!</span>
+
+<span class="label">──────────────────────────────────────────────────────</span>
+  <span class="result">✅ Conclusion: 6-character key is sufficient for 10 years at 100 TPS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">5</div>
+      <div><div class="step-title">Storage Estimation</div>
+      <div class="step-sub">How much disk space do we need?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:12px">Estimate size of a single URL record, then multiply by total URLs.</p>
+      <div class="math-block">
+<span class="label">Size of one URL record in Cassandra:</span>
+  <span class="eq">short_key   (8 chars, UTF-8)   =</span>   <span class="val">8</span>   <span class="label">bytes</span>
+  <span class="eq">long_url    (avg 200 chars)    =</span> <span class="val">200</span>   <span class="label">bytes</span>
+  <span class="eq">user_id     (UUID, 16 bytes)   =</span>  <span class="val">16</span>   <span class="label">bytes</span>
+  <span class="eq">created_at  (timestamp, 8B)    =</span>   <span class="val">8</span>   <span class="label">bytes</span>
+  <span class="eq">expires_at  (timestamp, 8B)    =</span>   <span class="val">8</span>   <span class="label">bytes</span>
+  <span class="eq">is_active   (boolean, 1B)      =</span>   <span class="val">1</span>   <span class="label">byte</span>
+  <span class="eq">metadata overhead (Cassandra)  =</span> <span class="val">259</span>   <span class="label">bytes</span>
+                                      ────
+  <span class="eq">Total per record               ≈</span> <span class="val">500</span>   <span class="label">bytes</span>
+
+<span class="label">Storage over time:</span>
+  <span class="eq">Per day     = 8.6M × 500B     =</span>  <span class="val">4.3 GB</span>   <span class="label">/day</span>
+  <span class="eq">Per year    = 4.3GB × 365     =</span>   <span class="val">1.57 TB</span>  <span class="label">/year (raw data)</span>
+  <span class="eq">3× replication factor         ×</span>       <span class="val">3</span>
+  <span class="eq">Per year (replicated)         =</span>  <span class="val">4.7 TB</span>   <span class="label">/year on disk</span>
+  <span class="eq">Over 10 years (replicated)    =</span>   <span class="val">47 TB</span>   <span class="label">total (Cassandra cluster)</span>
+
+<span class="label">Note: At 100 TPS (not 100M/day), numbers are more modest.
+For 100M URL/day (1157 TPS) scale from the problem statement:</span>
+  <span class="eq">Per year    = 100M × 365 × 500B =</span> <span class="val">18.25 TB</span> <span class="label">/year raw</span>
+  <span class="eq">Replicated (3×)               =</span>   <span class="val">54 TB</span>   <span class="label">/year on disk</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">6</div>
+      <div><div class="step-title">Memory / Cache Estimation</div>
+      <div class="step-sub">How big should the Redis cache be?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Using 80/20 rule: 20% of URLs get 80% of traffic</span>
+
+<span class="label">Daily new URLs = 8.6M (at 100 TPS)</span>
+  <span class="eq">Hot URLs to cache  = 20% × 8.6M   =</span> <span class="val">1.72M</span>    <span class="label">URLs</span>
+  <span class="eq">Cache entry size   = 500 bytes</span>
+  <span class="eq">Total cache size   = 1.72M × 500B  =</span> <span class="val">860 MB</span>   <span class="label">≈ 1 GB Redis</span>
+
+<span class="label">At 100M URL/day scale (1157 TPS):</span>
+  <span class="eq">Hot URLs to cache  = 20% × 100M    =</span> <span class="val">20M</span>      <span class="label">URLs</span>
+  <span class="eq">Total cache size   = 20M × 500B    =</span>  <span class="val">10 GB</span>   <span class="label">Redis (fits in 1–2 nodes)</span>
+
+<span class="label">Expected cache hit rate with these hot URLs cached:</span>
+  <span class="result">≈ 90–95% cache hit rate  →  Only 5-10% of reads hit Cassandra</span>
+  <span class="eq">DB reads reduced from 116K/sec to approximately</span> <span class="val">7K/sec</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">7</div>
+      <div><div class="step-title">Server Count Estimation</div>
+      <div class="step-sub">How many servers do we need?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Redirect service (read-heavy, stateless):</span>
+  <span class="eq">Peak redirects/sec          =</span> <span class="val">30,000</span>  <span class="label">(3× avg of 10K)</span>
+  <span class="eq">Capacity per server         =</span>  <span class="val">1,000</span>  <span class="label">req/sec (small instance, mostly cache hits)</span>
+  <span class="eq">Servers needed              = 30K ÷ 1K =</span> <span class="val">30</span>    <span class="label">servers</span>
+  <span class="eq">With 2× safety headroom     =</span>    <span class="val">60</span>    <span class="label">redirect servers</span>
+
+<span class="label">At 100M URL/day (116K avg reads/sec, 350K peak):</span>
+  <span class="eq">Peak reads/sec              =</span> <span class="val">350,000</span>
+  <span class="eq">Capacity per server         =</span>  <span class="val">10,000</span>  <span class="label">req/sec (with Redis, mostly I/O bound)</span>
+  <span class="eq">Servers needed              = 350K ÷ 10K =</span> <span class="val">35</span>
+  <span class="eq">With 3× safety headroom     =</span> <span class="val">~100</span>   <span class="label">redirect servers</span>
+
+<span class="label">Write service (low load, 1 server is fine):</span>
+  <span class="eq">Write TPS (avg)             =</span>  <span class="val">1,157</span>  <span class="label">/sec (100M / 86400)</span>
+  <span class="eq">Servers needed              =</span>     <span class="val">5–10</span>  <span class="label">write service instances</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="cap-step">
+    <div class="cap-step-head">
+      <div class="step-num">8</div>
+      <div><div class="step-title">Bandwidth Estimation</div>
+      <div class="step-sub">How much network bandwidth do we consume?</div></div>
+    </div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Inbound (URL creations):</span>
+  <span class="eq">Avg request size           ≈</span>   <span class="val">500</span>   <span class="label">bytes (short URL + metadata)</span>
+  <span class="eq">Write TPS                  =</span> <span class="val">1,157</span>   <span class="label">/sec</span>
+  <span class="eq">Inbound bandwidth          = 1,157 × 500B =</span> <span class="val">578 KB/s</span> <span class="label">≈ 0.6 MB/s (negligible)</span>
+
+<span class="label">Outbound (redirects):</span>
+  <span class="eq">Avg response size          ≈</span>   <span class="val">200</span>   <span class="label">bytes (just HTTP 302 header)</span>
+  <span class="eq">Read TPS (avg)             =</span> <span class="val">116,000</span> <span class="label">/sec</span>
+  <span class="eq">Outbound bandwidth         = 116K × 200B =</span> <span class="val">23 MB/s</span>
+  <span class="eq">Peak (3×)                  =</span>  <span class="val">69 MB/s</span>  <span class="label">≈ 70 MB/s peak outbound</span>
+
+<span class="result">Summary: ~70 MB/s peak outbound — a modern 10Gbps NIC handles this on a single server easily</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="sec">
+    <div class="sec-head"><span class="ic">📋</span> Capacity Summary Table</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value (100 TPS scale)</th><th>Value (100M/day scale)</th><th>Notes</th></tr>
+        <tr><td>Write TPS (avg)</td><td class="hi">100</td><td class="hi">1,157</td><td>URL creations</td></tr>
+        <tr><td>Read TPS (avg)</td><td class="hi">10,000</td><td class="hi">116,000</td><td>100:1 ratio</td></tr>
+        <tr><td>Peak read TPS</td><td class="hi">30,000</td><td class="hi">350,000</td><td>3× average</td></tr>
+        <tr><td>Key space (6 chars)</td><td colspan="2" class="ans">56.8 Billion</td><td>62⁶ — 18 years at 100 TPS</td></tr>
+        <tr><td>Storage / year (raw)</td><td class="hi">1.57 TB</td><td class="hi">18.25 TB</td><td>500B per record</td></tr>
+        <tr><td>Storage / year (3× rep)</td><td class="hi">4.7 TB</td><td class="hi">54 TB</td><td>Cassandra 3× replication</td></tr>
+        <tr><td>Redis cache size</td><td class="hi">860 MB</td><td class="hi">10 GB</td><td>Top 20% hot URLs</td></tr>
+        <tr><td>Cache hit rate</td><td colspan="2" class="ans">~90–95%</td><td>Zipf distribution</td></tr>
+        <tr><td>Redirect servers needed</td><td class="hi">60</td><td class="hi">~100</td><td>With 2–3× headroom</td></tr>
+        <tr><td>Outbound bandwidth (peak)</td><td colspan="2" class="ans">~70 MB/s</td><td>200B per 302 response</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /cap -->
+
+<!-- ══════════════════════════════════════════════════════
+     API DESIGN
+══════════════════════════════════════════════════════ -->
+<div id="api" class="panel">
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🔌</span> API Design — REST Contract</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>Good API design shows:</strong> You think about the caller's experience, error handling, versioning, and backward compatibility. Always include response codes and error formats.</div>
+    </div>
+  </div>
+
+  <!-- POST /shorten -->
+  <div class="api-endpoint">
+    <div class="api-head">
+      <span class="http-method m-post">POST</span>
+      <span class="api-path">/api/v1/urls</span>
+      <span class="api-desc">Create a new short URL</span>
+    </div>
+    <div class="api-body">
+      <div class="api-section">
+        <div class="api-section-title">Request Body — application/json</div>
+        <div class="field-row"><span class="field-name">long_url</span><span class="field-type">string</span><span class="field-req">required</span><span class="field-desc">The full destination URL. Must be a valid URL (http/https). Max 2,048 chars. Example: <code>"https://example.com/very/long/path"</code></span></div>
+        <div class="field-row"><span class="field-name">custom_alias</span><span class="field-type">string</span><span class="field-opt">optional</span><span class="field-desc">User-defined short key. 3–20 chars, alphanumeric + hyphens. Returns 409 if already taken. Example: <code>"my-promo"</code></span></div>
+        <div class="field-row"><span class="field-name">ttl_days</span><span class="field-type">integer</span><span class="field-opt">optional</span><span class="field-desc">Time-to-live in days. Range: 1–3650. Default: 365 (1 year). Pass <code>-1</code> for never-expire.</span></div>
+        <div class="field-row"><span class="field-name">user_id</span><span class="field-type">uuid</span><span class="field-opt">optional</span><span class="field-desc">Associate URL with a registered user account for analytics dashboard access.</span></div>
+      </div>
+      <div class="api-section">
+        <div class="api-section-title">Response Codes</div>
+        <div class="status-row"><span class="status-code s-201">201</span><span class="status-desc">Created. Returns short URL details. <code>{"short_key":"abc123","short_url":"https://short.ly/abc123","expires_at":"2027-03-21T00:00:00Z","created_at":"2026-03-21T10:00:00Z"}</code></span></div>
+        <div class="status-row"><span class="status-code s-400">400</span><span class="status-desc">Bad Request. Invalid URL format, missing required field, or URL contains unsafe content (malware/phishing). <code>{"error":"INVALID_URL","message":"The provided URL is not a valid http/https URL"}</code></span></div>
+        <div class="status-row"><span class="status-code s-409">409</span><span class="status-desc">Conflict. Custom alias is already taken. <code>{"error":"ALIAS_CONFLICT","message":"The alias 'my-promo' is already in use"}</code></span></div>
+        <div class="status-row"><span class="status-code s-429">429</span><span class="status-desc">Too Many Requests. Rate limit exceeded (100 creations/min per IP). Includes <code>Retry-After: 30</code> header.</span></div>
+        <div class="status-row"><span class="status-code s-500">500</span><span class="status-desc">Internal Server Error. Counter service failure, DB write failure. Client should retry with exponential backoff.</span></div>
+      </div>
+      <div class="api-section">
+        <div class="api-section-title">Example Request / Response</div>
+        <div class="code-wrap" style="border-radius:8px">
+          <div class="cblock active" style="border-radius:8px;padding:16px;max-height:200px">
+            <pre><code><span class="cm"># Request</span>
+POST /api/v1/urls
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  <span class="str">"long_url"</span>: <span class="str">"https://example.com/products/laptop-pro-max?ref=newsletter"</span>,
+  <span class="str">"custom_alias"</span>: <span class="str">"laptop-sale"</span>,
+  <span class="str">"ttl_days"</span>: <span class="num">30</span>
+}
+
+<span class="cm"># Response 201 Created</span>
+{
+  <span class="str">"short_key"</span>:   <span class="str">"laptop-sale"</span>,
+  <span class="str">"short_url"</span>:   <span class="str">"https://short.ly/laptop-sale"</span>,
+  <span class="str">"long_url"</span>:    <span class="str">"https://example.com/products/laptop-pro-max?ref=newsletter"</span>,
+  <span class="str">"created_at"</span>:  <span class="str">"2026-03-21T10:00:00Z"</span>,
+  <span class="str">"expires_at"</span>:  <span class="str">"2026-04-20T10:00:00Z"</span>
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET redirect -->
+  <div class="api-endpoint">
+    <div class="api-head">
+      <span class="http-method m-get">GET</span>
+      <span class="api-path">/{short_key}</span>
+      <span class="api-desc">Redirect to original URL</span>
+    </div>
+    <div class="api-body">
+      <div class="api-section">
+        <div class="api-section-title">Path Parameters</div>
+        <div class="field-row"><span class="field-name">short_key</span><span class="field-type">string</span><span class="field-req">required</span><span class="field-desc">The 6–20 char short key. Example: <code>abc123</code> or <code>laptop-sale</code></span></div>
+      </div>
+      <div class="api-section">
+        <div class="api-section-title">Response Codes</div>
+        <div class="status-row"><span class="status-code s-302">302</span><span class="status-desc">Found. Redirects to long URL. Response header: <code>Location: https://original-url.com/path</code>. Also sets <code>Cache-Control: no-cache</code> to prevent browser caching (needed for analytics).</span></div>
+        <div class="status-row"><span class="status-code s-404">404</span><span class="status-desc">Not Found. Short key doesn't exist. <code>{"error":"URL_NOT_FOUND","message":"Short URL 'xyz999' does not exist"}</code></span></div>
+        <div class="status-row"><span class="status-code s-410">410</span><span class="status-desc">Gone. Short URL existed but has expired or been deactivated. <code>{"error":"URL_EXPIRED","message":"This short URL expired on 2026-01-01"}</code></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET analytics -->
+  <div class="api-endpoint">
+    <div class="api-head">
+      <span class="http-method m-get">GET</span>
+      <span class="api-path">/api/v1/urls/{short_key}/analytics</span>
+      <span class="api-desc">Get click analytics for a short URL</span>
+    </div>
+    <div class="api-body">
+      <div class="api-section">
+        <div class="api-section-title">Query Parameters</div>
+        <div class="field-row"><span class="field-name">from</span><span class="field-type">datetime</span><span class="field-opt">optional</span><span class="field-desc">Start of date range. ISO 8601. Default: 30 days ago.</span></div>
+        <div class="field-row"><span class="field-name">to</span><span class="field-type">datetime</span><span class="field-opt">optional</span><span class="field-desc">End of date range. ISO 8601. Default: now.</span></div>
+        <div class="field-row"><span class="field-name">granularity</span><span class="field-type">enum</span><span class="field-opt">optional</span><span class="field-desc">Aggregation level: <code>hour</code> | <code>day</code> | <code>week</code>. Default: <code>day</code></span></div>
+      </div>
+      <div class="api-section">
+        <div class="api-section-title">Response 200 — Example</div>
+        <div class="code-wrap" style="border-radius:8px">
+          <div class="cblock active" style="border-radius:8px;padding:16px;max-height:240px">
+            <pre><code>{
+  <span class="str">"short_key"</span>:       <span class="str">"abc123"</span>,
+  <span class="str">"total_clicks"</span>:    <span class="num">142837</span>,
+  <span class="str">"unique_visitors"</span>: <span class="num">98210</span>,
+  <span class="str">"clicks_by_day"</span>: [
+    { <span class="str">"date"</span>: <span class="str">"2026-03-20"</span>, <span class="str">"clicks"</span>: <span class="num">5421</span> },
+    { <span class="str">"date"</span>: <span class="str">"2026-03-21"</span>, <span class="str">"clicks"</span>: <span class="num">8932</span> }
+  ],
+  <span class="str">"top_countries"</span>: [
+    { <span class="str">"country"</span>: <span class="str">"US"</span>, <span class="str">"clicks"</span>: <span class="num">45000</span> },
+    { <span class="str">"country"</span>: <span class="str">"IN"</span>, <span class="str">"clicks"</span>: <span class="num">32000</span> }
+  ],
+  <span class="str">"top_referrers"</span>: [
+    { <span class="str">"referrer"</span>: <span class="str">"twitter.com"</span>, <span class="str">"clicks"</span>: <span class="num">60000</span> },
+    { <span class="str">"referrer"</span>: <span class="str">"direct"</span>,      <span class="str">"clicks"</span>: <span class="num">40000</span> }
+  ],
+  <span class="str">"devices"</span>: {
+    <span class="str">"mobile"</span>: <span class="num">72</span>, <span class="str">"desktop"</span>: <span class="num">24</span>, <span class="str">"tablet"</span>: <span class="num">4</span>
+  }
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE -->
+  <div class="api-endpoint">
+    <div class="api-head">
+      <span class="http-method m-del">DELETE</span>
+      <span class="api-path">/api/v1/urls/{short_key}</span>
+      <span class="api-desc">Deactivate a short URL</span>
+    </div>
+    <div class="api-body">
+      <div class="api-section">
+        <div class="api-section-title">Response Codes</div>
+        <div class="status-row"><span class="status-code s-200">200</span><span class="status-desc">Successfully deactivated. Future visits to the short URL will return 410 Gone.</span></div>
+        <div class="status-row"><span class="status-code s-400">400</span><span class="status-desc">Forbidden. Caller is not the owner of this short URL.</span></div>
+        <div class="status-row"><span class="status-code s-404">404</span><span class="status-desc">Short URL not found.</span></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /api -->
+
+<!-- ══════════════════════════════════════════════════════
+     HLD
+══════════════════════════════════════════════════════ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">👥</span> Actors in the System</div>
+    <div class="sec-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:16px">Before drawing the architecture, identify who uses the system. Each actor eventually becomes a client or a service class.</p>
+      <div class="actor-grid">
+        <div class="actor-card">
+          <div class="actor-icon">🧑‍💻</div>
+          <div class="actor-name">End User</div>
+          <div class="actor-role">Clicks a short URL link (e.g., on Twitter). Expects instant redirect to destination. Never creates URLs.</div>
+        </div>
+        <div class="actor-card">
+          <div class="actor-icon">🏢</div>
+          <div class="actor-name">URL Creator</div>
+          <div class="actor-role">Submits a long URL to create a short link. Optionally provides custom alias and TTL. May be a developer via API or a web user.</div>
+        </div>
+        <div class="actor-card">
+          <div class="actor-icon">📊</div>
+          <div class="actor-name">Analytics Consumer</div>
+          <div class="actor-role">Views click analytics for their short URLs — total clicks, geo breakdown, referrers, device type over time.</div>
+        </div>
+        <div class="actor-card">
+          <div class="actor-icon">🤖</div>
+          <div class="actor-name">Admin / Trust & Safety</div>
+          <div class="actor-role">Reviews flagged URLs for abuse/malware. Can deactivate any URL. Manages blocklists.</div>
+        </div>
+        <div class="actor-card">
+          <div class="actor-icon">🔧</div>
+          <div class="actor-name">Developer (API User)</div>
+          <div class="actor-role">Uses the REST API to programmatically create/manage short URLs, integrate into their own apps or marketing tools.</div>
+        </div>
+        <div class="actor-card">
+          <div class="actor-icon">⏰</div>
+          <div class="actor-name">Cleanup Scheduler</div>
+          <div class="actor-role">Automated background job that deletes expired URLs from storage nightly. Not a human actor.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🏗</span> High-Level Architecture Diagram</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 960 580" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:580px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#334155"/>
+            </marker>
+            <marker id="arc" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#00d4ff"/>
+            </marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#10b981"/>
+            </marker>
+            <marker id="arp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/>
+            </marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/>
+            </marker>
+          </defs>
+
+          <!-- ─── ZONES ─── -->
+          <!-- Client Zone -->
+          <rect x="8" y="8" width="130" height="564" rx="10" fill="rgba(167,139,250,0.03)" stroke="rgba(167,139,250,0.12)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="73" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7c3aed" letter-spacing="1">CLIENT ZONE</text>
+
+          <!-- App Zone -->
+          <rect x="155" y="8" width="440" height="564" rx="10" fill="rgba(0,212,255,0.02)" stroke="rgba(0,212,255,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="375" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#00d4ff" letter-spacing="1">APPLICATION ZONE</text>
+
+          <!-- Data Zone -->
+          <rect x="612" y="8" width="340" height="564" rx="10" fill="rgba(16,185,129,0.02)" stroke="rgba(16,185,129,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="782" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981" letter-spacing="1">DATA ZONE</text>
+
+          <!-- ─── CLIENT BOXES ─── -->
+          <rect x="18" y="80" width="110" height="44" rx="8" fill="#131c2e" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="73" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">👤 User</text>
+          <text x="73" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">clicks short link</text>
+
+          <rect x="18" y="160" width="110" height="44" rx="8" fill="#131c2e" stroke="#7c3aed" stroke-width="1.5"/>
+          <text x="73" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🏢 Creator</text>
+          <text x="73" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">creates short URLs</text>
+
+          <!-- ─── LOAD BALANCER ─── -->
+          <rect x="170" y="100" width="120" height="44" rx="8" fill="#131c2e" stroke="#00d4ff" stroke-width="2"/>
+          <text x="230" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#00d4ff">⚖️ Load Balancer</text>
+          <text x="230" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Nginx / L7 Anycast</text>
+
+          <!-- ─── RATE LIMITER ─── -->
+          <rect x="170" y="175" width="120" height="44" rx="8" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="230" y="193" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">🛡 Rate Limiter</text>
+          <text x="230" y="207" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Redis token bucket</text>
+
+          <!-- ─── REDIRECT SERVICE ─── -->
+          <rect x="330" y="80" width="140" height="54" rx="8" fill="#131c2e" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="400" y="101" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">⚡ Redirect Service</text>
+          <text x="400" y="117" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GET /{key} → 302</text>
+          <text x="400" y="129" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">stateless, autoscaled</text>
+
+          <!-- ─── WRITE SERVICE ─── -->
+          <rect x="330" y="165" width="140" height="54" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="400" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">✏️ Write Service</text>
+          <text x="400" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">POST /urls</text>
+          <text x="400" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">validate + create key</text>
+
+          <!-- ─── COUNTER SERVICE ─── -->
+          <rect x="330" y="255" width="140" height="44" rx="8" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="400" y="273" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🔢 Counter Service</text>
+          <text x="400" y="287" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ZooKeeper range alloc</text>
+
+          <!-- ─── SAFE BROWSING ─── -->
+          <rect x="330" y="335" width="140" height="44" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="400" y="353" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🔒 Safe Browsing</text>
+          <text x="400" y="367" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Google API + blocklist</text>
+
+          <!-- ─── ANALYTICS SERVICE ─── -->
+          <rect x="330" y="420" width="140" height="54" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="400" y="440" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📊 Analytics Svc</text>
+          <text x="400" y="456" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Kafka consumer</text>
+          <text x="400" y="468" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">aggregates click events</text>
+
+          <!-- ─── DATA: REDIS ─── -->
+          <rect x="628" y="68" width="120" height="54" rx="8" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="688" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Redis Cache</text>
+          <text x="688" y="105" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">L2 Cache — LRU evict</text>
+          <text x="688" y="117" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10 GB / ~20M URLs</text>
+
+          <!-- ─── DATA: CASSANDRA ─── -->
+          <rect x="628" y="165" width="120" height="54" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="688" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Cassandra</text>
+          <text x="688" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Primary KV store</text>
+          <text x="688" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">RF=3, 54 TB/yr</text>
+
+          <!-- ─── DATA: KAFKA ─── -->
+          <rect x="628" y="355" width="120" height="44" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="688" y="373" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 Kafka</text>
+          <text x="688" y="387" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">click-events topic</text>
+
+          <!-- ─── DATA: CLICKHOUSE ─── -->
+          <rect x="628" y="435" width="120" height="44" rx="8" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="688" y="453" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📈 ClickHouse</text>
+          <text x="688" y="467" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Analytics OLAP DB</text>
+
+          <!-- ─── DATA: CDN ─── -->
+          <rect x="790" y="80" width="120" height="44" rx="8" fill="#131c2e" stroke="#00d4ff" stroke-width="1"/>
+          <text x="850" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🌐 CDN Edge</text>
+          <text x="850" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">CloudFront (future)</text>
+
+          <!-- ─── ARROWS ─── -->
+          <!-- User → LB -->
+          <line x1="128" y1="102" x2="168" y2="115" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#ar)"/>
+          <!-- Creator → Rate Limiter -->
+          <line x1="128" y1="185" x2="168" y2="193" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#ar)"/>
+          <!-- LB → Redirect -->
+          <line x1="290" y1="114" x2="328" y2="110" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#arc)"/>
+          <!-- Rate Limiter → Write -->
+          <line x1="290" y1="195" x2="328" y2="193" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <!-- Write → Counter -->
+          <line x1="400" y1="219" x2="400" y2="253" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arp)"/>
+          <!-- Write → Safe Browsing -->
+          <line x1="400" y1="219" x2="400" y2="333" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+          <!-- Redirect → Redis -->
+          <line x1="470" y1="105" x2="626" y2="100" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#ar)"/>
+          <!-- Redis miss → Cassandra -->
+          <line x1="688" y1="122" x2="688" y2="163" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+          <!-- Write → Cassandra -->
+          <line x1="470" y1="183" x2="626" y2="190" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <!-- Write → Redis (warm cache) -->
+          <line x1="470" y1="172" x2="626" y2="105" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+          <!-- Redirect → Kafka (async) -->
+          <line x1="440" y1="125" x2="626" y2="368" stroke="#10b981" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arg)"/>
+          <!-- Kafka → Analytics -->
+          <line x1="688" y1="399" x2="688" y2="433" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arp)"/>
+          <!-- Analytics Svc → ClickHouse -->
+          <line x1="470" y1="447" x2="626" y2="455" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arp)"/>
+
+          <!-- ─── FLOW LABELS ─── -->
+          <text x="145" y="105" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">GET /{key}</text>
+          <text x="145" y="188" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">POST /urls</text>
+          <text x="490" y="98" font-family="JetBrains Mono" font-size="8" fill="#f87171">cache lookup</text>
+          <text x="620" y="145" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0" transform="rotate(90,620,145)">cache miss</text>
+          <text x="480" y="178" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">write</text>
+          <text x="460" y="310" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7" transform="rotate(90,460,310)">async click</text>
+
+          <!-- Legend -->
+          <rect x="628" y="520" width="300" height="40" rx="6" fill="rgba(0,0,0,0.2)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <text x="638" y="536" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">── sync call</text>
+          <text x="638" y="550" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">- - async / background</text>
+          <text x="750" y="536" font-family="JetBrains Mono" font-size="8" fill="#f87171">red = cache layer</text>
+          <text x="750" y="550" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">yellow = storage layer</text>
+        </svg>
+      </div>
+      <br>
+      <div class="info-box"><strong>Read path (blue):</strong> User → LB → Redirect Service → Redis (95% hit) → 302 back. Miss: Redis → Cassandra → warm cache → 302. Async: emit click to Kafka.<br><br>
+      <strong>Write path (green):</strong> Creator → Rate Limiter → Write Service → Safe Browsing check → Counter Service (get ID) → Cassandra (persist) → Redis (warm cache) → return short URL.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🔄</span> Detailed Read & Write Flow</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#7dd3fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">📥 REDIRECT (READ) FLOW</div>
+          <div style="font-size:12.5px;color:#94a3b8;line-height:2">
+            <div>1️⃣ <code>GET /abc123</code> hits Load Balancer</div>
+            <div>2️⃣ LB routes to any Redirect Service instance</div>
+            <div>3️⃣ Check <b>L1 in-process cache</b> → hit? <span style="color:#34d399">→ return 302</span></div>
+            <div>4️⃣ L1 miss → check <b>Redis L2 cache</b> → hit? <span style="color:#34d399">→ return 302</span></div>
+            <div>5️⃣ Redis miss → query <b>Cassandra</b></div>
+            <div>6️⃣ Check URL <b>active + not expired</b></div>
+            <div>7️⃣ Warm Redis + L1 caches</div>
+            <div>8️⃣ Return <code>HTTP 302 Location: long_url</code></div>
+            <div>9️⃣ 🔀 <em>Async:</em> publish ClickEvent to Kafka</div>
+          </div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">📤 CREATE URL (WRITE) FLOW</div>
+          <div style="font-size:12.5px;color:#94a3b8;line-height:2">
+            <div>1️⃣ <code>POST /api/v1/urls</code> hits Rate Limiter</div>
+            <div>2️⃣ Validate request (URL format, fields)</div>
+            <div>3️⃣ Check <b>Safe Browsing API</b> (malware/phishing)</div>
+            <div>4️⃣ Check dedup: does <code>long_url</code> already exist?</div>
+            <div>5️⃣ Custom alias? → check uniqueness → <span style="color:#f87171">409 if conflict</span></div>
+            <div>6️⃣ No alias → get next ID from <b>Counter Service</b></div>
+            <div>7️⃣ Base62 encode ID → XOR mask → <code>short_key</code></div>
+            <div>8️⃣ Write record to <b>Cassandra</b></div>
+            <div>9️⃣ Write-through: warm <b>Redis</b> with same TTL</div>
+            <div>🔟 Return <code>201 Created</code> with short URL</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /hld -->
+
+<!-- ══════════════════════════════════════════════════════
+     LLD
+══════════════════════════════════════════════════════ -->
+<div id="lld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">📦</span> Core Classes / Components</div>
+    <div class="sec-body">
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:18px">Each actor and responsibility from the HLD maps to a class or service. These are the building blocks of the implementation.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+        <div class="class-block">
+          <div class="class-name-bar">UrlShortenerService</div>
+          <div class="class-fields">
+            <div class="cf-label">Fields</div>
+            <div class="cf">keyGen: <span class="ft">KeyGenerationService</span></div>
+            <div class="cf">urlRepo: <span class="ft">UrlRepository</span></div>
+            <div class="cf">cache: <span class="ft">CacheService</span></div>
+            <div class="cf">kafka: <span class="ft">EventPublisher</span></div>
+            <div class="cf">safeBrowsing: <span class="ft">SafeBrowsingClient</span></div>
+          </div>
+          <div class="class-methods">
+            <div class="cf-label">Methods</div>
+            <div class="cm2">shorten(req: ShortenRequest): ShortenResponse</div>
+            <div class="cm2">resolve(shortKey: String): String</div>
+            <div class="cm2">deactivate(shortKey: String, userId: UUID)</div>
+            <div class="cm2">getAnalytics(shortKey: String): Analytics</div>
+          </div>
+        </div>
+
+        <div class="class-block">
+          <div class="class-name-bar">KeyGenerationService</div>
+          <div class="class-fields">
+            <div class="cf-label">Fields</div>
+            <div class="cf">zkCounter: <span class="ft">ZookeeperClient</span></div>
+            <div class="cf">rangeStart: <span class="ft">long</span></div>
+            <div class="cf">rangeEnd: <span class="ft">long</span></div>
+            <div class="cf">XOR_MASK: <span class="ft">long</span> = 0x3F4A9B2C</div>
+          </div>
+          <div class="class-methods">
+            <div class="cf-label">Methods</div>
+            <div class="cm2">nextKey(): String</div>
+            <div class="cm2">encodeBase62(id: long): String</div>
+            <div class="cm2">allocateRange(): void</div>
+            <div class="cm2">decodeBase62(key: String): long</div>
+          </div>
+        </div>
+
+        <div class="class-block">
+          <div class="class-name-bar">CacheService</div>
+          <div class="class-fields">
+            <div class="cf-label">Fields</div>
+            <div class="cf">l1Cache: <span class="ft">LinkedHashMap&lt;String,String&gt;</span></div>
+            <div class="cf">redis: <span class="ft">RedisCluster</span></div>
+            <div class="cf">L1_SIZE: <span class="ft">int</span> = 1000</div>
+          </div>
+          <div class="class-methods">
+            <div class="cf-label">Methods</div>
+            <div class="cm2">get(key: String): Optional&lt;String&gt;</div>
+            <div class="cm2">put(key: String, val: String, ttl: Duration)</div>
+            <div class="cm2">evict(key: String)</div>
+          </div>
+        </div>
+
+        <div class="class-block">
+          <div class="class-name-bar">UrlEntity (Data Model)</div>
+          <div class="class-fields">
+            <div class="cf-label">Fields</div>
+            <div class="cf">shortKey: <span class="ft">String</span> — PK</div>
+            <div class="cf">longUrl: <span class="ft">String</span></div>
+            <div class="cf">longUrlHash: <span class="ft">String</span> — MD5 for dedup</div>
+            <div class="cf">userId: <span class="ft">UUID</span></div>
+            <div class="cf">createdAt: <span class="ft">Instant</span></div>
+            <div class="cf">expiresAt: <span class="ft">Instant</span></div>
+            <div class="cf">isActive: <span class="ft">boolean</span></div>
+          </div>
+          <div class="class-methods">
+            <div class="cf-label">Methods</div>
+            <div class="cm2">isExpired(): boolean</div>
+            <div class="cm2">isAccessible(): boolean</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">🗄</span> Database Schema (Cassandra)</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:400px">
+<pre><code><span class="cm">-- ─────────────────────────────────────────────────────────
+-- Table 1: Primary URL store
+-- Partition key: short_key → uniform distribution across nodes
+-- Cassandra handles TTL natively — expired rows auto-deleted
+-- ─────────────────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE</span> url_keyspace.urls (
+    short_key      <span class="cls">TEXT</span>        <span class="kw">PRIMARY KEY</span>,
+    long_url       <span class="cls">TEXT</span>        <span class="kw">NOT NULL</span>,
+    long_url_hash  <span class="cls">TEXT</span>,                     <span class="cm">-- MD5 of long_url for dedup lookup</span>
+    user_id        <span class="cls">UUID</span>,
+    created_at     <span class="cls">TIMESTAMP</span>,
+    expires_at     <span class="cls">TIMESTAMP</span>,
+    is_active      <span class="cls">BOOLEAN</span>     <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,
+    click_count    <span class="cls">COUNTER</span>                    <span class="cm">-- Cassandra distributed counter</span>
+) <span class="kw">WITH</span> default_time_to_live = <span class="num">31536000</span>   <span class="cm">-- 1 year default TTL (seconds)</span>
+  <span class="kw">AND</span> compaction = {'class': 'LeveledCompactionStrategy'}
+  <span class="kw">AND</span> replication = {'class': 'NetworkTopologyStrategy', 'dc1': 3};
+
+<span class="cm">-- ─────────────────────────────────────────────────────────
+-- Table 2: Reverse lookup (long URL → short key)
+-- Used for deduplication: same long URL → same short key
+-- ─────────────────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE</span> url_keyspace.url_by_hash (
+    long_url_hash  <span class="cls">TEXT</span>  <span class="kw">PRIMARY KEY</span>,
+    short_key      <span class="cls">TEXT</span>
+);
+
+<span class="cm">-- ─────────────────────────────────────────────────────────
+-- Table 3: User's URL list (for dashboard)
+-- Partition by user_id, cluster by created_at DESC
+-- ─────────────────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE</span> url_keyspace.urls_by_user (
+    user_id        <span class="cls">UUID</span>,
+    created_at     <span class="cls">TIMESTAMP</span>,
+    short_key      <span class="cls">TEXT</span>,
+    long_url       <span class="cls">TEXT</span>,
+    <span class="kw">PRIMARY KEY</span>    (user_id, created_at)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (created_at <span class="kw">DESC</span>);
+
+<span class="cm">-- ─────────────────────────────────────────────────────────
+-- Table 4: Click events (time-series, 90 day retention)
+-- Partitioned by short_key + date bucket (avoid wide rows)
+-- ─────────────────────────────────────────────────────────</span>
+<span class="kw">CREATE TABLE</span> url_keyspace.click_events (
+    short_key      <span class="cls">TEXT</span>,
+    date_bucket    <span class="cls">DATE</span>,                      <span class="cm">-- partition by day to limit row width</span>
+    clicked_at     <span class="cls">TIMESTAMP</span>,
+    ip_hash        <span class="cls">TEXT</span>,                      <span class="cm">-- hashed for privacy (GDPR)</span>
+    country_code   <span class="cls">TEXT</span>,
+    device_type    <span class="cls">TEXT</span>,                      <span class="cm">-- mobile | desktop | tablet</span>
+    referrer       <span class="cls">TEXT</span>,
+    <span class="kw">PRIMARY KEY</span>    ((short_key, date_bucket), clicked_at)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (clicked_at <span class="kw">DESC</span>)
+  <span class="kw">AND</span> default_time_to_live = <span class="num">7776000</span>;       <span class="cm">-- 90 days retention</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /lld -->
+
+<!-- ══════════════════════════════════════════════════════
+     CODE
+══════════════════════════════════════════════════════ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head"><span class="ic">💻</span> Implementation — Java &amp; Python</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java (Spring Boot)</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python (Flask)</button>
+        </div>
+
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// URL Shortener — Java Spring Boot Implementation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Key Generation Service ───────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">KeyGenerationService</span> {
+
+    <span class="kw">private static final</span> <span class="cls">String</span> BASE62 =
+        <span class="str">"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"</span>;
+    <span class="kw">private static final int</span>  KEY_LENGTH  = <span class="num">6</span>;
+    <span class="kw">private static final long</span> BLOCK_SIZE  = <span class="num">1_000_000L</span>;
+    <span class="kw">private static final long</span> XOR_MASK    = <span class="num">0x3F4A9B2CL</span>; <span class="cm">// prevents sequential enumeration</span>
+
+    <span class="kw">private volatile long</span> rangeStart = <span class="num">0</span>;
+    <span class="kw">private volatile long</span> rangeEnd   = <span class="num">0</span>;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">ZookeeperCounterClient</span> zkCounter;
+
+    <span class="cm">/**
+     * Returns next unique 6-char Base62 key.
+     * Thread-safe: synchronized on range allocation only.
+     */</span>
+    <span class="kw">public</span> <span class="cls">String</span> <span class="fn2">nextKey</span>() {
+        <span class="kw">long</span> id = <span class="fn2">nextId</span>();
+        <span class="kw">long</span> masked = id ^ XOR_MASK; <span class="cm">// obfuscate sequential IDs</span>
+        <span class="kw">return</span> <span class="fn2">encodeBase62</span>(masked);
+    }
+
+    <span class="kw">private synchronized long</span> <span class="fn2">nextId</span>() {
+        <span class="kw">if</span> (rangeStart >= rangeEnd) {
+            <span class="fn2">allocateNewRange</span>(); <span class="cm">// fetch next 1M block from ZooKeeper</span>
+        }
+        <span class="cm">// Pre-fetch next range when 90% exhausted (non-blocking)</span>
+        <span class="kw">if</span> (rangeStart > rangeEnd - (BLOCK_SIZE * <span class="num">0.1</span>)) {
+            <span class="cls">CompletableFuture</span>.runAsync(<span class="kw">this</span>::prefetchNextRange);
+        }
+        <span class="kw">return</span> rangeStart++;
+    }
+
+    <span class="kw">private void</span> <span class="fn2">allocateNewRange</span>() {
+        <span class="cls">CounterRange</span> range = zkCounter.allocateRange(BLOCK_SIZE);
+        rangeStart = range.getStart();
+        rangeEnd   = range.getEnd();
+    }
+
+    <span class="kw">public</span> <span class="cls">String</span> <span class="fn2">encodeBase62</span>(<span class="kw">long</span> num) {
+        <span class="kw">if</span> (num < <span class="num">0</span>) num = -num; <span class="cm">// handle XOR overflow</span>
+        <span class="cls">StringBuilder</span> sb = <span class="kw">new</span> <span class="cls">StringBuilder</span>();
+        <span class="kw">do</span> {
+            sb.append(BASE62.charAt((<span class="kw">int</span>)(num % <span class="num">62</span>)));
+            num /= <span class="num">62</span>;
+        } <span class="kw">while</span> (num > <span class="num">0</span>);
+        <span class="kw">while</span> (sb.length() < KEY_LENGTH) sb.append(<span class="str">'a'</span>); <span class="cm">// left-pad</span>
+        <span class="kw">return</span> sb.reverse().toString();
+    }
+}
+
+<span class="cm">// ── 2. Two-Level Cache Service ───────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">CacheService</span> {
+
+    <span class="cm">// L1: in-process LRU cache (per app server, ~1000 entries)</span>
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">String</span>&gt; l1Cache =
+        <span class="cls">Collections</span>.synchronizedMap(
+            <span class="kw">new</span> <span class="cls">LinkedHashMap</span>&lt;&gt;(<span class="num">1000</span>, <span class="num">0.75f</span>, <span class="kw">true</span>) {
+                <span class="ann">@Override</span> <span class="kw">protected boolean</span> removeEldestEntry(<span class="cls">Map.Entry</span>&lt;?, ?&gt; e) {
+                    <span class="kw">return</span> size() > <span class="num">1000</span>; <span class="cm">// LRU eviction at 1000 entries</span>
+                }
+            });
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>, <span class="cls">String</span>&gt; redis;
+
+    <span class="cm">/**
+     * Two-level lookup: L1 (in-process) → L2 (Redis)
+     * Returns empty if not found in either level.
+     */</span>
+    <span class="kw">public</span> <span class="cls">Optional</span>&lt;<span class="cls">String</span>&gt; <span class="fn2">get</span>(<span class="cls">String</span> key) {
+        <span class="cm">// L1 — zero network hop</span>
+        <span class="cls">String</span> l1Hit = l1Cache.get(key);
+        <span class="kw">if</span> (l1Hit != <span class="kw">null</span>) <span class="kw">return</span> <span class="cls">Optional</span>.of(l1Hit);
+
+        <span class="cm">// L2 — Redis (~1ms)</span>
+        <span class="cls">String</span> l2Hit = redis.opsForValue().get(key);
+        <span class="kw">if</span> (l2Hit != <span class="kw">null</span>) {
+            l1Cache.put(key, l2Hit); <span class="cm">// promote to L1</span>
+            <span class="kw">return</span> <span class="cls">Optional</span>.of(l2Hit);
+        }
+        <span class="kw">return</span> <span class="cls">Optional</span>.empty();
+    }
+
+    <span class="kw">public void</span> <span class="fn2">put</span>(<span class="cls">String</span> key, <span class="cls">String</span> value, <span class="cls">Duration</span> ttl) {
+        l1Cache.put(key, value);
+        redis.opsForValue().set(key, value, ttl);
+    }
+
+    <span class="kw">public void</span> <span class="fn2">evict</span>(<span class="cls">String</span> key) {
+        l1Cache.remove(key);
+        redis.delete(key);
+    }
+}
+
+<span class="cm">// ── 3. Main Shortener Service ────────────────────────</span>
+<span class="ann">@Service</span>
+<span class="ann">@Slf4j</span>
+<span class="kw">public class</span> <span class="cls">UrlShortenerService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KeyGenerationService</span>         keyGen;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">UrlRepository</span>                 urlRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">CacheService</span>                  cache;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">ClickEvent</span>&gt; kafka;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">SafeBrowsingClient</span>             safeBrowsing;
+
+    <span class="cm">/** Create a short URL from a long URL */</span>
+    <span class="kw">public</span> <span class="cls">ShortenResponse</span> <span class="fn2">shorten</span>(<span class="cls">ShortenRequest</span> req) {
+        <span class="cm">// Step 1: validate URL format</span>
+        <span class="fn2">validateUrl</span>(req.getLongUrl());
+
+        <span class="cm">// Step 2: check safe browsing (malware/phishing)</span>
+        <span class="kw">if</span> (safeBrowsing.isMalicious(req.getLongUrl()))
+            <span class="kw">throw new</span> <span class="cls">MaliciousUrlException</span>();
+
+        <span class="cm">// Step 3: deduplication — same long URL gets same short key</span>
+        <span class="cls">String</span> longUrlHash = <span class="fn2">md5</span>(req.getLongUrl());
+        <span class="cls">String</span> existingKey = urlRepo.findShortKeyByHash(longUrlHash);
+        <span class="kw">if</span> (existingKey != <span class="kw">null</span>)
+            <span class="kw">return</span> <span class="fn2">buildResponse</span>(existingKey);
+
+        <span class="cm">// Step 4: resolve short key (custom alias or generated)</span>
+        <span class="cls">String</span> shortKey;
+        <span class="kw">if</span> (req.hasCustomAlias()) {
+            <span class="kw">if</span> (urlRepo.exists(req.getCustomAlias()))
+                <span class="kw">throw new</span> <span class="cls">AliasConflictException</span>(req.getCustomAlias());
+            shortKey = req.getCustomAlias();
+        } <span class="kw">else</span> {
+            shortKey = keyGen.nextKey();
+        }
+
+        <span class="cm">// Step 5: persist to Cassandra</span>
+        <span class="cls">UrlEntity</span> entity = <span class="cls">UrlEntity</span>.builder()
+            .shortKey(shortKey).longUrl(req.getLongUrl())
+            .longUrlHash(longUrlHash).userId(req.getUserId())
+            .createdAt(<span class="cls">Instant</span>.now())
+            .expiresAt(<span class="cls">Instant</span>.now().plusSeconds(req.getTtlDays() * <span class="num">86400L</span>))
+            .isActive(<span class="kw">true</span>).build();
+        urlRepo.save(entity);
+
+        <span class="cm">// Step 6: write-through cache (warm Redis immediately)</span>
+        cache.put(shortKey, req.getLongUrl(),
+            <span class="cls">Duration</span>.ofSeconds(req.getTtlDays() * <span class="num">86400L</span>));
+
+        <span class="kw">return</span> <span class="fn2">buildResponse</span>(shortKey);
+    }
+
+    <span class="cm">/** Resolve short key → original URL (redirect) */</span>
+    <span class="kw">public</span> <span class="cls">String</span> <span class="fn2">resolve</span>(<span class="cls">String</span> shortKey, <span class="cls">ClickContext</span> ctx) {
+        <span class="cm">// Fast path: two-level cache lookup</span>
+        <span class="cls">Optional</span>&lt;<span class="cls">String</span>&gt; cached = cache.get(shortKey);
+        <span class="kw">if</span> (cached.isPresent()) {
+            <span class="fn2">publishClickAsync</span>(shortKey, ctx);
+            <span class="kw">return</span> cached.get();
+        }
+
+        <span class="cm">// Slow path: Cassandra</span>
+        <span class="cls">UrlEntity</span> entity = urlRepo.findById(shortKey)
+            .orElseThrow(() -> <span class="kw">new</span> <span class="cls">UrlNotFoundException</span>(shortKey));
+
+        <span class="kw">if</span> (!entity.isAccessible()) <span class="cm">// checks isActive && !isExpired</span>
+            <span class="kw">throw new</span> <span class="cls">UrlExpiredException</span>(shortKey);
+
+        <span class="cm">// Warm both cache levels</span>
+        <span class="cls">Duration</span> remaining = <span class="cls">Duration</span>.between(<span class="cls">Instant</span>.now(), entity.getExpiresAt());
+        cache.put(shortKey, entity.getLongUrl(), remaining);
+
+        <span class="fn2">publishClickAsync</span>(shortKey, ctx);
+        <span class="kw">return</span> entity.getLongUrl();
+    }
+
+    <span class="cm">/** Deactivate a URL (sets is_active = false) */</span>
+    <span class="kw">public void</span> <span class="fn2">deactivate</span>(<span class="cls">String</span> shortKey, <span class="cls">UUID</span> requestingUserId) {
+        <span class="cls">UrlEntity</span> entity = urlRepo.findById(shortKey)
+            .orElseThrow(() -> <span class="kw">new</span> <span class="cls">UrlNotFoundException</span>(shortKey));
+        <span class="kw">if</span> (!entity.getUserId().equals(requestingUserId))
+            <span class="kw">throw new</span> <span class="cls">UnauthorizedException</span>(<span class="str">"Not owner"</span>);
+        entity.setIsActive(<span class="kw">false</span>);
+        urlRepo.save(entity);
+        cache.evict(shortKey); <span class="cm">// invalidate both L1 and L2</span>
+    }
+
+    <span class="ann">@Async</span>
+    <span class="kw">private void</span> <span class="fn2">publishClickAsync</span>(<span class="cls">String</span> shortKey, <span class="cls">ClickContext</span> ctx) {
+        <span class="kw">try</span> {
+            kafka.send(<span class="str">"click-events"</span>, <span class="kw">new</span> <span class="cls">ClickEvent</span>(shortKey, ctx));
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) {
+            log.warn(<span class="str">"Click event publish failed for {}: {}"</span>, shortKey, e.getMessage());
+            <span class="cm">// Don't fail the redirect — analytics loss is acceptable</span>
+        }
+    }
+}
+
+<span class="cm">// ── 4. REST Controller ───────────────────────────────</span>
+<span class="ann">@RestController</span>
+<span class="kw">public class</span> <span class="cls">UrlController</span> {
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">UrlShortenerService</span> service;
+
+    <span class="ann">@PostMapping</span>(<span class="str">"/api/v1/urls"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;<span class="cls">ShortenResponse</span>&gt; <span class="fn2">shorten</span>(
+            <span class="ann">@RequestBody</span> <span class="ann">@Valid</span> <span class="cls">ShortenRequest</span> req) {
+        <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="cls">HttpStatus</span>.CREATED)
+                .body(service.shorten(req));
+    }
+
+    <span class="ann">@GetMapping</span>(<span class="str">"/{shortKey}"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;<span class="cls">Void</span>&gt; <span class="fn2">redirect</span>(
+            <span class="ann">@PathVariable</span> <span class="cls">String</span> shortKey,
+            <span class="cls">HttpServletRequest</span> httpReq) {
+        <span class="cls">ClickContext</span> ctx = <span class="cls">ClickContext</span>.from(httpReq);
+        <span class="cls">String</span> longUrl = service.resolve(shortKey, ctx);
+        <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="cls">HttpStatus</span>.FOUND)
+                .header(<span class="str">"Location"</span>, longUrl)
+                .header(<span class="str">"Cache-Control"</span>, <span class="str">"no-cache, no-store"</span>)
+                .build();
+    }
+
+    <span class="ann">@DeleteMapping</span>(<span class="str">"/api/v1/urls/{shortKey}"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;<span class="cls">Void</span>&gt; <span class="fn2">deactivate</span>(
+            <span class="ann">@PathVariable</span> <span class="cls">String</span> shortKey,
+            <span class="ann">@AuthenticationPrincipal</span> <span class="cls">UUID</span> userId) {
+        service.deactivate(shortKey, userId);
+        <span class="kw">return</span> <span class="cls">ResponseEntity</span>.ok().build();
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# URL Shortener — Python Flask Implementation
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> string, hashlib, time, threading, logging
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+<span class="kw">from</span> functools <span class="kw">import</span> lru_cache
+<span class="kw">from</span> collections <span class="kw">import</span> OrderedDict
+<span class="kw">from</span> concurrent.futures <span class="kw">import</span> ThreadPoolExecutor
+
+logger = logging.getLogger(__name__)
+BASE62 = string.ascii_lowercase + string.ascii_uppercase + string.digits  <span class="cm"># 62 chars</span>
+
+
+<span class="cm"># ── 1. Key Generation Service ───────────────────────</span>
+<span class="kw">class</span> <span class="cls">KeyGenerationService</span>:
+    <span class="str">"""
+    Generates unique short keys using range-based counter allocation.
+    Each instance owns a block of 1M IDs from ZooKeeper.
+    XOR masking prevents sequential key enumeration.
+    """</span>
+    KEY_LENGTH  = <span class="num">6</span>
+    BLOCK_SIZE  = <span class="num">1_000_000</span>
+    XOR_MASK    = <span class="num">0x3F4A9B2C</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, zk_counter):
+        self.zk = zk_counter
+        self.range_start = <span class="num">0</span>
+        self.range_end   = <span class="num">0</span>
+        self.lock = threading.Lock()
+        self.executor = ThreadPoolExecutor(max_workers=<span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn2">next_key</span>(self) -> str:
+        <span class="str">"""Thread-safe: returns next unique Base62 key"""</span>
+        <span class="kw">with</span> self.lock:
+            <span class="kw">if</span> self.range_start >= self.range_end:
+                self._allocate_range()
+            <span class="cm"># Pre-fetch next range when 90% exhausted</span>
+            <span class="kw">if</span> self.range_start > self.range_end - (self.BLOCK_SIZE * <span class="num">0.1</span>):
+                self.executor.submit(self._prefetch_range)
+            key_id = self.range_start
+            self.range_start += <span class="num">1</span>
+
+        masked = key_id ^ self.XOR_MASK  <span class="cm"># obfuscate sequential pattern</span>
+        <span class="kw">return</span> self._encode_base62(abs(masked))
+
+    <span class="kw">def</span> <span class="fn2">_encode_base62</span>(self, num: int) -> str:
+        <span class="kw">if</span> num == <span class="num">0</span>:
+            <span class="kw">return</span> <span class="str">'a'</span> * self.KEY_LENGTH
+        chars = []
+        <span class="kw">while</span> num > <span class="num">0</span>:
+            chars.append(BASE62[num % <span class="num">62</span>])
+            num //= <span class="num">62</span>
+        result = <span class="str">''</span>.join(reversed(chars))
+        <span class="kw">return</span> result.rjust(self.KEY_LENGTH, <span class="str">'a'</span>)  <span class="cm"># left-pad to KEY_LENGTH</span>
+
+    <span class="kw">def</span> <span class="fn2">_allocate_range</span>(self):
+        r = self.zk.allocate_range(self.BLOCK_SIZE)
+        self.range_start, self.range_end = r.start, r.end
+
+
+<span class="cm"># ── 2. Two-Level Cache Service ──────────────────────</span>
+<span class="kw">class</span> <span class="cls">CacheService</span>:
+    <span class="str">"""
+    L1: in-process LRU (per server, 1000 entries, ~0ms lookup)
+    L2: Redis cluster (shared, ~1ms lookup)
+    """</span>
+    L1_SIZE = <span class="num">1000</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, redis_client):
+        self.redis = redis_client
+        self.l1 = OrderedDict()  <span class="cm"># LRU via OrderedDict</span>
+        self.lock = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">get</span>(self, key: str) -> Optional[str]:
+        <span class="cm"># L1 lookup</span>
+        <span class="kw">with</span> self.lock:
+            <span class="kw">if</span> key <span class="kw">in</span> self.l1:
+                self.l1.move_to_end(key)  <span class="cm"># mark as recently used</span>
+                <span class="kw">return</span> self.l1[key]
+
+        <span class="cm"># L2 lookup</span>
+        val = self.redis.get(key)
+        <span class="kw">if</span> val:
+            decoded = val.decode()
+            self._l1_put(key, decoded)  <span class="cm"># promote to L1</span>
+            <span class="kw">return</span> decoded
+        <span class="kw">return None</span>
+
+    <span class="kw">def</span> <span class="fn2">put</span>(self, key: str, value: str, ttl_seconds: int):
+        self._l1_put(key, value)
+        self.redis.setex(key, ttl_seconds, value)
+
+    <span class="kw">def</span> <span class="fn2">evict</span>(self, key: str):
+        <span class="kw">with</span> self.lock:
+            self.l1.pop(key, <span class="kw">None</span>)
+        self.redis.delete(key)
+
+    <span class="kw">def</span> <span class="fn2">_l1_put</span>(self, key: str, value: str):
+        <span class="kw">with</span> self.lock:
+            self.l1[key] = value
+            self.l1.move_to_end(key)
+            <span class="kw">if</span> len(self.l1) > self.L1_SIZE:
+                self.l1.popitem(last=<span class="kw">False</span>)  <span class="cm"># evict LRU</span>
+
+
+<span class="cm"># ── 3. Main Shortener Service ────────────────────────</span>
+<span class="kw">class</span> <span class="cls">UrlShortenerService</span>:
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, key_gen, db, cache, kafka, safe_browsing):
+        self.key_gen       = key_gen
+        self.db            = db
+        self.cache         = cache
+        self.kafka         = kafka
+        self.safe_browsing = safe_browsing
+        self.executor      = ThreadPoolExecutor(max_workers=<span class="num">20</span>)
+
+    <span class="kw">def</span> <span class="fn2">shorten</span>(self,
+              long_url: str,
+              custom_alias: Optional[str] = <span class="kw">None</span>,
+              ttl_days: int = <span class="num">365</span>,
+              user_id: Optional[str] = <span class="kw">None</span>) -> dict:
+        <span class="str">"""Create a short URL — full validation + dedup + persist"""</span>
+
+        <span class="cm"># Step 1: Validate URL</span>
+        self._validate_url(long_url)
+
+        <span class="cm"># Step 2: Safe browsing check</span>
+        <span class="kw">if</span> self.safe_browsing.is_malicious(long_url):
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"URL_FLAGGED_MALICIOUS"</span>)
+
+        <span class="cm"># Step 3: Deduplication</span>
+        long_url_hash = hashlib.md5(long_url.encode()).hexdigest()
+        existing = self.db.find_short_key_by_hash(long_url_hash)
+        <span class="kw">if</span> existing:
+            <span class="kw">return</span> self._build_response(existing)
+
+        <span class="cm"># Step 4: Resolve short key</span>
+        <span class="kw">if</span> custom_alias:
+            <span class="kw">if</span> self.db.exists(custom_alias):
+                <span class="kw">raise</span> <span class="cls">ValueError</span>(f<span class="str">"ALIAS_CONFLICT:{custom_alias}"</span>)
+            short_key = custom_alias
+        <span class="kw">else</span>:
+            short_key = self.key_gen.next_key()
+
+        <span class="cm"># Step 5: Persist to Cassandra</span>
+        record = {
+            <span class="str">"short_key"</span>:     short_key,
+            <span class="str">"long_url"</span>:      long_url,
+            <span class="str">"long_url_hash"</span>: long_url_hash,
+            <span class="str">"user_id"</span>:       user_id,
+            <span class="str">"created_at"</span>:    time.time(),
+            <span class="str">"expires_at"</span>:    time.time() + ttl_days * <span class="num">86400</span>,
+            <span class="str">"is_active"</span>:     <span class="kw">True</span>
+        }
+        self.db.put(record)
+
+        <span class="cm"># Step 6: Write-through cache</span>
+        self.cache.put(short_key, long_url, ttl_days * <span class="num">86400</span>)
+
+        <span class="kw">return</span> self._build_response(short_key)
+
+    <span class="kw">def</span> <span class="fn2">resolve</span>(self, short_key: str, click_meta: dict = <span class="kw">None</span>) -> str:
+        <span class="str">"""Resolve short key to original URL — cache-first"""</span>
+
+        <span class="cm"># Fast path: two-level cache</span>
+        cached = self.cache.get(short_key)
+        <span class="kw">if</span> cached:
+            self.executor.submit(self._publish_click, short_key, click_meta)
+            <span class="kw">return</span> cached
+
+        <span class="cm"># Slow path: DB</span>
+        record = self.db.get(short_key)
+        <span class="kw">if not</span> record:
+            <span class="kw">raise</span> <span class="cls">KeyError</span>(<span class="str">"URL_NOT_FOUND"</span>)
+        <span class="kw">if not</span> record[<span class="str">"is_active"</span>]:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"URL_DEACTIVATED"</span>)
+        <span class="kw">if</span> time.time() > record[<span class="str">"expires_at"</span>]:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"URL_EXPIRED"</span>)
+
+        <span class="cm"># Warm caches</span>
+        ttl = int(record[<span class="str">"expires_at"</span>] - time.time())
+        self.cache.put(short_key, record[<span class="str">"long_url"</span>], ttl)
+        self.executor.submit(self._publish_click, short_key, click_meta)
+        <span class="kw">return</span> record[<span class="str">"long_url"</span>]
+
+    <span class="kw">def</span> <span class="fn2">deactivate</span>(self, short_key: str, requesting_user_id: str):
+        <span class="str">"""Soft-delete: set is_active=False, evict from cache"""</span>
+        record = self.db.get(short_key)
+        <span class="kw">if not</span> record:
+            <span class="kw">raise</span> <span class="cls">KeyError</span>(<span class="str">"URL_NOT_FOUND"</span>)
+        <span class="kw">if</span> record[<span class="str">"user_id"</span>] != requesting_user_id:
+            <span class="kw">raise</span> <span class="cls">PermissionError</span>(<span class="str">"NOT_OWNER"</span>)
+        self.db.update(short_key, {<span class="str">"is_active"</span>: <span class="kw">False</span>})
+        self.cache.evict(short_key)
+
+    <span class="kw">def</span> <span class="fn2">_publish_click</span>(self, short_key: str, meta: dict):
+        <span class="str">"""Async click event — never fails the redirect"""</span>
+        <span class="kw">if not</span> meta: <span class="kw">return</span>
+        <span class="kw">try</span>:
+            event = {
+                <span class="str">"short_key"</span>:   short_key,
+                <span class="str">"timestamp"</span>:   time.time(),
+                <span class="str">"ip_hash"</span>:     hashlib.md5(
+                    meta.get(<span class="str">"ip"</span>,<span class="str">""</span>).encode()).hexdigest(),
+                <span class="str">"country"</span>:     meta.get(<span class="str">"country"</span>),
+                <span class="str">"device"</span>:      meta.get(<span class="str">"device"</span>),
+                <span class="str">"referrer"</span>:    meta.get(<span class="str">"referrer"</span>),
+            }
+            self.kafka.send(<span class="str">"click-events"</span>, key=short_key, value=event)
+        <span class="kw">except Exception</span> <span class="kw">as</span> e:
+            logger.warning(f<span class="str">"Click publish failed {short_key}: {e}"</span>)
+
+    <span class="kw">def</span> <span class="fn2">_validate_url</span>(self, url: str):
+        <span class="kw">from</span> urllib.parse <span class="kw">import</span> urlparse
+        parsed = urlparse(url)
+        <span class="kw">if</span> parsed.scheme <span class="kw">not in</span> (<span class="str">'http'</span>, <span class="str">'https'</span>):
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"INVALID_URL: must be http or https"</span>)
+        <span class="kw">if not</span> parsed.netloc:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"INVALID_URL: missing domain"</span>)
+
+    <span class="kw">def</span> <span class="fn2">_build_response</span>(self, short_key: str) -> dict:
+        <span class="kw">return</span> {<span class="str">"short_key"</span>: short_key,
+                <span class="str">"short_url"</span>: f<span class="str">"https://short.ly/{short_key}"</span>}
+
+
+<span class="cm"># ── 4. Flask REST API ────────────────────────────────</span>
+<span class="kw">from</span> flask <span class="kw">import</span> Flask, redirect, jsonify, request, abort
+app = Flask(__name__)
+
+<span class="ann">@app.errorhandler</span>(<span class="cls">Exception</span>)
+<span class="kw">def</span> <span class="fn2">handle_error</span>(e):
+    <span class="str">"""Centralised error → HTTP status mapping"""</span>
+    error_map = {
+        <span class="str">"URL_NOT_FOUND"</span>:       <span class="num">404</span>,
+        <span class="str">"URL_EXPIRED"</span>:         <span class="num">410</span>,
+        <span class="str">"URL_DEACTIVATED"</span>:     <span class="num">410</span>,
+        <span class="str">"ALIAS_CONFLICT"</span>:      <span class="num">409</span>,
+        <span class="str">"INVALID_URL"</span>:         <span class="num">400</span>,
+        <span class="str">"URL_FLAGGED_MALICIOUS"</span>:<span class="num">400</span>,
+        <span class="str">"NOT_OWNER"</span>:           <span class="num">403</span>,
+    }
+    msg = str(e)
+    status = next((v <span class="kw">for</span> k,v <span class="kw">in</span> error_map.items() <span class="kw">if</span> k <span class="kw">in</span> msg), <span class="num">500</span>)
+    <span class="kw">return</span> jsonify({<span class="str">"error"</span>: msg}), status
+
+<span class="ann">@app.post</span>(<span class="str">"/api/v1/urls"</span>)
+<span class="kw">def</span> <span class="fn2">create_url</span>():
+    body = request.get_json(force=<span class="kw">True</span>)
+    result = service.shorten(
+        long_url     = body[<span class="str">"long_url"</span>],
+        custom_alias = body.get(<span class="str">"custom_alias"</span>),
+        ttl_days     = body.get(<span class="str">"ttl_days"</span>, <span class="num">365</span>),
+        user_id      = body.get(<span class="str">"user_id"</span>)
+    )
+    <span class="kw">return</span> jsonify(result), <span class="num">201</span>
+
+<span class="ann">@app.get</span>(<span class="str">"/<short_key>"</span>)
+<span class="kw">def</span> <span class="fn2">redirect_url</span>(short_key: str):
+    meta = {
+        <span class="str">"ip"</span>:      request.remote_addr,
+        <span class="str">"device"</span>:  _parse_device(request.user_agent.string),
+        <span class="str">"referrer"</span>:request.referrer,
+        <span class="str">"country"</span>: request.headers.get(<span class="str">"CF-IPCountry"</span>, <span class="str">"unknown"</span>)
+    }
+    long_url = service.resolve(short_key, meta)
+    resp = redirect(long_url, code=<span class="num">302</span>)
+    resp.headers[<span class="str">"Cache-Control"</span>] = <span class="str">"no-cache, no-store, must-revalidate"</span>
+    <span class="kw">return</span> resp
+
+<span class="ann">@app.delete</span>(<span class="str">"/api/v1/urls/<short_key>"</span>)
+<span class="kw">def</span> <span class="fn2">deactivate_url</span>(short_key: str):
+    user_id = request.headers.get(<span class="str">"X-User-ID"</span>)
+    service.deactivate(short_key, user_id)
+    <span class="kw">return</span> jsonify({<span class="str">"message"</span>: <span class="str">"URL deactivated"</span>}), <span class="num">200</span>
+
+<span class="kw">def</span> <span class="fn2">_parse_device</span>(ua: str) -> str:
+    ua = ua.lower()
+    <span class="kw">if</span> <span class="str">"mobile"</span> <span class="kw">in</span> ua <span class="kw">or</span> <span class="str">"android"</span> <span class="kw">in</span> ua: <span class="kw">return</span> <span class="str">"mobile"</span>
+    <span class="kw">if</span> <span class="str">"tablet"</span> <span class="kw">in</span> ua <span class="kw">or</span> <span class="str">"ipad"</span> <span class="kw">in</span> ua:   <span class="kw">return</span> <span class="str">"tablet"</span>
+    <span class="kw">return</span> <span class="str">"desktop"</span>
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /code -->
+
+<!-- ══════════════════════════════════════════════════════
+     TRADEOFFS
+══════════════════════════════════════════════════════ -->
+<div id="tradeoffs" class="panel">
+
+  <div class="sec">
+    <div class="sec-head"><span class="ic">⚖️</span> Design Tradeoffs &amp; Decisions</div>
+    <div class="sec-body">
+      <div class="warn-box"><strong>Interview tip:</strong> Every design decision is a tradeoff. When you say "I chose X", always follow with "because Y, and the cost is Z". This shows maturity.</div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔄 Redirect Type: HTTP 301 vs 302</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chosen: 302 Temporary</div><p>Every redirect hits our server. We see every click, can track analytics, can update destination URL, can deactivate instantly.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Alternative: 301 Permanent</div><p>Browser caches permanently. After first visit, user goes directly to long URL — no analytics, no deactivation possible. Saves server load but breaks all tracking.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Why 302 wins here</div><p>We have an explicit analytics requirement. 302 load overhead is negligible because each redirect is just a Redis cache lookup — sub-millisecond. If analytics were out of scope, 301 would be better.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🔑 Key Generation: Base62(Counter) vs MD5 Hash vs KGS</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chosen: Base62 + Counter Range</div><p>Zero collision guarantee. Predictable key length. Range allocation eliminates central bottleneck. XOR masking hides sequential nature.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Alternative: MD5 Hash of URL</div><p>No counter service needed. But collision-prone at scale — two URLs with same MD5 prefix need retry loops. Non-deterministic performance.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Why counter wins</div><p>At 100M URLs/day, collision handling adds unpredictable latency. Counter is O(1), deterministic, and range allocation makes it fully distributed. KGS is viable but adds operational complexity of a separate key DB.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🗄 Storage: Cassandra (NoSQL) vs PostgreSQL (SQL)</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chosen: Cassandra</div><p>Built for massive key-value scale. Auto-sharding. Tunable consistency. Native TTL. 54+ TB handled across a few nodes. No manual sharding needed.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Alternative: PostgreSQL</div><p>Great for smaller scale (&lt;10M URLs). ACID transactions, easy dedup queries. But requires manual sharding at 90TB+, and ACID overhead is unnecessary for simple key lookups.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 When to use SQL</div><p>For a startup with &lt;10M URLs, start with PostgreSQL — simpler, cheaper, easier to operate. Add Cassandra when you hit sharding limits. Never over-engineer early.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">⚡ Cache Strategy: Write-Through vs Read-Through vs Write-Behind</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chosen: Write-Through</div><p>On URL creation, write to both Cassandra AND Redis simultaneously. Cache is warm from the very first redirect. No cold-start latency spike for new URLs.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Read-Through</div><p>Cache populated only on first cache miss. First redirect always goes to Cassandra (~5–10ms). For viral links, this means the first million hits are slower until cache warms up.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Write-Behind risk</div><p>Write-behind (async write to DB) would be fastest but risks data loss if server crashes before DB write completes. For URL mappings, we never want to lose data — write-through is the safe choice.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📊 Analytics: Sync Write vs Async via Kafka</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chosen: Async via Kafka</div><p>Analytics event is fire-and-forget after sending 302. Kafka consumer aggregates clicks independently. Analytics outage never affects redirect latency.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Sync DB Write</div><p>Write click to DB in the redirect path. Simpler architecture but adds 10–50ms per redirect. At 116K req/sec, a slow analytics DB can cascade and kill redirect performance.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Tradeoff accepted</div><p>Async means we accept <em>eventual consistency</em> for analytics — clicks may be delayed by seconds. For analytics dashboards, this is completely fine. For real-time billing, it would not be acceptable.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🌍 Consistency: Strong vs Eventual</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chosen: Eventual (reads), Strong (writes)</div><p>Reads use eventual consistency (LOCAL_ONE in Cassandra) — fast. Writes use quorum (QUORUM) — ensures durability. Multi-region reads may be slightly stale (100ms), acceptable for URL lookups.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Strong Consistency Everywhere</div><p>All reads would require quorum (slower, higher latency). Requires cross-region coordination. Overkill for URL redirects where millisecond-stale data is fine.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Exception: deactivation</div><p>When a URL is deactivated (e.g., reported malicious), we need strong consistency — we must ensure ALL regions stop serving it immediately. This specific operation uses QUORUM writes + cache invalidation to all replicas.</p></div>
+    </div>
+  </div>
+
+</div><!-- /tradeoffs -->
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

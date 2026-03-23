@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #4 — YouTube / Video Streaming</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;
+  --accent:#f87171;--a2:#fb923c;--a3:#10b981;--a4:#f59e0b;--a5:#a78bfa;--a6:#00d4ff;
+  --text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;
+  --icolor:#a78bfa;--ecolor:#fca5a5;--code:#060a12;
+}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+
+.hero{background:linear-gradient(160deg,#07090f 0%,#180d0a 40%,#07090f 100%);
+  padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;
+  background:radial-gradient(circle,rgba(248,113,113,0.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}
+.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(248,113,113,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(90deg,#fca5a5 0%,#f87171 50%,#ef4444 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(248,113,113,.07);color:#fca5a5;border:1px solid rgba(248,113,113,.18)}
+
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;
+  display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 10px}}
+.panel{display:none}.panel.active{display:block}
+
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--accent);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(248,113,113,.1);color:var(--ecolor);border:1.5px solid rgba(248,113,113,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;
+  font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(248,113,113,.08);color:var(--accent);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.warn-box strong{color:var(--a4)}
+.info-box{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-left:3px solid var(--a6);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bfdbfe;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--a6)}
+
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:680px){.rq-grid{grid-template-columns:1fr}}
+.rq-box{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.rq-box h4{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
+.rq-box.fn h4{color:var(--a3)}.rq-box.nf h4{color:var(--a4)}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+
+.cap-step{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.cap-step-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+.step-num{width:32px;height:32px;border-radius:50%;background:rgba(248,113,113,.1);color:var(--accent);border:1.5px solid rgba(248,113,113,.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0}
+.step-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.step-sub{font-size:11.5px;color:var(--muted2)}
+.cap-step-body{padding:18px 20px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}.math-block .result{color:#f87171;font-weight:700;font-size:14px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(248,113,113,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-put{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.22)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:160px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+.srow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.sc{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;min-width:50px}
+.s200{color:#34d399}.s201{color:#34d399}.s400{color:#fbbf24}.s404{color:#f87171}.s202{color:#7dd3fc}
+
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+.actor-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.actor-icon{font-size:24px;margin-bottom:8px}
+.actor-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.actor-role{font-size:12px;color:var(--muted2);line-height:1.55}
+
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.class-grid{grid-template-columns:1fr}}
+.cb{background:var(--code);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cb-name{background:rgba(248,113,113,.08);padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border)}
+.cb-fields{padding:12px 18px;border-bottom:1px solid var(--border)}.cb-methods{padding:12px 18px}
+.cf{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#aed0f5;margin-bottom:5px}
+.cf .cft{color:#a78bfa}.cm2{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#82aaff;margin-bottom:5px}
+.cf-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(248,113,113,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* pipeline stages */
+.pipeline{display:flex;align-items:center;gap:0;margin:16px 0;overflow-x:auto;padding-bottom:8px}
+.pipe-stage{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:120px;text-align:center;flex-shrink:0}
+.pipe-stage-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin-bottom:6px}
+.pipe-stage-detail{font-size:11px;color:#94a3b8;line-height:1.5}
+.pipe-arrow{color:var(--muted);font-size:18px;padding:0 8px;flex-shrink:0}
+
+/* bitrate table */
+.bitrate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.br-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.br-res{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px}
+.br-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);margin-bottom:6px}
+.br-size{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="crumb">System Design › Streaming › <span>04 / YouTube</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">▶️</div>
+    <div>
+      <div class="h-title">YouTube / Video Streaming</div>
+      <div class="h-desc">Design a global video platform for 2B+ users — handling video upload, transcoding pipeline, adaptive bitrate streaming, CDN delivery, recommendations, and 500 hours of video uploaded every minute.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">HLS/DASH</span>
+        <span class="badge b-tag">Adaptive Bitrate</span>
+        <span class="badge b-tag">CDN</span>
+        <span class="badge b-tag">Transcoding</span>
+        <span class="badge b-tag">S3</span>
+        <span class="badge b-tag">Kafka</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('lld',this)">🔬 LLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+
+<div class="wrap">
+
+<!-- ══ REQUIREMENTS ══ -->
+<div id="req" class="panel active">
+  <div class="sec">
+    <div class="sec-head">🎯 Clarify Scope</div>
+    <div class="sec-body">
+      <div class="info-box"><strong>YouTube does a lot.</strong> Streaming, Shorts, Live, Creator Studio, Ads, Comments, Subscriptions. Scope clearly — the core is upload + transcode + stream.</div><br>
+      <div class="rq-grid">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Upload + streaming only, or live streaming too?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Expected DAU? Uploads per day?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Adaptive bitrate streaming (auto quality) needed?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Do we need recommendations / search?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Comments, likes, subscriptions?</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Global delivery or single-region?</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Upload + on-demand streaming. No live stream for now.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>2B DAU, 500 hours of video uploaded per minute</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — adaptive bitrate (360p, 480p, 720p, 1080p, 4K)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Basic recommendations and search (out of deep scope)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — likes, comments, subscriptions, view count</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Global CDN delivery required</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">✅ Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;gap:12px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">CORE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Upload Video:</strong> Creator uploads a raw video file (up to 256GB). System processes it and makes it streamable. Upload status visible during processing.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Transcode:</strong> Convert uploaded raw video into multiple resolutions and formats (360p → 4K) for adaptive bitrate streaming. Generate thumbnails.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Stream Video:</strong> User plays video with adaptive bitrate — player auto-selects quality based on network speed. Supports seek, pause, resume.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>View Count:</strong> Track number of views per video accurately at scale.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Like / Dislike:</strong> Users like or dislike videos. Counts visible to everyone.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Comments:</strong> Users comment on videos. Replies supported. Paginated.</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Subscribe:</strong> Users subscribe to channels. Subscribed videos appear in feed.</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">EXTENDED</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Search:</strong> Full-text search across video titles, descriptions, captions</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Recommendations:</strong> "Up next" and homepage recommendations based on watch history</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Captions/Subtitles:</strong> Auto-generated captions (speech-to-text), user-uploaded SRT</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div><strong>Watch History:</strong> Track and display per-user watch history with resume position</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:.08em;margin-bottom:12px">OUT OF SCOPE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--muted)"></div><div>Live streaming · YouTube Shorts · Ad system · Creator monetisation · Content moderation · Offline download</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">⚡ Non-Functional Requirements</div>
+    <div class="sec-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">PERFORMANCE</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Time to first frame:</strong> &lt; 200ms from pressing Play (buffered from CDN)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Buffering ratio:</strong> &lt; 0.1% of playback time spent buffering</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Upload-to-playable:</strong> Low-res version available within 3 minutes of upload finishing</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">RELIABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Availability:</strong> 99.99% — downtime means millions of disrupted streams</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Upload durability:</strong> Never lose an uploaded video — 11 nines (S3-class)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Resumable upload:</strong> Large files can resume after network interruption</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a4);font-weight:700;letter-spacing:.08em;margin-bottom:12px">SCALABILITY</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>500 hours uploaded/minute → ~250 hours transcoded/minute across cluster</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>1B+ video views/day → ~11,574 streams/sec average</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Read-heavy: streaming far outweighs uploads (100,000:1)</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a5);font-weight:700;letter-spacing:.08em;margin-bottom:12px">COST / INFRA</div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a5)"></div><div>CDN caching is critical — most views come from popular/viral videos</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a5)"></div><div>Storage cost dominates — aggressive compression + tiered storage (hot/cold)</div></div>
+          <div class="rq-item"><div class="rq-dot" style="background:var(--a5)"></div><div>Transcoding is GPU/CPU intensive — dedicated worker fleet</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Q&A ══ -->
+<div id="qa" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">🎙 Phase 1 — System Overview & Hard Problems</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 1 · SCOPE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design YouTube. Walk me through how you'd approach this.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        I'd split this into three distinct sub-problems because they have completely different characteristics:<br><br>
+        <b>1. Video Upload & Transcoding Pipeline</b> — Write-heavy, CPU/GPU intensive, async. 500 hours uploaded per minute. The hard part is converting raw video into multiple streamable formats efficiently.<br><br>
+        <b>2. Video Streaming Delivery</b> — Extremely read-heavy. 1B+ views/day. Latency-critical. The hard part is delivering large video files globally with &lt;200ms start time and no buffering.<br><br>
+        <b>3. Metadata & Interactions</b> — View counts, likes, comments, subscriptions. The hard part is accuracy at scale — a viral video can get 10M likes in an hour.<br><br>
+        The <em>most interesting</em> problems are the transcoding pipeline and adaptive bitrate streaming — I'll focus there. The interactions problem we solved for Instagram.<br><br>
+        Key observations:<br>
+        <ul>
+          <li>This is <em>massively read-heavy</em> — upload rate vs view rate is like 1:100,000</li>
+          <li>The same video is served millions of times — perfect CDN cache efficiency</li>
+          <li>Video files are enormous — a 1-hour 1080p video = ~4GB. We can't serve this from application servers</li>
+          <li>Different users on different networks need different quality levels — adaptive bitrate is essential</li>
+        </ul>
+      </div></div>
+      <div class="tip-box"><strong>💡 Structure your answer early.</strong> Splitting into sub-problems and identifying the hardest ones immediately shows senior-level thinking. Don't try to design everything at once.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📤 Phase 2 — Video Upload & Transcoding Pipeline</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 2 · UPLOAD + TRANSCODE</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Walk me through the upload flow. A creator uploads a 4K, 2GB video file.</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Upload has two phases — the file transfer itself, then the transcoding pipeline:<br><br>
+        <b>Phase 1 — File Transfer (Chunked Resumable Upload):</b>
+        <ol>
+          <li>Client hits <code>POST /api/v1/videos</code> with metadata (title, description, category). Server creates a video record (status: <code>UPLOADING</code>), returns <code>video_id</code> and a <b>resumable upload session URL</b></li>
+          <li>Client splits the 2GB file into <b>chunks of 5–10MB</b> and uploads each chunk via PUT to the session URL, with chunk index and total chunk count</li>
+          <li>Server assembles chunks in S3 using <b>S3 Multipart Upload</b> — each chunk is stored independently, assembled at the end. Chunks are stored out-of-order and reassembled by index</li>
+          <li>If network drops mid-upload: client queries <code>GET /upload-session/{id}/progress</code>, gets back which chunks are received, resumes from missing chunks. <em>Nothing is re-uploaded unnecessarily.</em></li>
+          <li>When all chunks received: S3 CompleteMultipartUpload, video status → <code>PROCESSING</code></li>
+        </ol>
+        <br>
+        <b>Phase 2 — Transcoding Pipeline (Async):</b>
+        <ol>
+          <li>S3 upload completion triggers an <b>S3 Event → Kafka</b> message (topic: <code>video-uploaded</code>)</li>
+          <li><b>Transcoding Orchestrator</b> consumes the event, creates separate transcoding jobs for each target resolution</li>
+          <li>Jobs distributed to a fleet of <b>Transcoding Workers</b> (GPU-equipped instances) via a job queue</li>
+          <li>Each worker transcodes the raw video to one resolution: 360p, 480p, 720p, 1080p, 2160p (4K)</li>
+          <li>Also generates: 10 thumbnail candidates (1 per 10% of video), chapter markers, WebVTT captions</li>
+          <li>Each completed rendition uploaded to S3 → CDN origin</li>
+          <li>When <em>lowest resolution</em> (360p) is ready: video status → <code>PUBLISHED</code> — video becomes watchable immediately, higher resolutions become available as they complete</li>
+        </ol>
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Why chunk the upload instead of streaming the file directly?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Three key reasons:
+        <ul>
+          <li><b>Resumability:</b> A 2GB upload on a mobile connection can take 30+ minutes. If it fails at 95%, without chunking the user re-uploads everything. With chunks, we resume from the last successful chunk.</li>
+          <li><b>Parallelism:</b> Chunks can be uploaded in parallel (5–10 concurrent chunks), maximising bandwidth utilisation</li>
+          <li><b>Memory efficiency:</b> Server never needs to hold the entire 2GB in memory — each chunk is streamed directly to S3 and immediately freed</li>
+        </ul>
+        S3 Multipart Upload was specifically designed for this pattern — it's the industry standard.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The transcoding is slow. How do you parallelize it?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        Two levels of parallelism:<br><br>
+        <b>Across resolutions:</b> All 5 resolution jobs (360p, 480p, 720p, 1080p, 4K) start simultaneously on different workers — not sequentially. A 1-hour video transcoded to 5 resolutions in parallel takes ~15 minutes, not 75 minutes.<br><br>
+        <b>Within a single resolution (segment parallelism):</b> Split the raw video into <b>2-minute segments</b> and transcode each segment independently on different workers. A 2-hour video has 60 segments → 60 workers can transcode in parallel → complete in ~2 minutes instead of 120 minutes. Then stitch segments together.<br><br>
+        <b>Technology:</b> FFmpeg on GPU instances (NVIDIA Tesla V100 or A100). GPU encoding (h.264 NVENC, h.265 HEVC) is 20–50× faster than CPU encoding. AWS Elemental MediaConvert or Google Transcoder API are managed alternatives.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">▶️ Phase 3 — Adaptive Bitrate Streaming (HLS/DASH)</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 3 · STREAMING PROTOCOL</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does the video actually stream? What protocol do you use and why?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        I'd use <b>HLS (HTTP Live Streaming)</b> — originally by Apple but now the industry standard for on-demand video (used by YouTube, Netflix, Twitch).<br><br>
+        <b>How HLS works:</b><br>
+        <ol>
+          <li>The transcoded video for each resolution is split into <b>short segments</b> (2–10 seconds each, stored as .ts or .fmp4 files)</li>
+          <li>A <b>Master Playlist</b> (.m3u8 file) lists all available quality levels with their stream bandwidth and resolution</li>
+          <li>Each quality level has a <b>Media Playlist</b> (.m3u8) listing all its segment URLs in order</li>
+          <li>The video player downloads the Master Playlist, reads available qualities, picks the starting quality</li>
+          <li>Player downloads 2–3 segments ahead (buffering), then plays from buffer</li>
+          <li>Player measures download speed continuously → if speed drops, switches to lower quality for next segment → <em>seamless quality adaptation</em></li>
+        </ol>
+        <br>
+        <b>Why HLS over DASH?</b><br>
+        HLS has better compatibility — it's natively supported on iOS/Safari (Apple devices) where DASH is not. For universal support, use HLS. DASH is technically more flexible but requires additional player code for Apple devices. YouTube actually uses DASH for Android/Desktop but HLS for iOS.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does a segment request flow from the user's player to the video data?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        The segment delivery path is carefully optimised:<br>
+        <ol>
+          <li>Player makes HTTP GET request: <code>https://cdn.youtube.com/{video_id}/720p/segment_042.ts</code></li>
+          <li>Request hits the <b>nearest CDN edge node</b> (via Anycast routing) — could be &lt;10ms away</li>
+          <li><b>CDN cache hit</b> (expected ~95% for popular videos): CDN serves the segment directly from its cache. Player receives data in &lt;20ms.</li>
+          <li><b>CDN cache miss</b>: Edge forwards to CDN origin → S3 bucket → streams back. S3 returns the segment, CDN caches it for future requests from the same region.</li>
+        </ol>
+        The <em>first viewer</em> in a region experiences the cache-miss path. Every subsequent viewer in that region gets the cached version. For a viral video, 99.9%+ of views are served from CDN edge — S3 and application servers are barely touched.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What happens when a user seeks to 01:23:45 in a 3-hour video?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-i">YOU</div>
+        This is where HLS segments shine. At 10-second segments, the user seeks to timestamp 5,025 seconds → that's segment #503 (<code>5025 ÷ 10 = 502.5</code> → segment 503).<br><br>
+        The player directly requests <code>segment_503.ts</code> via HTTP range request — no need to download segments 1–502. The URL is deterministic from the playlist. CDN serves segment 503 instantly if cached.<br><br>
+        This is fundamentally different from how traditional media files work (where you'd need byte-range requests deep into a single huge file). HLS segments make seeking O(1) — just compute segment number, fetch that segment URL.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">👁 Phase 4 — View Counts & Interactions at Scale</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 4 · COUNTERS + INTERACTIONS</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A video goes viral — 10 million views in 5 minutes. How do you count views accurately without killing your database?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        10M views in 5 minutes = <em>33,333 view increments per second</em> on a single row. Direct DB writes would create a lock contention disaster.<br><br>
+        <b>Solution — Multi-tier counter aggregation:</b><br>
+        <ol>
+          <li><b>Client-side batching:</b> Video player doesn't emit a view event immediately on play. It waits until the user has watched 30+ seconds (prevents accidental counts), then sends a view event to the View Service.</li>
+          <li><b>Redis atomic counter:</b> View Service does <code>INCR view_count:{video_id}</code> in Redis. Redis handles ~1M INCR/sec single-threaded without contention. In-memory, atomic, ultra-fast.</li>
+          <li><b>Periodic flush:</b> Every 30 seconds, a flush job reads the Redis counter delta and writes it to the persistent DB (Cassandra or MySQL): <code>UPDATE videos SET view_count = view_count + {delta}</code></li>
+          <li><b>Read from Redis:</b> When displaying view count, read from Redis (real-time) not from DB. Redis value is always ahead of DB by at most 30 seconds — acceptable.</li>
+        </ol>
+        <b>Anti-gaming:</b> Track view events per (user_id/IP, video_id) in a Redis set with TTL. Duplicate views within 24 hours are deduplicated. This prevents view count inflation from repeat visits or bot attacks.
+      </div></div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What about the recommendation system — how does it work at a high level?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        At a high level, YouTube's recommendation system is a <b>two-stage pipeline</b>:<br><br>
+        <b>Stage 1 — Candidate Generation:</b> For a given user, quickly narrow 800M+ videos down to ~hundreds of candidates. Uses collaborative filtering (users who watched X also watched Y), content-based filtering (similar tags, categories, creators), and user's watch history. Fast, approximate — runs on a simplified model.<br><br>
+        <b>Stage 2 — Ranking:</b> Takes ~hundreds of candidates, applies a deeper ML model (Deep Neural Network) that scores each candidate on predicted watch time, engagement likelihood, freshness, diversity. Returns top 20 ranked results.<br><br>
+        For the system design, the key data store is a <b>User Watch History</b> service (Cassandra, partitioned by user_id) and a <b>Video Embeddings</b> service (vector database like Faiss or Pinecone for approximate nearest-neighbor search). A separate offline training pipeline (Spark) trains the models on interaction data from Kafka.
+      </div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">💾 Phase 5 — Storage Strategy & Cost Optimisation</div>
+    <div class="sec-body">
+      <div class="phase-label">PHASE 5 · STORAGE + COST</div>
+      <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Storage must be enormous. How do you manage it cost-effectively?</div></div>
+      <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+        YouTube stores roughly <b>1 exabyte (1,000 PB)</b> of video data. Storage cost optimisation is critical.<br><br>
+        <b>Tiered storage strategy:</b><br>
+        <ul>
+          <li><b>Hot tier (S3 Standard):</b> Videos uploaded in the last 30 days + any video with &gt;1,000 views/day. Fast retrieval, higher cost. ~5% of all videos but ~80% of views.</li>
+          <li><b>Warm tier (S3 Standard-IA):</b> Videos 30–180 days old, moderate view rate. Lower storage cost, small retrieval fee.</li>
+          <li><b>Cold tier (S3 Glacier):</b> Videos &gt;6 months old with very low view rate. Very cheap storage (~$0.004/GB/month). Retrieval takes minutes — acceptable for rarely-watched content.</li>
+        </ul>
+        <br>
+        <b>Video deduplication:</b> Many users upload identical videos (clips, re-uploads). MD5/perceptual hash of video content → if hash exists, don't store again. Save the storage reference instead. YouTube saved enormous space this way.<br><br>
+        <b>Codec efficiency:</b> Encode older content with newer codecs (AV1, H.265) as they become mainstream. AV1 achieves ~50% better compression than H.264 at same quality — halving storage for re-encoded content.
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPACITY ══ -->
+<div id="cap" class="panel">
+  <div class="sec">
+    <div class="sec-head">📊 Capacity Estimation</div>
+    <div class="sec-body"><div class="warn-box"><strong>Key assumption:</strong> "500 hours of video uploaded per minute" is the most famous YouTube stat. Use it to anchor all estimates.</div></div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">1</div>
+      <div><div class="step-title">Upload Volume — Raw Data Ingestion Rate</div>
+      <div class="step-sub">How much raw video arrives per second?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Given: 500 hours of video uploaded per minute</span>
+
+<span class="label">Convert to seconds of video per second:</span>
+  <span class="label">500 hours/min × 60 min/hr × 60 sec/hr = 1,800,000 sec of video per minute</span>
+  <span class="label">1,800,000 ÷ 60                                     = </span><span class="val">30,000 sec of video per second</span>
+  <span class="label">(Every 1 second of real time, 30,000 seconds of video arrive)</span>
+
+<span class="label">Raw video bitrate (4K source): ~50 Mbps = 6.25 MB/sec per video</span>
+<span class="label">But uploads are compressed (720p mobile): ~5 Mbps = 625 KB/sec per video</span>
+<span class="label">Assume average upload bitrate: ~2 Mbps = 250 KB/sec</span>
+
+<span class="label">Videos uploaded per minute:</span>
+  <span class="label">Assume average video duration = 7 minutes</span>
+  <span class="label">Videos per minute = (500 hours × 60 min) ÷ 7 min/video = </span><span class="val">~4,286 videos/min</span>
+  <span class="label">                                                        = </span><span class="val">~71 videos/sec</span>
+
+<span class="label">Raw storage ingestion rate:</span>
+  <span class="label">71 videos/sec × 7 min × 60 sec × 250 KB/sec           = </span><span class="val">~75 GB/sec raw ingest</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">2</div>
+      <div><div class="step-title">Storage — Transcoded Video Files</div>
+      <div class="step-sub">How much storage do all the transcoded renditions need?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Transcoded renditions per video (H.264 bitrates):</span>
+      </div>
+      <div class="bitrate-grid">
+        <div class="br-card"><div class="br-res">360p</div><div class="br-label">Mobile / Low</div><div class="br-size">0.5 Mbps</div></div>
+        <div class="br-card"><div class="br-res">480p</div><div class="br-label">SD</div><div class="br-size">1 Mbps</div></div>
+        <div class="br-card"><div class="br-res">720p</div><div class="br-label">HD</div><div class="br-size">2.5 Mbps</div></div>
+        <div class="br-card"><div class="br-res">1080p</div><div class="br-label">Full HD</div><div class="br-size">5 Mbps</div></div>
+        <div class="br-card"><div class="br-res">4K</div><div class="br-label">Ultra HD</div><div class="br-size">20 Mbps</div></div>
+      </div>
+      <div class="math-block" style="margin-top:14px">
+<span class="label">Total bitrate across all 5 renditions = 0.5+1+2.5+5+20 = 29 Mbps</span>
+<span class="label">For a 7-minute (420 sec) video:</span>
+  <span class="label">29 Mbps × 420 sec ÷ 8 bits/byte     = </span><span class="val">~1.52 GB per video</span>  <span class="label">(all renditions combined)</span>
+
+<span class="label">Daily upload volume:</span>
+  <span class="label">71 videos/sec × 86,400 sec/day       = </span><span class="val">6.1M videos/day</span>
+  <span class="label">6.1M × 1.52 GB                        = </span><span class="val">~9.3 PB/day</span>  <span class="label">new video storage needed</span>
+
+<span class="label">Annual accumulation:</span>
+  <span class="label">9.3 PB/day × 365                      = </span><span class="val">~3.4 EB/year</span>  <span class="label">at current upload rates</span>
+
+<span class="label">YouTube total storage estimate (25 years of content):  </span><span class="val">~1 Exabyte</span>
+<span class="label">Stored in S3-compatible object storage across multiple data centers</span>
+<span class="result">→ With tiered storage (hot/warm/cold), ~80% stored in cheaper tiers — massive cost savings</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">3</div>
+      <div><div class="step-title">Transcoding Compute — Worker Fleet Size</div>
+      <div class="step-sub">How many transcoding workers are needed?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">500 hours of video uploaded per minute needs to be transcoded</span>
+<span class="label">Each video transcoded to 5 resolutions = 500 × 5 = 2,500 hours of transcoding work/min</span>
+
+<span class="label">Transcoding speed: GPU instances (NVIDIA A100) at 100× real-time speed for 1080p H.264</span>
+  <span class="label">1 GPU worker can transcode 1 hour of 1080p in:</span>
+  <span class="label">3600 sec real-time ÷ 100× speed = </span><span class="val">36 seconds</span>
+  <span class="label">So 1 GPU does 100 hours of 1080p per hour = </span><span class="val">1.67 hours/minute</span>
+
+<span class="label">Workers needed for 2,500 hours/min of transcoding:</span>
+  <span class="label">2,500 hours ÷ 1.67 hours/worker/min = </span><span class="val">~1,500 GPU workers</span>  <span class="label">running continuously</span>
+
+<span class="label">With segment-level parallelism (2-min segments) this scales further</span>
+<span class="label">Workers auto-scale up/down based on queue depth</span>
+  <span class="result">→ ~1,500-2,000 GPU transcoding workers (managed via Kubernetes + job queue)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">4</div>
+      <div><div class="step-title">Streaming Traffic — Bandwidth & CDN Load</div>
+      <div class="step-sub">How much bandwidth does video delivery consume?</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Given: 2B DAU, ~30 minutes watched per user per day</span>
+
+<span class="label">Total watch time per day:</span>
+  <span class="label">2B × 30 min × 60 sec             = </span><span class="val">3.6 Trillion seconds/day</span>
+  <span class="label">Average streaming bitrate (720p)  = </span><span class="val">2.5 Mbps</span>
+  <span class="label">Total bandwidth                   = 3.6T sec × 2.5 Mbps ÷ 86400 =</span> <span class="val">~104 Tbps</span>  <span class="label">average</span>
+  <span class="label">Peak (3×)                         =</span> <span class="val">~300 Tbps</span>
+
+<span class="label">CDN cache hit rate (popular videos, edge cached): ~95%</span>
+  <span class="label">Origin bandwidth needed           = 300 Tbps × 5% = </span><span class="val">~15 Tbps</span>  <span class="label">to S3 origin</span>
+
+<span class="label">CDN scale reference: Cloudflare's total network capacity is ~200 Tbps</span>
+<span class="result">→ YouTube operates one of the largest CDN deployments in the world — ~300 Tbps peak</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap-step">
+    <div class="cap-step-head"><div class="step-num">5</div>
+      <div><div class="step-title">View Count — Redis Counter Load</div>
+      <div class="step-sub">Write rate for view count increments</div></div></div>
+    <div class="cap-step-body">
+      <div class="math-block">
+<span class="label">Daily video views: ~5B (2B users × ~2.5 videos/day)</span>
+<span class="label">Views per second (avg)            = 5B ÷ 86,400 = </span><span class="val">~57,870 view events/sec</span>
+
+<span class="label">But view events are batched (fire after 30s watch):</span>
+  <span class="label">Not every click = a view event — ~60% convert = ~35,000 INCR/sec</span>
+
+<span class="label">Redis handles 1M ops/sec per node</span>
+  <span class="label">Nodes needed                     = 35K ÷ 1M = </span><span class="val">1 Redis node</span>  <span class="label">(easily handled)</span>
+
+<span class="label">But viral spikes (1 video, 10M views in 5 min):</span>
+  <span class="label">10M ÷ 300sec = 33,333 INCR/sec on one key → </span><span class="val">hot key problem</span>
+  <span class="label">Solution: shard the counter across N keys: view_count:{id}:shard_{0..9}</span>
+  <span class="label">Read: sum all 10 shards. Still O(10) = acceptable</span>
+  <span class="result">→ Sharded Redis counters handle any viral spike</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">📋 Summary</div>
+    <div class="sec-body">
+      <table class="math-table">
+        <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+        <tr><td>Upload rate</td><td class="hi">500 hrs/min / ~71 videos/sec</td><td>Given</td></tr>
+        <tr><td>Raw ingest bandwidth</td><td class="hi">~75 GB/s</td><td>Raw upload data</td></tr>
+        <tr><td>Storage per video (all renditions)</td><td class="hi">~1.52 GB</td><td>5 resolutions, 7-min avg</td></tr>
+        <tr><td>New video storage/day</td><td class="hi">~9.3 PB</td><td>6.1M videos × 1.52GB</td></tr>
+        <tr><td>Total video library</td><td class="hi">~1 Exabyte</td><td>25+ years accumulated</td></tr>
+        <tr><td>Transcoding workers</td><td class="hi">~1,500–2,000 GPU</td><td>Auto-scaling fleet</td></tr>
+        <tr><td>Streaming bandwidth (avg/peak)</td><td class="hi">~104 Tbps / ~300 Tbps</td><td>Global CDN</td></tr>
+        <tr><td>CDN cache hit rate</td><td class="hi">~95%</td><td>Popular videos cached at edge</td></tr>
+        <tr><td>View count write rate</td><td class="hi">~35K INCR/sec avg</td><td>Redis sharded counters</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ API ══ -->
+<div id="api" class="panel">
+  <div class="sec">
+    <div class="sec-head">🔌 API Design</div>
+    <div class="sec-body"><div class="info-box"><strong>Video upload uses resumable chunked upload (not a single POST).</strong> Video streaming uses HTTP Range Requests against CDN-hosted HLS playlists — not API endpoints.</div></div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/videos</span><span class="api-desc">Initiate video upload (Phase 1 — metadata)</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Request Body</div>
+        <div class="frow"><span class="fn">title</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Video title. Max 100 chars.</span></div>
+        <div class="frow"><span class="fn">description</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Max 5,000 chars. Supports markdown.</span></div>
+        <div class="frow"><span class="fn">category</span><span class="ft">enum</span><span class="fr">required</span><span class="fd">Music | Gaming | Education | Sports | News | Entertainment | ...</span></div>
+        <div class="frow"><span class="fn">file_size_bytes</span><span class="ft">integer</span><span class="fr">required</span><span class="fd">Total raw file size. Used to pre-validate and allocate multipart upload. Max 256 GB.</span></div>
+        <div class="frow"><span class="fn">file_name</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Original filename including extension (e.g. <code>vacation_4k.mp4</code>).</span></div>
+        <div class="frow"><span class="fn">visibility</span><span class="ft">enum</span><span class="fo">optional</span><span class="fd"><code>public</code> | <code>unlisted</code> | <code>private</code>. Default: <code>private</code> until processing complete.</span></div>
+        <div class="frow"><span class="fn">tags</span><span class="ft">string[]</span><span class="fo">optional</span><span class="fd">Search tags. Max 500 chars total. Example: <code>["travel","4K","drone"]</code></span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Response 202 — Accepted</div>
+        <div class="frow"><span class="fn">video_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Unique video identifier (Snowflake ID, also the URL slug)</span></div>
+        <div class="frow"><span class="fn">upload_session_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Resumable upload session identifier. Use in subsequent chunk PUT requests.</span></div>
+        <div class="frow"><span class="fn">chunk_size_bytes</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Required chunk size for this upload. Server recommends 5MB (5,242,880 bytes).</span></div>
+        <div class="frow"><span class="fn">total_chunks</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Expected number of chunks based on file_size / chunk_size.</span></div>
+        <div class="frow"><span class="fn">status</span><span class="ft">string</span><span class="fo"></span><span class="fd"><code>AWAITING_UPLOAD</code></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-put">PUT</span><span class="api-path">/api/v1/uploads/{session_id}/chunks/{chunk_index}</span><span class="api-desc">Upload a single video chunk</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Headers</div>
+        <div class="frow"><span class="fn">Content-Type</span><span class="ft">header</span><span class="fr">required</span><span class="fd"><code>application/octet-stream</code></span></div>
+        <div class="frow"><span class="fn">Content-Length</span><span class="ft">header</span><span class="fr">required</span><span class="fd">Exact size of this chunk in bytes.</span></div>
+        <div class="frow"><span class="fn">Content-MD5</span><span class="ft">header</span><span class="fr">required</span><span class="fd">Base64 MD5 hash of chunk bytes. Server verifies integrity — rejects corrupt chunks.</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Status Codes</div>
+        <div class="srow"><span class="sc s200">200</span><span class="fd">Chunk received and verified. Returns <code>{"chunk_index": 42, "received": true, "total_received": 43}</code></span></div>
+        <div class="srow"><span class="sc s400">400</span><span class="fd">Corrupt chunk (MD5 mismatch). Client must retry this chunk.</span></div>
+        <div class="srow"><span class="sc s404">404</span><span class="fd">Upload session expired (sessions expire after 24h of inactivity).</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/uploads/{session_id}/progress</span><span class="api-desc">Get upload progress (for resuming)</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">received_chunks</span><span class="ft">int[]</span><span class="fo"></span><span class="fd">Sorted list of chunk indices successfully received. Client can compute missing chunks and retry only those.</span></div>
+        <div class="frow"><span class="fn">total_chunks</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Total expected chunks for this upload.</span></div>
+        <div class="frow"><span class="fn">status</span><span class="ft">string</span><span class="fo"></span><span class="fd"><code>UPLOADING</code> | <code>COMPLETE</code> | <code>EXPIRED</code></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/videos/{video_id}</span><span class="api-desc">Get video metadata + stream URLs</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Response 200</div>
+        <div class="frow"><span class="fn">video_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Video identifier</span></div>
+        <div class="frow"><span class="fn">title, description</span><span class="ft">string</span><span class="fo"></span><span class="fd">Video metadata</span></div>
+        <div class="frow"><span class="fn">status</span><span class="ft">string</span><span class="fo"></span><span class="fd"><code>PROCESSING</code> | <code>PUBLISHED</code> | <code>FAILED</code></span></div>
+        <div class="frow"><span class="fn">hls_manifest_url</span><span class="ft">string</span><span class="fo"></span><span class="fd">CDN URL for the HLS Master Playlist (.m3u8). Player uses this to start streaming. Example: <code>https://cdn.yt.com/{video_id}/master.m3u8</code></span></div>
+        <div class="frow"><span class="fn">thumbnail_url</span><span class="ft">string</span><span class="fo"></span><span class="fd">CDN URL for the default thumbnail (auto-selected at upload time).</span></div>
+        <div class="frow"><span class="fn">duration_seconds</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Total video duration</span></div>
+        <div class="frow"><span class="fn">view_count, like_count</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Current counts (from Redis — near real-time)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-ep">
+    <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/videos/{video_id}/view</span><span class="api-desc">Record a view event</span></div>
+    <div class="api-body">
+      <div class="api-sec">
+        <div class="api-sec-title">Notes</div>
+        <div class="frow"><span class="fn">watch_duration_sec</span><span class="ft">integer</span><span class="fr">required</span><span class="fd">Seconds watched. Server only counts as a view if ≥ 30 seconds watched.</span></div>
+        <div class="frow"><span class="fn">Idempotent</span><span class="ft"></span><span class="fo"></span><span class="fd">Duplicate view events from same user within 24 hours are deduplicated (Redis Set per video per day).</span></div>
+      </div>
+      <div class="api-sec">
+        <div class="api-sec-title">Status Codes</div>
+        <div class="srow"><span class="sc s200">200</span><span class="fd">View recorded. Returns <code>{"view_count": 1234567}</code> (Redis real-time count)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HLD ══ -->
+<div id="hld" class="panel">
+
+  <div class="sec">
+    <div class="sec-head">👥 Actors</div>
+    <div class="sec-body">
+      <div class="actor-grid">
+        <div class="actor-card"><div class="actor-icon">📹</div><div class="actor-name">Creator</div><div class="actor-role">Uploads raw video, sets metadata. Interacts via Resumable Upload API. Monitors processing status.</div></div>
+        <div class="actor-card"><div class="actor-icon">👤</div><div class="actor-name">Viewer</div><div class="actor-role">Streams video via HLS player. Triggers view events. Likes, comments, subscribes.</div></div>
+        <div class="actor-card"><div class="actor-icon">⚙️</div><div class="actor-name">Transcoding Worker</div><div class="actor-role">GPU instance. Pulls jobs from queue. Converts raw video to HLS segments per resolution. Stores to S3.</div></div>
+        <div class="actor-card"><div class="actor-icon">🌐</div><div class="actor-name">CDN Edge Node</div><div class="actor-role">Caches HLS segments and playlists at ~200 PoPs globally. Serves ~95% of streaming traffic.</div></div>
+        <div class="actor-card"><div class="actor-icon">🔔</div><div class="actor-name">Notification Svc</div><div class="actor-role">Notifies subscribers when a new video is published. Triggered by Kafka event on video PUBLISHED status.</div></div>
+        <div class="actor-card"><div class="actor-icon">🤖</div><div class="actor-name">Recommendation Eng</div><div class="actor-role">Offline ML pipeline (Spark). Generates personalised video recommendations from watch history.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🎬 Transcoding Pipeline (Detail)</div>
+    <div class="sec-body">
+      <div class="pipeline">
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">RAW UPLOAD</div>
+          <div class="pipe-stage-detail">Chunked to S3<br>256GB max<br>Multipart</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">KAFKA EVENT</div>
+          <div class="pipe-stage-detail">S3 trigger<br>video-uploaded<br>topic</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">SEGMENT SPLIT</div>
+          <div class="pipe-stage-detail">2-min chunks<br>parallel jobs<br>per segment</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">GPU TRANSCODE</div>
+          <div class="pipe-stage-detail">FFmpeg NVENC<br>5 resolutions<br>×N segments</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">SEGMENT MERGE</div>
+          <div class="pipe-stage-detail">Stitch segments<br>per resolution<br>into .ts files</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">PLAYLIST GEN</div>
+          <div class="pipe-stage-detail">.m3u8 master<br>+ per-quality<br>playlists</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage">
+          <div class="pipe-stage-title">S3 + CDN</div>
+          <div class="pipe-stage-detail">Segments at<br>CDN-friendly<br>paths</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-stage" style="border-color:var(--a3)">
+          <div class="pipe-stage-title" style="color:var(--a3)">PUBLISHED</div>
+          <div class="pipe-stage-detail">360p first<br>Higher res<br>async follow</div>
+        </div>
+      </div>
+
+      <div class="info-box" style="margin-top:16px"><strong>Key design decision:</strong> Publish the 360p version as soon as it's ready (within ~3 min of upload finishing). Users can start watching immediately while higher resolutions are still processing. This drastically improves perceived upload-to-watch latency.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🏗 High-Level Architecture</div>
+    <div class="sec-body">
+      <div class="diag">
+        <svg viewBox="0 0 1020 640" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:640px">
+          <defs>
+            <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+            <marker id="arc" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f87171"/></marker>
+            <marker id="arg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+            <marker id="ary" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+            <marker id="arb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#00d4ff"/></marker>
+            <marker id="arp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+          </defs>
+
+          <!-- Zones -->
+          <rect x="8" y="8" width="130" height="624" rx="10" fill="rgba(167,139,250,.02)" stroke="rgba(167,139,250,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="73" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7c3aed">CLIENTS</text>
+          <rect x="148" y="8" width="260" height="624" rx="10" fill="rgba(248,113,113,.02)" stroke="rgba(248,113,113,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="278" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f87171">SERVICES</text>
+          <rect x="418" y="8" width="250" height="624" rx="10" fill="rgba(245,158,11,.02)" stroke="rgba(245,158,11,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="543" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">PROCESSING</text>
+          <rect x="678" y="8" width="334" height="624" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="845" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">DATA / CDN</text>
+
+          <!-- Clients -->
+          <rect x="18" y="50" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="73" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">📹 Creator</text>
+          <text x="73" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">uploads video</text>
+
+          <rect x="18" y="160" width="110" height="40" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="73" y="176" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">👤 Viewer</text>
+          <text x="73" y="190" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">streams video</text>
+
+          <!-- API Gateway -->
+          <rect x="160" y="90" width="120" height="42" rx="7" fill="#131c2e" stroke="#f87171" stroke-width="2"/>
+          <text x="220" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fca5a5">⚖️ API Gateway</text>
+          <text x="220" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Auth + LB + Rate Limit</text>
+
+          <!-- Upload Service -->
+          <rect x="160" y="160" width="120" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="220" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📤 Upload Service</text>
+          <text x="220" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">chunked + resumable</text>
+
+          <!-- Video Service -->
+          <rect x="160" y="230" width="120" height="42" rx="7" fill="#131c2e" stroke="#f87171" stroke-width="1.5"/>
+          <text x="220" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fca5a5">🎬 Video Service</text>
+          <text x="220" y="262" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">metadata + stream URLs</text>
+
+          <!-- Interaction Service -->
+          <rect x="160" y="300" width="120" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="220" y="318" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">❤️ Interaction Svc</text>
+          <text x="220" y="332" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">views + likes + comments</text>
+
+          <!-- Search Service -->
+          <rect x="160" y="370" width="120" height="42" rx="7" fill="#131c2e" stroke="#00d4ff" stroke-width="1"/>
+          <text x="220" y="388" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🔍 Search Service</text>
+          <text x="220" y="402" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Elasticsearch</text>
+
+          <!-- Recommendation -->
+          <rect x="160" y="440" width="120" height="42" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1"/>
+          <text x="220" y="458" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🤖 Recomm. Svc</text>
+          <text x="220" y="472" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ML-based ranking</text>
+
+          <!-- PROCESSING: Kafka -->
+          <rect x="430" y="90" width="120" height="52" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+          <text x="490" y="109" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 Kafka</text>
+          <text x="490" y="123" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">video-uploaded</text>
+          <text x="490" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">events bus</text>
+
+          <!-- Transcoding Orchestrator -->
+          <rect x="430" y="180" width="120" height="52" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="490" y="199" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">⚙️ Transcode Orch</text>
+          <text x="490" y="213" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">splits video</text>
+          <text x="490" y="225" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">creates jobs</text>
+
+          <!-- Transcoding Workers -->
+          <rect x="430" y="270" width="120" height="62" rx="7" fill="#131c2e" stroke="#f87171" stroke-width="1.5"/>
+          <text x="490" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fca5a5">🖥 GPU Workers</text>
+          <text x="490" y="306" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">FFmpeg NVENC</text>
+          <text x="490" y="320" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">~2,000 instances</text>
+          <text x="490" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">auto-scale</text>
+
+          <!-- Thumbnail Generator -->
+          <rect x="430" y="370" width="120" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="490" y="388" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🖼 Thumbnail Gen</text>
+          <text x="490" y="402" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10 candidates</text>
+
+          <!-- Caption Generator -->
+          <rect x="430" y="440" width="120" height="42" rx="7" fill="#131c2e" stroke="#00d4ff" stroke-width="1"/>
+          <text x="490" y="458" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📝 Caption Gen</text>
+          <text x="490" y="472" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">speech-to-text</text>
+
+          <!-- DATA: S3 Raw -->
+          <rect x="690" y="50" width="130" height="52" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="755" y="69" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🪣 S3 Raw</text>
+          <text x="755" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">uploaded source files</text>
+          <text x="755" y="95" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">tiered storage</text>
+
+          <!-- DATA: S3 Processed -->
+          <rect x="690" y="140" width="130" height="52" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="755" y="159" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🪣 S3 Processed</text>
+          <text x="755" y="173" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HLS segments + playlists</text>
+          <text x="755" y="185" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">~1 EB total</text>
+
+          <!-- DATA: CDN -->
+          <rect x="830" y="140" width="120" height="52" rx="7" fill="#131c2e" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="890" y="159" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🌐 CDN</text>
+          <text x="890" y="173" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">300+ PoPs global</text>
+          <text x="890" y="185" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">95% cache hit</text>
+
+          <!-- DATA: MySQL (video metadata) -->
+          <rect x="690" y="240" width="130" height="42" rx="7" fill="#131c2e" stroke="#00d4ff" stroke-width="1"/>
+          <text x="755" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🐬 MySQL</text>
+          <text x="755" y="272" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">video metadata</text>
+
+          <!-- DATA: Redis -->
+          <rect x="690" y="320" width="130" height="42" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+          <text x="755" y="338" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Redis</text>
+          <text x="755" y="352" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">view/like counters</text>
+
+          <!-- DATA: Cassandra (watch history) -->
+          <rect x="690" y="400" width="130" height="42" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+          <text x="755" y="418" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Cassandra</text>
+          <text x="755" y="432" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">watch history</text>
+
+          <!-- DATA: Elasticsearch -->
+          <rect x="690" y="480" width="130" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="755" y="498" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🔍 Elasticsearch</text>
+          <text x="755" y="512" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">video search index</text>
+
+          <!-- ARROWS: Upload path -->
+          <line x1="128" y1="65" x2="158" y2="100" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ar)"/>
+          <line x1="220" y1="132" x2="220" y2="158" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <line x1="280" y1="178" x2="428" y2="110" stroke="#10b981" stroke-width="1.5" marker-end="url(#arg)"/>
+          <!-- Upload → S3 Raw -->
+          <line x1="280" y1="185" x2="688" y2="75" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <!-- Kafka → Transcode Orch -->
+          <line x1="490" y1="142" x2="490" y2="178" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <!-- Transcode Orch → GPU Workers -->
+          <line x1="490" y1="232" x2="490" y2="268" stroke="#f87171" stroke-width="1.5" marker-end="url(#arc)"/>
+          <!-- GPU Workers → S3 Processed -->
+          <line x1="550" y1="295" x2="688" y2="175" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ary)"/>
+          <!-- S3 Processed → CDN -->
+          <line x1="820" y1="166" x2="828" y2="166" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#arb)"/>
+          <!-- Viewer → CDN (streaming) -->
+          <line x1="128" y1="175" x2="888" y2="192" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arb)"/>
+
+          <!-- Viewer → API GW (metadata) -->
+          <line x1="128" y1="183" x2="158" y2="105" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+          <!-- Video Svc → MySQL -->
+          <line x1="280" y1="250" x2="688" y2="258" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arb)"/>
+          <!-- Interaction → Redis -->
+          <line x1="280" y1="318" x2="688" y2="338" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#ar)"/>
+          <!-- Thumbnail → S3 -->
+          <line x1="550" y1="395" x2="688" y2="175" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ar)"/>
+
+          <!-- Labels -->
+          <text x="292" y="155" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">chunked upload</text>
+          <text x="300" y="120" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">S3 event → Kafka</text>
+          <text x="560" y="245" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">HLS segments</text>
+          <text x="380" y="165" font-family="JetBrains Mono" font-size="8" fill="#f87171">HLS player</text>
+          <text x="380" y="175" font-family="JetBrains Mono" font-size="8" fill="#00d4ff">streams via CDN</text>
+
+          <!-- Legend -->
+          <rect x="690" y="560" width="300" height="40" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+          <text x="700" y="576" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">── sync</text>
+          <text x="700" y="590" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">- - async/CDN</text>
+          <text x="810" y="576" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">yellow = S3 storage</text>
+          <text x="810" y="590" font-family="JetBrains Mono" font-size="8" fill="#f87171">red = hot path</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🔄 Key Flows</div>
+    <div class="sec-body">
+      <div class="two-col">
+        <div class="flow-box">
+          <div class="flow-title" style="color:#fca5a5">📤 UPLOAD FLOW</div>
+          <div class="fs"><div class="fnum">1</div><div>Creator uploads chunks → S3 Multipart Upload via chunked API</div></div>
+          <div class="fs"><div class="fnum">2</div><div>S3 completion → S3 Event → Kafka <code>video-uploaded</code> topic</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Transcoding Orchestrator splits video into 2-min segments</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Segment jobs distributed to GPU Worker fleet (job queue)</div></div>
+          <div class="fs"><div class="fnum">5</div><div>Each worker transcodes 1 segment × 5 resolutions with FFmpeg NVENC</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Segments stitched back, HLS playlists generated, uploaded to S3</div></div>
+          <div class="fs"><div class="fnum">7</div><div>360p ready → video status = PUBLISHED → subscribers notified</div></div>
+          <div class="fs"><div class="fnum">8</div><div>Higher resolutions (720p, 1080p, 4K) become available async</div></div>
+        </div>
+        <div class="flow-box">
+          <div class="flow-title" style="color:#6ee7b7">▶️ STREAMING FLOW</div>
+          <div class="fs"><div class="fnum">1</div><div>Viewer clicks play → player fetches <code>GET /api/v1/videos/{id}</code> for metadata + HLS URL</div></div>
+          <div class="fs"><div class="fnum">2</div><div>Player downloads <b>Master Playlist (.m3u8)</b> from CDN → lists all available quality levels</div></div>
+          <div class="fs"><div class="fnum">3</div><div>Player picks starting quality (based on network speed) → downloads Quality Playlist (.m3u8)</div></div>
+          <div class="fs"><div class="fnum">4</div><div>Player requests segment_001.ts, segment_002.ts, segment_003.ts (2–3 ahead)</div></div>
+          <div class="fs"><div class="fnum">5</div><div>CDN edge serves segments (<b>~95% cache hit</b> for popular videos)</div></div>
+          <div class="fs"><div class="fnum">6</div><div>Player monitors download speed continuously. If speed drops → switches to lower quality for next segment (seamless ABR)</div></div>
+          <div class="fs"><div class="fnum">7</div><div>After 30s watched → View Service fires <code>POST /videos/{id}/view</code> → Redis INCR</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LLD ══ -->
+<div id="lld" class="panel">
+  <div class="sec">
+    <div class="sec-head">📦 Core Service Classes</div>
+    <div class="sec-body">
+      <div class="class-grid">
+        <div class="cb">
+          <div class="cb-name">VideoUploadService</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">s3: <span class="cft">S3Client</span></div>
+            <div class="cf">videoRepo: <span class="cft">VideoRepository</span></div>
+            <div class="cf">kafka: <span class="cft">KafkaProducer</span></div>
+            <div class="cf">CHUNK_SIZE: <span class="cft">int</span> = 5MB</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">initiateUpload(req): UploadSession</div>
+            <div class="cm2">uploadChunk(sessionId, idx, bytes): void</div>
+            <div class="cm2">getProgress(sessionId): UploadProgress</div>
+            <div class="cm2">completeUpload(sessionId): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">TranscodingOrchestrator</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">jobQueue: <span class="cft">JobQueue</span></div>
+            <div class="cf">videoRepo: <span class="cft">VideoRepository</span></div>
+            <div class="cf">SEGMENT_DURATION: <span class="cft">int</span> = 120s</div>
+            <div class="cf">RESOLUTIONS: <span class="cft">int[]</span> = [360,480,720,1080,2160]</div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">onVideoUploaded(event: VideoEvent): void</div>
+            <div class="cm2">splitIntoSegments(videoId): List&lt;Segment&gt;</div>
+            <div class="cm2">submitTranscodeJobs(segments, resolutions): void</div>
+            <div class="cm2">onJobComplete(job): void</div>
+            <div class="cm2">generateHlsPlaylist(videoId): void</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">VideoService</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">videoRepo: <span class="cft">VideoRepository</span></div>
+            <div class="cf">redis: <span class="cft">RedisClient</span></div>
+            <div class="cf">cdnBaseUrl: <span class="cft">String</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">getVideo(videoId): VideoDetails</div>
+            <div class="cm2">getHlsManifestUrl(videoId): String</div>
+            <div class="cm2">recordView(videoId, userId, watchedSec): void</div>
+            <div class="cm2">likeVideo(videoId, userId): LikeResult</div>
+            <div class="cm2">search(query, page): VideoList</div>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cb-name">Video (Data Model)</div>
+          <div class="cb-fields"><div class="cf-label">Fields</div>
+            <div class="cf">videoId: <span class="cft">long</span> — Snowflake ID</div>
+            <div class="cf">channelId: <span class="cft">long</span></div>
+            <div class="cf">title: <span class="cft">String</span></div>
+            <div class="cf">status: <span class="cft">Enum</span> UPLOADING|PROCESSING|PUBLISHED|FAILED</div>
+            <div class="cf">hlsManifestPath: <span class="cft">String</span></div>
+            <div class="cf">thumbnailPath: <span class="cft">String</span></div>
+            <div class="cf">durationSeconds: <span class="cft">int</span></div>
+            <div class="cf">createdAt: <span class="cft">Instant</span></div>
+          </div>
+          <div class="cb-methods"><div class="cf-label">Methods</div>
+            <div class="cm2">getCdnUrl(resolution): String</div>
+            <div class="cm2">isPublished(): boolean</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">🗄 Database Schema</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="cblock active" style="border-radius:10px;max-height:480px">
+<pre><code><span class="cm">-- ── MySQL: Video Metadata ────────────────────────────</span>
+<span class="kw">CREATE TABLE</span> videos (
+    video_id       <span class="cls">BIGINT</span>       <span class="kw">PRIMARY KEY</span>,   <span class="cm">-- Snowflake ID</span>
+    channel_id     <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+    title          <span class="cls">VARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,
+    description    <span class="cls">TEXT</span>,
+    status         <span class="cls">ENUM</span>(<span class="str">'UPLOADING'</span>,<span class="str">'PROCESSING'</span>,<span class="str">'PUBLISHED'</span>,<span class="str">'FAILED'</span>),
+    hls_manifest   <span class="cls">VARCHAR</span>(<span class="num">500</span>),             <span class="cm">-- S3 path to master.m3u8</span>
+    thumbnail_url  <span class="cls">VARCHAR</span>(<span class="num">500</span>),
+    duration_sec   <span class="cls">INT</span>,
+    file_size_bytes <span class="cls">BIGINT</span>,
+    category       <span class="cls">VARCHAR</span>(<span class="num">50</span>),
+    visibility     <span class="cls">ENUM</span>(<span class="str">'public'</span>,<span class="str">'unlisted'</span>,<span class="str">'private'</span>),
+    created_at     <span class="cls">DATETIME</span>,
+    published_at   <span class="cls">DATETIME</span>,
+    <span class="kw">INDEX</span> idx_channel (channel_id, published_at <span class="kw">DESC</span>),
+    <span class="kw">INDEX</span> idx_status  (status)
+);
+
+<span class="cm">-- ── MySQL: Upload Sessions (transient) ───────────────</span>
+<span class="kw">CREATE TABLE</span> upload_sessions (
+    session_id     <span class="cls">VARCHAR</span>(<span class="num">64</span>) <span class="kw">PRIMARY KEY</span>,
+    video_id       <span class="cls">BIGINT</span>,
+    channel_id     <span class="cls">BIGINT</span>,
+    total_chunks   <span class="cls">INT</span>,
+    received_chunks <span class="cls">JSON</span>,                     <span class="cm">-- array of received chunk indices</span>
+    s3_upload_id   <span class="cls">VARCHAR</span>(<span class="num">200</span>),              <span class="cm">-- S3 Multipart Upload ID</span>
+    expires_at     <span class="cls">DATETIME</span>,
+    created_at     <span class="cls">DATETIME</span>
+) ENGINE=InnoDB ROW_FORMAT=COMPRESSED;
+
+<span class="cm">-- ── Cassandra: Watch History (time-series, per user) ─</span>
+<span class="kw">CREATE TABLE</span> watch_history (
+    user_id        <span class="cls">BIGINT</span>,
+    watched_at     <span class="cls">TIMESTAMP</span>,
+    video_id       <span class="cls">BIGINT</span>,
+    watch_duration <span class="cls">INT</span>,                       <span class="cm">-- seconds watched</span>
+    resume_pos_sec <span class="cls">INT</span>,                       <span class="cm">-- where user left off</span>
+    <span class="kw">PRIMARY KEY</span>    (user_id, watched_at, video_id)
+) <span class="kw">WITH CLUSTERING ORDER BY</span> (watched_at <span class="kw">DESC</span>)
+  <span class="kw">AND</span> default_time_to_live = <span class="num">7776000</span>;         <span class="cm">-- 90 day retention</span>
+
+<span class="cm">-- ── Redis Data Structures ─────────────────────────────
+-- View count per video (sharded for hot videos)
+-- Key: view_count:{video_id}:shard_{0..9}  → INCR
+-- Read: SUM all 10 shards
+
+-- Like counter
+-- Key: like_count:{video_id}  → INCR / DECR
+
+-- Like set (one like per user)
+-- Key: video_likes:{video_id}  → SADD / SISMEMBER {user_id}
+
+-- View deduplication (24hr window)
+-- Key: views_today:{video_id}:{date}  → SADD {user_id}  EX 86400
+
+-- Trending videos (sorted by view velocity)
+-- Key: trending:{region}:{hour}  → ZINCRBY score={view_count}</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CODE ══ -->
+<div id="code" class="panel">
+  <div class="sec">
+    <div class="sec-head">💻 Implementation</div>
+    <div class="sec-body">
+      <div class="code-wrap">
+        <div class="ctabs">
+          <button class="ctab active" onclick="switchLang('java',this)">☕ Java (Spring Boot)</button>
+          <button class="ctab" onclick="switchLang('python',this)">🐍 Python (Flask)</button>
+        </div>
+        <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// YouTube — Java Implementation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Resumable Upload Service ───────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">VideoUploadService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">S3Client</span>         s3;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">VideoRepository</span>  videoRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">UploadSessionRepo</span> sessionRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">VideoEvent</span>&gt; kafka;
+
+    <span class="kw">private static final int</span>  CHUNK_SIZE  = <span class="num">5</span> * <span class="num">1024</span> * <span class="num">1024</span>; <span class="cm">// 5 MB</span>
+    <span class="kw">private static final</span> <span class="cls">String</span> BUCKET = <span class="str">"yt-videos-raw"</span>;
+
+    <span class="cm">/** Phase 1: Create metadata + S3 multipart upload session */</span>
+    <span class="kw">public</span> <span class="cls">UploadSessionResponse</span> <span class="fn2">initiateUpload</span>(<span class="cls">InitiateUploadRequest</span> req) {
+        <span class="kw">long</span> videoId = snowflake.nextId();
+        <span class="cls">String</span> s3Key = <span class="str">"raw/"</span> + videoId + <span class="str">"/original"</span>;
+
+        <span class="cm">// Create S3 Multipart Upload</span>
+        <span class="cls">CreateMultipartUploadResponse</span> multipart = s3.createMultipartUpload(
+            <span class="cls">CreateMultipartUploadRequest</span>.builder()
+                .bucket(BUCKET).key(s3Key).build());
+
+        <span class="cls">int</span> totalChunks = (<span class="kw">int</span>) <span class="cls">Math</span>.ceil(
+            (<span class="kw">double</span>) req.getFileSizeBytes() / CHUNK_SIZE);
+
+        <span class="cm">// Persist video + session</span>
+        videoRepo.save(<span class="cls">Video</span>.builder()
+            .videoId(videoId).channelId(req.getChannelId())
+            .title(req.getTitle()).status(<span class="str">"UPLOADING"</span>).build());
+
+        sessionRepo.save(<span class="cls">UploadSession</span>.builder()
+            .sessionId(<span class="cls">UUID</span>.randomUUID().toString())
+            .videoId(videoId).totalChunks(totalChunks)
+            .s3UploadId(multipart.uploadId())
+            .expiresAt(<span class="cls">Instant</span>.now().plus(<span class="num">24</span>, <span class="cls">ChronoUnit</span>.HOURS))
+            .build());
+
+        <span class="kw">return new</span> <span class="cls">UploadSessionResponse</span>(videoId, totalChunks, CHUNK_SIZE);
+    }
+
+    <span class="cm">/** Phase 2: Upload a single chunk */</span>
+    <span class="kw">public void</span> <span class="fn2">uploadChunk</span>(<span class="cls">String</span> sessionId, <span class="kw">int</span> chunkIdx,
+                               <span class="kw">byte</span>[] data) {
+        <span class="cls">UploadSession</span> session = sessionRepo.findById(sessionId)
+            .orElseThrow(() -> <span class="kw">new</span> <span class="cls">SessionNotFoundException</span>(sessionId));
+
+        <span class="cm">// S3 part numbers are 1-indexed</span>
+        <span class="cls">UploadPartResponse</span> part = s3.uploadPart(
+            <span class="cls">UploadPartRequest</span>.builder()
+                .bucket(BUCKET)
+                .key(<span class="str">"raw/"</span> + session.getVideoId() + <span class="str">"/original"</span>)
+                .uploadId(session.getS3UploadId())
+                .partNumber(chunkIdx + <span class="num">1</span>) <span class="cm">// S3 parts are 1-indexed</span>
+                .build(),
+            <span class="cls">RequestBody</span>.fromBytes(data));
+
+        <span class="cm">// Record this chunk as received</span>
+        session.addReceivedChunk(chunkIdx, part.eTag());
+        sessionRepo.save(session);
+
+        <span class="cm">// All chunks received? Complete the multipart upload</span>
+        <span class="kw">if</span> (session.isComplete()) {
+            <span class="fn2">completeUpload</span>(session);
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">completeUpload</span>(<span class="cls">UploadSession</span> session) {
+        <span class="cls">List</span>&lt;<span class="cls">CompletedPart</span>&gt; parts = session.getParts().stream()
+            .map(p -> <span class="cls">CompletedPart</span>.builder()
+                .partNumber(p.getIndex() + <span class="num">1</span>)
+                .eTag(p.getEtag()).build())
+            .collect(<span class="cls">Collectors</span>.toList());
+
+        s3.completeMultipartUpload(<span class="cls">CompleteMultipartUploadRequest</span>.builder()
+            .bucket(BUCKET)
+            .key(<span class="str">"raw/"</span> + session.getVideoId() + <span class="str">"/original"</span>)
+            .uploadId(session.getS3UploadId())
+            .multipartUpload(<span class="cls">CompletedMultipartUpload</span>.builder()
+                .parts(parts).build())
+            .build());
+
+        <span class="cm">// Update video status + trigger pipeline</span>
+        videoRepo.updateStatus(session.getVideoId(), <span class="str">"PROCESSING"</span>);
+        kafka.send(<span class="str">"video-uploaded"</span>, <span class="kw">new</span> <span class="cls">VideoEvent</span>(session.getVideoId()));
+    }
+}
+
+<span class="cm">// ── 2. Transcoding Orchestrator ───────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">TranscodingOrchestrator</span> {
+
+    <span class="kw">private static final</span> <span class="kw">int</span>[] RESOLUTIONS = {<span class="num">360</span>, <span class="num">480</span>, <span class="num">720</span>, <span class="num">1080</span>, <span class="num">2160</span>};
+    <span class="kw">private static final</span> <span class="kw">int</span>    SEGMENT_SEC  = <span class="num">120</span>; <span class="cm">// 2-minute segments</span>
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">TranscodeJobQueue</span> jobQueue;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">VideoRepository</span>  videoRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">S3Client</span>         s3;
+
+    <span class="ann">@KafkaListener</span>(topics = <span class="str">"video-uploaded"</span>)
+    <span class="kw">public void</span> <span class="fn2">onVideoUploaded</span>(<span class="cls">VideoEvent</span> event) {
+        <span class="kw">long</span> videoId = event.getVideoId();
+        <span class="cls">Video</span> video = videoRepo.findById(videoId);
+
+        <span class="cm">// Probe video duration to calculate segments</span>
+        <span class="kw">int</span> durationSec = <span class="fn2">probeDuration</span>(video.getRawS3Key());
+        <span class="kw">int</span> numSegments = (<span class="kw">int</span>) <span class="cls">Math</span>.ceil(
+            (<span class="kw">double</span>) durationSec / SEGMENT_SEC);
+
+        <span class="cm">// Submit jobs: numSegments × numResolutions in parallel</span>
+        <span class="cls">List</span>&lt;<span class="cls">TranscodeJob</span>&gt; jobs = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+        <span class="kw">for</span> (<span class="kw">int</span> seg = <span class="num">0</span>; seg < numSegments; seg++) {
+            <span class="kw">for</span> (<span class="kw">int</span> res : RESOLUTIONS) {
+                jobs.add(<span class="cls">TranscodeJob</span>.builder()
+                    .videoId(videoId)
+                    .segmentIndex(seg)
+                    .startSec(seg * SEGMENT_SEC)
+                    .durationSec(<span class="cls">Math</span>.min(SEGMENT_SEC,
+                                  durationSec - seg * SEGMENT_SEC))
+                    .resolution(res)
+                    .inputKey(video.getRawS3Key())
+                    .outputKey(<span class="fn2">outputKey</span>(videoId, res, seg))
+                    .build());
+            }
+        }
+        <span class="cm">// Dispatch all jobs to worker queue</span>
+        jobQueue.submitAll(jobs);
+    }
+
+    <span class="cm">/** Called by workers when a segment is done */</span>
+    <span class="kw">public void</span> <span class="fn2">onSegmentComplete</span>(<span class="cls">TranscodeJob</span> job) {
+        <span class="kw">boolean</span> resolutionComplete = jobQueue
+            .markDone(job.getVideoId(), job.getResolution(), job.getSegmentIndex());
+
+        <span class="kw">if</span> (resolutionComplete) {
+            <span class="fn2">stitchSegmentsAndGeneratePlaylist</span>(job.getVideoId(), job.getResolution());
+
+            <span class="cm">// 360p done? Publish video immediately</span>
+            <span class="kw">if</span> (job.getResolution() == <span class="num">360</span>) {
+                videoRepo.updateStatus(job.getVideoId(), <span class="str">"PUBLISHED"</span>);
+            }
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">stitchSegmentsAndGeneratePlaylist</span>(<span class="kw">long</span> videoId, <span class="kw">int</span> res) {
+        <span class="cm">// Generate .m3u8 media playlist listing all segment URLs</span>
+        <span class="cls">StringBuilder</span> playlist = <span class="kw">new</span> <span class="cls">StringBuilder</span>();
+        playlist.append(<span class="str">"#EXTM3U\n#EXT-X-VERSION:3\n"</span>);
+        playlist.append(<span class="str">"#EXT-X-TARGETDURATION:"</span>).append(SEGMENT_SEC).append(<span class="str">"\n"</span>);
+
+        <span class="kw">int</span> segCount = videoRepo.getSegmentCount(videoId);
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < segCount; i++) {
+            playlist.append(<span class="str">"#EXTINF:"</span>).append(SEGMENT_SEC).append(<span class="str">",\n"</span>);
+            playlist.append(<span class="fn2">cdnUrl</span>(videoId, res, i)).append(<span class="str">"\n"</span>);
+        }
+        playlist.append(<span class="str">"#EXT-X-ENDLIST\n"</span>);
+
+        <span class="cm">// Upload playlist to S3</span>
+        <span class="cls">String</span> playlistKey = <span class="str">"processed/"</span> + videoId + <span class="str">"/"</span> + res + <span class="str">"p/playlist.m3u8"</span>;
+        s3.putObject(PROCESSED_BUCKET, playlistKey,
+                     playlist.toString().getBytes());
+
+        <span class="cm">// If all resolutions done, generate master playlist</span>
+        <span class="kw">if</span> (videoRepo.allResolutionsDone(videoId)) {
+            <span class="fn2">generateMasterPlaylist</span>(videoId);
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">generateMasterPlaylist</span>(<span class="kw">long</span> videoId) {
+        <span class="cls">String</span> master =
+            <span class="str">"#EXTM3U\n"</span> +
+            <span class="str">"#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360\n"</span> +
+            <span class="fn2">cdnBase</span>(videoId) + <span class="str">"/360p/playlist.m3u8\n"</span> +
+            <span class="str">"#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720\n"</span> +
+            <span class="fn2">cdnBase</span>(videoId) + <span class="str">"/720p/playlist.m3u8\n"</span> +
+            <span class="str">"#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\n"</span> +
+            <span class="fn2">cdnBase</span>(videoId) + <span class="str">"/1080p/playlist.m3u8\n"</span>;
+        s3.putObject(PROCESSED_BUCKET,
+            <span class="str">"processed/"</span> + videoId + <span class="str">"/master.m3u8"</span>,
+            master.getBytes());
+    }
+}
+
+<span class="cm">// ── 3. View Count Service (sharded Redis) ─────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">ViewCountService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="kw">private static final int</span> SHARDS = <span class="num">10</span>;
+
+    <span class="cm">/**
+     * Atomic view count increment using sharded counters.
+     * Prevents single-key hot spot for viral videos.
+     */</span>
+    <span class="kw">public long</span> <span class="fn2">incrementView</span>(<span class="kw">long</span> videoId, <span class="kw">long</span> userId) {
+        <span class="cls">String</span> today = <span class="cls">LocalDate</span>.now().toString();
+
+        <span class="cm">// Deduplication: one view per user per video per day</span>
+        <span class="cls">String</span> dedupKey = <span class="str">"views_dedup:"</span> + videoId + <span class="str">":"</span> + today;
+        <span class="cls">Boolean</span> isNewView = redis.opsForSet()
+            .add(dedupKey, <span class="cls">String</span>.valueOf(userId)) == <span class="num">1</span>;
+        redis.expire(dedupKey, <span class="cls">Duration</span>.ofHours(<span class="num">25</span>)); <span class="cm">// TTL slightly over 24h</span>
+
+        <span class="kw">if</span> (!isNewView) <span class="kw">return</span> <span class="fn2">getViewCount</span>(videoId); <span class="cm">// already counted</span>
+
+        <span class="cm">// Shard by user ID to distribute hot key load</span>
+        <span class="kw">int</span> shard = (<span class="kw">int</span>) (userId % SHARDS);
+        <span class="cls">String</span> countKey = <span class="str">"view_count:"</span> + videoId + <span class="str">":shard_"</span> + shard;
+        redis.opsForValue().increment(countKey);
+
+        <span class="kw">return</span> <span class="fn2">getViewCount</span>(videoId);
+    }
+
+    <span class="kw">public long</span> <span class="fn2">getViewCount</span>(<span class="kw">long</span> videoId) {
+        <span class="cm">// Sum across all shards</span>
+        <span class="kw">return</span> <span class="cls">LongStream</span>.range(<span class="num">0</span>, SHARDS)
+            .mapToObj(s -> redis.opsForValue()
+                .get(<span class="str">"view_count:"</span> + videoId + <span class="str">":shard_"</span> + s))
+            .filter(<span class="cls">Objects</span>::nonNull)
+            .mapToLong(<span class="cls">Long</span>::parseLong)
+            .sum();
+    }
+
+    <span class="cm">/** Scheduled: flush Redis counts to MySQL every 30 seconds */</span>
+    <span class="ann">@Scheduled</span>(fixedDelay = <span class="num">30_000</span>)
+    <span class="kw">public void</span> <span class="fn2">flushToDatabase</span>() {
+        <span class="cm">// Scan for all view_count keys, aggregate, update MySQL</span>
+        redis.keys(<span class="str">"view_count:*:shard_0"</span>).forEach(key -> {
+            <span class="kw">long</span> videoId = <span class="fn2">extractVideoId</span>(key);
+            <span class="kw">long</span> total = <span class="fn2">getViewCount</span>(videoId);
+            videoRepo.setViewCount(videoId, total); <span class="cm">// SET not increment</span>
+        });
+    }
+}
+</code></pre>
+        </div>
+
+        <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# YouTube — Python Implementation
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> math, time, uuid, hashlib, threading
+<span class="kw">from</span> typing <span class="kw">import</span> List, Optional
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> datetime <span class="kw">import</span> date
+
+
+<span class="cm"># ── 1. Video Upload Service ───────────────────────────</span>
+<span class="kw">class</span> <span class="cls">VideoUploadService</span>:
+    <span class="str">"""
+    Handles chunked resumable video upload to S3.
+    Uses S3 Multipart Upload for reliability and parallelism.
+    """</span>
+    CHUNK_SIZE   = <span class="num">5</span> * <span class="num">1024</span> * <span class="num">1024</span>  <span class="cm"># 5 MB</span>
+    RAW_BUCKET   = <span class="str">"yt-videos-raw"</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, s3_client, video_repo, session_repo, kafka):
+        self.s3       = s3_client
+        self.videos   = video_repo
+        self.sessions = session_repo
+        self.kafka    = kafka
+
+    <span class="kw">def</span> <span class="fn2">initiate_upload</span>(self, channel_id: int, title: str,
+                          file_size_bytes: int, description: str = <span class="str">""</span>) -> dict:
+        <span class="str">"""Phase 1: Create video record + S3 multipart session"""</span>
+        video_id  = self._snowflake_id()
+        s3_key    = f<span class="str">"raw/{video_id}/original"</span>
+        total_chunks = math.ceil(file_size_bytes / self.CHUNK_SIZE)
+
+        <span class="cm"># Start S3 Multipart Upload</span>
+        response = self.s3.create_multipart_upload(
+            Bucket=self.RAW_BUCKET, Key=s3_key)
+        s3_upload_id = response[<span class="str">"UploadId"</span>]
+
+        <span class="cm"># Persist video record</span>
+        self.videos.save({
+            <span class="str">"video_id"</span>: video_id, <span class="str">"channel_id"</span>: channel_id,
+            <span class="str">"title"</span>: title, <span class="str">"description"</span>: description,
+            <span class="str">"status"</span>: <span class="str">"UPLOADING"</span>, <span class="str">"created_at"</span>: time.time()
+        })
+
+        session_id = str(uuid.uuid4())
+        self.sessions.save({
+            <span class="str">"session_id"</span>: session_id, <span class="str">"video_id"</span>: video_id,
+            <span class="str">"s3_upload_id"</span>: s3_upload_id,
+            <span class="str">"total_chunks"</span>: total_chunks, <span class="str">"received"</span>: {},
+            <span class="str">"expires_at"</span>: time.time() + <span class="num">86400</span>
+        })
+        <span class="kw">return</span> {<span class="str">"session_id"</span>: session_id, <span class="str">"video_id"</span>: video_id,
+                <span class="str">"total_chunks"</span>: total_chunks, <span class="str">"chunk_size"</span>: self.CHUNK_SIZE}
+
+    <span class="kw">def</span> <span class="fn2">upload_chunk</span>(self, session_id: str, chunk_idx: int,
+                       data: bytes, md5_b64: str):
+        <span class="str">"""Phase 2: Upload one chunk. Idempotent — safe to retry."""</span>
+        session = self.sessions.get(session_id)
+        <span class="kw">if not</span> session <span class="kw">or</span> time.time() > session[<span class="str">"expires_at"</span>]:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"Session not found or expired"</span>)
+
+        <span class="cm"># Upload to S3 (part numbers are 1-indexed)</span>
+        part_resp = self.s3.upload_part(
+            Bucket=self.RAW_BUCKET,
+            Key=f<span class="str">"raw/{session['video_id']}/original"</span>,
+            UploadId=session[<span class="str">"s3_upload_id"</span>],
+            PartNumber=chunk_idx + <span class="num">1</span>,
+            Body=data,
+            ContentMD5=md5_b64
+        )
+        session[<span class="str">"received"</span>][chunk_idx] = part_resp[<span class="str">"ETag"</span>]
+        self.sessions.update(session_id, {<span class="str">"received"</span>: session[<span class="str">"received"</span>]})
+
+        <span class="cm"># All chunks received? Complete upload.</span>
+        <span class="kw">if</span> len(session[<span class="str">"received"</span>]) == session[<span class="str">"total_chunks"</span>]:
+            self._complete_upload(session)
+
+    <span class="kw">def</span> <span class="fn2">_complete_upload</span>(self, session: dict):
+        parts = [
+            {<span class="str">"PartNumber"</span>: idx + <span class="num">1</span>, <span class="str">"ETag"</span>: etag}
+            <span class="kw">for</span> idx, etag <span class="kw">in</span> sorted(session[<span class="str">"received"</span>].items())
+        ]
+        self.s3.complete_multipart_upload(
+            Bucket=self.RAW_BUCKET,
+            Key=f<span class="str">"raw/{session['video_id']}/original"</span>,
+            UploadId=session[<span class="str">"s3_upload_id"</span>],
+            MultipartUpload={<span class="str">"Parts"</span>: parts}
+        )
+        self.videos.update_status(session[<span class="str">"video_id"</span>], <span class="str">"PROCESSING"</span>)
+        self.kafka.send(<span class="str">"video-uploaded"</span>,
+            key=str(session[<span class="str">"video_id"</span>]),
+            value={<span class="str">"video_id"</span>: session[<span class="str">"video_id"</span>]})
+
+
+<span class="cm"># ── 2. Transcoding Orchestrator ───────────────────────</span>
+<span class="kw">class</span> <span class="cls">TranscodingOrchestrator</span>:
+    RESOLUTIONS  = [<span class="num">360</span>, <span class="num">480</span>, <span class="num">720</span>, <span class="num">1080</span>, <span class="num">2160</span>]
+    SEGMENT_SEC  = <span class="num">120</span>  <span class="cm"># 2-minute segments for parallel processing</span>
+    PROC_BUCKET  = <span class="str">"yt-videos-processed"</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, job_queue, video_repo, s3):
+        self.jobs   = job_queue
+        self.videos = video_repo
+        self.s3     = s3
+
+    <span class="kw">def</span> <span class="fn2">on_video_uploaded</span>(self, video_id: int):
+        <span class="str">"""Kafka consumer handler — splits video and dispatches jobs"""</span>
+        video    = self.videos.get(video_id)
+        duration = self._probe_duration(video[<span class="str">"raw_s3_key"</span>])
+        num_segs = math.ceil(duration / self.SEGMENT_SEC)
+
+        <span class="cm"># Create numSegments × numResolutions jobs in parallel</span>
+        all_jobs = [
+            {
+                <span class="str">"video_id"</span>:     video_id,
+                <span class="str">"segment_idx"</span>:  seg,
+                <span class="str">"start_sec"</span>:    seg * self.SEGMENT_SEC,
+                <span class="str">"duration_sec"</span>: min(self.SEGMENT_SEC, duration - seg * self.SEGMENT_SEC),
+                <span class="str">"resolution"</span>:   res,
+                <span class="str">"input_key"</span>:    video[<span class="str">"raw_s3_key"</span>],
+                <span class="str">"output_key"</span>:   f<span class="str">"processed/{video_id}/{res}p/seg_{seg:04d}.ts"</span>
+            }
+            <span class="kw">for</span> seg <span class="kw">in</span> range(num_segs)
+            <span class="kw">for</span> res <span class="kw">in</span> self.RESOLUTIONS
+        ]
+        self.jobs.submit_batch(all_jobs)
+
+    <span class="kw">def</span> <span class="fn2">on_segment_complete</span>(self, video_id: int, resolution: int, segment_idx: int):
+        <span class="str">"""Called by GPU workers when a segment finishes transcoding"""</span>
+        self.jobs.mark_done(video_id, resolution, segment_idx)
+        resolution_done = self.jobs.is_resolution_complete(video_id, resolution)
+
+        <span class="kw">if</span> resolution_done:
+            self._generate_media_playlist(video_id, resolution)
+            <span class="kw">if</span> resolution == <span class="num">360</span>:
+                <span class="cm"># 360p is ready — make video public IMMEDIATELY</span>
+                self.videos.update_status(video_id, <span class="str">"PUBLISHED"</span>)
+                <span class="cm"># Notify subscribers asynchronously</span>
+
+        <span class="kw">if</span> self.jobs.all_resolutions_complete(video_id):
+            self._generate_master_playlist(video_id)
+
+    <span class="kw">def</span> <span class="fn2">_generate_media_playlist</span>(self, video_id: int, res: int):
+        <span class="str">"""Build HLS media playlist (.m3u8) for one resolution"""</span>
+        num_segs = self.jobs.get_segment_count(video_id)
+        lines = [<span class="str">"#EXTM3U"</span>, <span class="str">"#EXT-X-VERSION:3"</span>,
+                 f<span class="str">"#EXT-X-TARGETDURATION:{self.SEGMENT_SEC}"</span>]
+        <span class="kw">for</span> i <span class="kw">in</span> range(num_segs):
+            lines.append(f<span class="str">"#EXTINF:{self.SEGMENT_SEC},"</span>)
+            lines.append(f<span class="str">"https://cdn.yt.com/processed/{video_id}/{res}p/seg_{i:04d}.ts"</span>)
+        lines.append(<span class="str">"#EXT-X-ENDLIST"</span>)
+
+        playlist_content = <span class="str">"\n"</span>.join(lines)
+        self.s3.put_object(
+            Bucket=self.PROC_BUCKET,
+            Key=f<span class="str">"processed/{video_id}/{res}p/playlist.m3u8"</span>,
+            Body=playlist_content.encode(),
+            ContentType=<span class="str">"application/vnd.apple.mpegurl"</span>
+        )
+
+    <span class="kw">def</span> <span class="fn2">_generate_master_playlist</span>(self, video_id: int):
+        <span class="str">"""Build HLS master playlist listing all available quality levels"""</span>
+        bandwidth_map = {<span class="num">360</span>: <span class="num">500000</span>, <span class="num">480</span>: <span class="num">1000000</span>,
+                         <span class="num">720</span>: <span class="num">2500000</span>, <span class="num">1080</span>: <span class="num">5000000</span>, <span class="num">2160</span>: <span class="num">20000000</span>}
+        res_map = {<span class="num">360</span>:<span class="str">"640x360"</span>, <span class="num">480</span>:<span class="str">"854x480"</span>, <span class="num">720</span>:<span class="str">"1280x720"</span>,
+                   <span class="num">1080</span>:<span class="str">"1920x1080"</span>, <span class="num">2160</span>:<span class="str">"3840x2160"</span>}
+
+        lines = [<span class="str">"#EXTM3U"</span>]
+        <span class="kw">for</span> res <span class="kw">in</span> self.RESOLUTIONS:
+            lines.append(
+                f<span class="str">"#EXT-X-STREAM-INF:BANDWIDTH={bandwidth_map[res]},RESOLUTION={res_map[res]}"</span>)
+            lines.append(f<span class="str">"https://cdn.yt.com/processed/{video_id}/{res}p/playlist.m3u8"</span>)
+
+        self.s3.put_object(
+            Bucket=self.PROC_BUCKET,
+            Key=f<span class="str">"processed/{video_id}/master.m3u8"</span>,
+            Body=<span class="str">"\n"</span>.join(lines).encode(),
+            ContentType=<span class="str">"application/vnd.apple.mpegurl"</span>
+        )
+        self.videos.update_hls_manifest(video_id,
+            f<span class="str">"https://cdn.yt.com/processed/{video_id}/master.m3u8"</span>)
+
+
+<span class="cm"># ── 3. View Count Service ─────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">ViewCountService</span>:
+    <span class="str">"""
+    Sharded Redis counters for view counts.
+    Prevents single hot key during viral spikes.
+    Periodic flush to MySQL for persistence.
+    """</span>
+    SHARDS = <span class="num">10</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, redis_client, video_repo):
+        self.redis  = redis_client
+        self.videos = video_repo
+
+    <span class="kw">def</span> <span class="fn2">record_view</span>(self, video_id: int, user_id: int,
+                      watched_sec: int) -> int:
+        <span class="str">"""Record a view if user watched ≥30 seconds. Deduplicates per day."""</span>
+        <span class="kw">if</span> watched_sec < <span class="num">30</span>:
+            <span class="kw">return</span> self.get_view_count(video_id)  <span class="cm"># not a real view</span>
+
+        today = date.today().isoformat()
+        dedup_key = f<span class="str">"views_dedup:{video_id}:{today}"</span>
+
+        <span class="cm"># SADD returns 1 if new member (first view today), 0 if already seen</span>
+        is_new = self.redis.sadd(dedup_key, str(user_id)) == <span class="num">1</span>
+        self.redis.expire(dedup_key, <span class="num">90000</span>)  <span class="cm"># 25h TTL</span>
+
+        <span class="kw">if not</span> is_new:
+            <span class="kw">return</span> self.get_view_count(video_id)
+
+        <span class="cm"># Shard by user_id to distribute hot-key load</span>
+        shard    = user_id % self.SHARDS
+        cnt_key  = f<span class="str">"view_count:{video_id}:shard_{shard}"</span>
+        self.redis.incr(cnt_key)
+        <span class="kw">return</span> self.get_view_count(video_id)
+
+    <span class="kw">def</span> <span class="fn2">get_view_count</span>(self, video_id: int) -> int:
+        <span class="str">"""Sum all 10 shards for total view count"""</span>
+        total = <span class="num">0</span>
+        pipe = self.redis.pipeline()
+        <span class="kw">for</span> shard <span class="kw">in</span> range(self.SHARDS):
+            pipe.get(f<span class="str">"view_count:{video_id}:shard_{shard}"</span>)
+        results = pipe.execute()
+        <span class="kw">return</span> sum(int(v) <span class="kw">if</span> v <span class="kw">else</span> <span class="num">0</span> <span class="kw">for</span> v <span class="kw">in</span> results)
+
+    <span class="kw">def</span> <span class="fn2">flush_to_database</span>(self):
+        <span class="str">"""Scheduled every 30s: persist Redis counts to MySQL"""</span>
+        cursor = self.redis.scan_iter(<span class="str">"view_count:*:shard_0"</span>)
+        <span class="kw">for</span> key <span class="kw">in</span> cursor:
+            video_id = int(key.decode().split(<span class="str">":"</span>)[<span class="num">1</span>])
+            total    = self.get_view_count(video_id)
+            <span class="kw">if</span> total > <span class="num">0</span>:
+                self.videos.set_view_count(video_id, total)
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRADEOFFS ══ -->
+<div id="tradeoffs" class="panel">
+  <div class="sec">
+    <div class="sec-head">⚖️ Design Tradeoffs & Decisions</div>
+    <div class="sec-body"><div class="warn-box"><strong>Video systems have unique tradeoffs</strong> around storage cost, encoding efficiency, and streaming latency. Always tie your choices back to the scale numbers.</div></div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📡 Streaming Protocol: HLS vs DASH vs Progressive Download</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ HLS (HTTP Live Streaming)</div><p>Native iOS/Safari support. CDN-friendly (standard HTTP GETs). Adaptive bitrate built-in. Segment-based seeking is O(1). Wide device support. De-facto standard.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ DASH (Dynamic Adaptive Streaming)</div><p>More flexible codec support (VP9, AV1). Better for DRM. But: no native iOS support — needs JavaScript player shim. YouTube uses DASH for Chrome/Android but HLS for iOS. More complex.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">❌ Progressive Download</div><p>Server streams a single large file via HTTP Range. Simple but: no adaptive quality (stuck at one bitrate), seeking requires downloading to that byte position, huge CDN cache files. Only practical for very short videos.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">⚙️ Transcoding Architecture: Dedicated Fleet vs Serverless vs Managed Service</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Dedicated GPU Fleet</div><p>Maximum control over encoding parameters. GPU instances (NVIDIA A100) encode H.264 at 100× real-time. Auto-scales via Kubernetes. At YouTube scale (500 hrs/min), managed services are cost-prohibitive.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ Managed (AWS Elemental / GCP Transcoder)</div><p>Zero ops overhead. Pay per minute of transcoded video. Great for startups/medium scale. But: limited customisation, expensive at massive scale ($0.017/min × YouTube volume = billions/month).</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Segment-level parallelism</div><p>The key innovation: splitting video into 2-min segments before transcoding. A 2-hour video becomes 60 independent jobs. 60 GPU workers process in ~2 minutes instead of 120. Critical for YouTube's upload-to-playable SLA of 3 minutes.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">💾 Storage Tiering: Hot vs Warm vs Cold</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Tiered Storage (S3 ILM)</div><p>Intelligent Lifecycle Management: new/popular videos on SSD (fast, expensive). Old/rare videos on Glacier (slow, very cheap at $0.004/GB/month vs $0.023/GB for SSD). 80% of storage is cold tier → enormous cost savings at EB scale.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ All on Hot Storage</div><p>Simple but cost-prohibitive. 1 exabyte × $0.023/GB = $23 billion/month in S3 costs alone. Obviously impossible. Tiering is not optional — it's existential.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 Glacier retrieval latency</div><p>Cold tier retrieval takes minutes (Glacier Instant is seconds). For rarely-watched old videos, a few minutes of initial buffering is acceptable — the video wasn't going to start playing instantly anyway. Hot videos are already in CDN edge cache.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">👁 View Counts: Redis Sharded Counter vs DB Row vs Kafka Event Stream</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Sharded Redis Counter</div><p>INCR is atomic and &lt;1ms. Shard across 10 keys per video to handle hot videos (33K INCR/sec for viral → 3.3K per shard). Periodic flush to MySQL. Near-real-time accuracy.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Direct DB Row Update</div><p>33K row locks/sec on one row = deadlock disaster. Even with optimistic locking, contention kills performance. SQL databases can't handle hot-row update patterns at this rate.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">⚠️ Kafka Event Stream</div><p>Every view event to Kafka, consumer aggregates counts. Accurate, auditable, replayable. But: higher complexity and ~seconds latency to reflect counts. Good for offline analytics, not for real-time display. Can combine: Redis for display, Kafka for analytics.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">📤 Upload Strategy: Chunked Resumable vs Direct Upload vs Presigned URL</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ Chunked + S3 Multipart</div><p>Files split to 5MB chunks. Parallel upload (5–10 concurrent). Resumable: only missing chunks re-sent on failure. MD5 per chunk for integrity. Server never holds full file in memory. Industry standard for large files.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">❌ Single POST through server</div><p>Whole 2GB file through app server. Server is memory and bandwidth bottleneck. No resume on failure — full re-upload. At 71 videos/sec × 200MB avg = 14.2 GB/s through app servers. Impossible.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 vs Simple Presigned URL</div><p>Simple presigned URL (like Instagram) works for small files (&lt;100MB). For videos up to 256GB, S3 Multipart is required — S3 doesn't support single-PUT for files over 5GB. Multipart also enables progress tracking and resumability that single presigned PUT doesn't.</p></div>
+    </div>
+  </div>
+
+  <div class="to-card">
+    <div class="to-head">🎬 Codec Choice: H.264 vs H.265 vs AV1</div>
+    <div class="to-body">
+      <div class="to-col"><div class="to-col-head tc-pick">✅ H.264 (Primary) + AV1 (Growing)</div><p>H.264: universal device support, hardware decode everywhere. AV1: 30–50% better compression than H.264 at same quality — huge storage and bandwidth savings at YouTube scale. YouTube now serves AV1 on supported devices.</p></div>
+      <div class="to-col"><div class="to-col-head tc-alt">⚠️ H.265 (HEVC)</div><p>50% better than H.264 but: patent licensing costs, inconsistent hardware decode support on older devices, iOS support only recent. Between H.264's universality and AV1's royalty-free efficiency, H.265 is the middle child nobody loves.</p></div>
+      <div class="to-col"><div class="to-col-head tc-why">💡 The tradeoff</div><p>Encode once in H.264 (universal), serve AV1 to modern browsers/devices. Dual encoding costs ~2× transcoding compute but pays back in bandwidth savings. At 300 Tbps CDN egress, even 30% savings = 90 Tbps less bandwidth — saves millions per day.</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchLang(lang, btn) {
+  document.querySelectorAll('.cblock').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
