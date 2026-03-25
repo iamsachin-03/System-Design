@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 4 — Building Social Networks</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--green:#22c55e;--amber:#f59e0b;
+  --red:#ef4444;--purple:#7c3aed;--pink:#ec4899;--teal:#14b8a6;
+  --orange:#f97316;--text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+.hb-pk{color:var(--pink);border-color:var(--pink);background:rgba(236,72,153,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+strong{color:var(--text)}
+
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-pk{border-top:2px solid var(--pink)}
+.ct-o{border-top:2px solid var(--orange)}.ct-t{border-top:2px solid var(--teal)}
+
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}.lcss{background:rgba(168,85,247,.2);color:#c084fc}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;border:1px solid;transition:all .15s}
+.dbtn-c{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--accent)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+.dbtn-a{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+.dbtn-p{background:rgba(124,58,237,.08);border-color:#a78bfa;color:#a78bfa}
+
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;margin-top:14px}
+
+/* Upload progress */
+.upload-track{background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin:5px 0;font-family:'JetBrains Mono',monospace;font-size:11px}
+.progress-bar{height:5px;background:var(--border);border-radius:3px;margin-top:5px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+/* Hashtag counter demo */
+.htag{display:inline-block;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;margin:2px;cursor:pointer;transition:all .2s}
+.htag:hover{background:rgba(0,229,255,.15)}
+
+/* Message indicator */
+.msg-ind{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;margin:5px 0;font-size:13px;transition:all .3s}
+.badge-count{background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;min-width:20px;text-align:center;transition:all .3s}
+.badge-count.zero{background:var(--border);color:var(--muted)}
+
+/* gravatar avatar demo */
+.av-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0}
+.av-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+.av-circle{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#fff}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 4 · Building Social Networks — All 5 Topics</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">Photos at Scale</span>
+    <span class="hbadge hb-g">Private Photos</span>
+    <span class="hbadge hb-p">Gravatar & OG</span>
+    <span class="hbadge hb-a">HashTag Counter</span>
+    <span class="hbadge hb-pk">Msg Indicators</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>Photos Upload at Scale</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>Private Photos (Instagram)</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>Gravatar &amp; Dynamic OG Images</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>Concurrent HashTag Counter</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Message Indicators</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════════════ T1: PHOTOS UPLOAD AT SCALE ══════════════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t1a">Problem & Requirements</div>
+    <div class="stab" data-s="t1b">Upload Architecture</div>
+    <div class="stab" data-s="t1c">Processing Pipeline</div>
+    <div class="stab" data-s="t1d">Serving & CDN</div>
+    <div class="stab" data-s="t1e">Schema & Capacity</div>
+    <div class="stab" data-s="t1f">Code</div>
+    <div class="stab" data-s="t1g">Tradeoffs & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">Photos Upload &amp; Serving <em>at Scale</em></div>
+    <p class="psub">Design an image service that handles 5 million photo uploads per hour, processes them for multiple device resolutions, and serves them globally with sub-100ms latency. This is the core of every social network.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">5M</div><div class="slbl">Uploads / hour</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">~1,400</div><div class="slbl">Uploads / second</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">50×</div><div class="slbl">Read:Write ratio</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">&lt;100ms</div><div class="slbl">Image serve latency (CDN)</div></div>
+    </div>
+    <h3>Requirements</h3>
+    <div class="g g3">
+      <div class="card ct-c">
+        <h4>Functional</h4>
+        <ul class="rl">
+          <li>Upload photos up to <strong>8 MB</strong> per image</li>
+          <li>Serve images to clients of <strong>any device/resolution</strong></li>
+          <li>Support <strong>JPEG, PNG, WebP, HEIC</strong> formats</li>
+          <li>Generate <strong>thumbnails</strong> (150px, 400px, 1080px)</li>
+          <li>Associate metadata: caption, tags, location, timestamp</li>
+          <li>Delete and soft-delete photos</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Non-Functional</h4>
+        <ul class="rl">
+          <li>Upload acknowledgment <strong>&lt;2s</strong> (async processing ok)</li>
+          <li>Serve image <strong>&lt;100ms p99</strong> from CDN</li>
+          <li>Storage <strong>durability: 99.999999999%</strong> (11 9s)</li>
+          <li><strong>High availability</strong> — no upload failures during partial outages</li>
+          <li>Support <strong>resumable uploads</strong> for large files / flaky connections</li>
+        </ul>
+      </div>
+      <div class="card ct-a">
+        <h4>Scale</h4>
+        <ul class="rl">
+          <li>5M uploads/hr = <strong>1,400 uploads/sec</strong></li>
+          <li>Avg 3 MB per photo → <strong>4.2 GB/s write bandwidth</strong></li>
+          <li>50× read:write → <strong>70,000 image serves/sec</strong></li>
+          <li>1 year = 5M × 24 × 365 = <strong>43.8B photos stored</strong></li>
+          <li>Storage = 43.8B × 3 variants × 1.5 MB avg = <strong>~200 PB/year</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle">Upload <em>Architecture</em></div>
+    <h3>Direct vs Pre-Signed URL Upload</h3>
+    <div class="tdp">
+      <div class="tdc con">
+        <h4>❌ Upload through API server</h4>
+        <ul>
+          <li>Client → API server → S3. API server becomes the bottleneck at 4.2 GB/s</li>
+          <li>API server must buffer the entire file in memory</li>
+          <li>Network bandwidth cost: API server pays egress fees to re-upload to S3</li>
+          <li>Single point of failure in the upload path</li>
+        </ul>
+      </div>
+      <div class="tdc pro">
+        <h4>✅ Pre-Signed URL (Direct Upload)</h4>
+        <ul>
+          <li>Client → API server: "I want to upload" → server generates pre-signed S3 URL</li>
+          <li>Client uploads directly to S3 — API server never touches the bytes</li>
+          <li>S3 handles 4.2 GB/s without any API server involvement</li>
+          <li>Pre-signed URL expires in 15 min — security without proxying</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Upload Flow Architecture</h3>
+    <div class="diag">
+<svg viewBox="0 0 720 180" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs>
+    <marker id="a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="ag" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#22c55e" opacity=".8"/></marker>
+    <marker id="aa" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L7,3z" fill="#f59e0b" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="716" height="176" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Client -->
+  <rect x="14" y="60" width="90" height="60" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="59" y="84" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Client App</text>
+  <text x="59" y="100" text-anchor="middle" fill="#5a6a85" font-size="8">Mobile / Web</text>
+  <text x="59" y="113" text-anchor="middle" fill="#5a6a85" font-size="8">photo.jpg (8MB)</text>
+  <!-- API Server -->
+  <rect x="156" y="50" width="110" height="80" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="211" y="72" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Upload API</text>
+  <text x="211" y="87" text-anchor="middle" fill="#5a6a85" font-size="8">1. Validate request</text>
+  <text x="211" y="100" text-anchor="middle" fill="#5a6a85" font-size="8">2. Gen pre-signed URL</text>
+  <text x="211" y="113" text-anchor="middle" fill="#5a6a85" font-size="8">3. Save metadata</text>
+  <text x="211" y="123" text-anchor="middle" fill="#5a6a85" font-size="8">4. Publish to Kafka</text>
+  <!-- S3 -->
+  <rect x="326" y="30" width="110" height="50" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="381" y="52" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">S3 / GCS</text>
+  <text x="381" y="68" text-anchor="middle" fill="#5a6a85" font-size="8">Raw photo stored</text>
+  <!-- Kafka -->
+  <rect x="326" y="100" width="110" height="50" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="381" y="122" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Kafka</text>
+  <text x="381" y="138" text-anchor="middle" fill="#5a6a85" font-size="8">photo.uploaded topic</text>
+  <!-- Processing Workers -->
+  <rect x="494" y="20" width="210" height="140" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="599" y="38" text-anchor="middle" fill="#3a4a60" font-size="8" letter-spacing="1">ASYNC PROCESSING WORKERS</text>
+  <rect x="504" y="46" width="90" height="32" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="549" y="62" text-anchor="middle" fill="#86efac" font-size="9">Resize Worker</text>
+  <text x="549" y="73" text-anchor="middle" fill="#5a6a85" font-size="7.5">150/400/1080px</text>
+  <rect x="604" y="46" width="90" height="32" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1"/>
+  <text x="649" y="62" text-anchor="middle" fill="#00e5ff" font-size="9">Format Worker</text>
+  <text x="649" y="73" text-anchor="middle" fill="#5a6a85" font-size="7.5">→ WebP / AVIF</text>
+  <rect x="504" y="90" width="90" height="32" rx="3" fill="#131a2a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="549" y="106" text-anchor="middle" fill="#fcd34d" font-size="9">CDN Warm</text>
+  <text x="549" y="117" text-anchor="middle" fill="#5a6a85" font-size="7.5">Pre-warm edges</text>
+  <rect x="604" y="90" width="90" height="32" rx="3" fill="#131a2a" stroke="#ec4899" stroke-width="1"/>
+  <text x="649" y="106" text-anchor="middle" fill="#ec4899" font-size="9">ML Worker</text>
+  <text x="649" y="117" text-anchor="middle" fill="#5a6a85" font-size="7.5">NSFW / objects</text>
+  <rect x="504" y="134" width="190" height="18" rx="3" fill="#0e1420" stroke="#1e2d45" stroke-dasharray="2,2"/>
+  <text x="599" y="146" text-anchor="middle" fill="#3a4a60" font-size="8">All workers → CDN-optimised S3 bucket</text>
+  <!-- Arrows -->
+  <line x1="104" y1="87" x2="154" y2="87" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a)" opacity=".8"/>
+  <text x="128" y="82" fill="#00e5ff" font-size="7.5" text-anchor="middle">① req</text>
+  <line x1="211" y1="130" x2="211" y2="155" stroke="#00e5ff" stroke-width="1" stroke-dasharray="3,2" opacity=".5"/>
+  <line x1="104" y1="82" x2="325" y2="48" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag)" opacity=".8"/>
+  <text x="215" y="55" fill="#22c55e" font-size="7.5" text-anchor="middle">② direct upload (pre-signed URL)</text>
+  <line x1="266" y1="100" x2="324" y2="118" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#a)" opacity=".7"/>
+  <text x="292" y="118" fill="#a78bfa" font-size="7.5" text-anchor="middle">③ event</text>
+  <line x1="436" y1="55" x2="492" y2="62" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#aa)" opacity=".7"/>
+  <line x1="436" y1="120" x2="492" y2="100" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#a)" opacity=".7"/>
+  <text x="599" y="168" text-anchor="middle" fill="#3a4a60" font-size="8">Workers pull from Kafka → process → store processed variants in CDN-origin S3</text>
+</svg>
+    </div>
+    <h3>Resumable Uploads — TUS Protocol</h3>
+    <p>For large files on unreliable mobile connections, standard HTTP uploads fail and must restart from scratch. TUS (resumable upload protocol) saves the upload offset, allowing clients to resume from where they left off.</p>
+    <div class="cwrap"><div class="ctop"><span>resumable_upload.py — TUS-style chunked upload</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> hashlib, os
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, Header, UploadFile, HTTPException
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> Response
+<span class="kw">import</span> aiofiles
+
+app    = <span class="fn">FastAPI</span>()
+UPLOAD_DIR = <span class="str">"/tmp/uploads"</span>
+
+<span class="dec">@app.post</span>(<span class="str">"/upload/init"</span>)
+<span class="kw">async def</span> <span class="fn">init_upload</span>(user_id: str, file_size: int, sha256: str):
+    <span class="str">"""Step 1: Client announces intent. Server reserves upload slot."""</span>
+    upload_id = hashlib.<span class="fn">sha256</span>(<span class="str">f"{user_id}{file_size}{sha256}"</span>.<span class="fn">encode</span>()).<span class="fn">hexdigest</span>()[:16]
+    os.<span class="fn">makedirs</span>(UPLOAD_DIR, exist_ok=<span class="kw">True</span>)
+    meta_path = <span class="str">f"{UPLOAD_DIR}/{upload_id}.meta"</span>
+    <span class="kw">async with</span> aiofiles.<span class="fn">open</span>(meta_path, <span class="str">"w"</span>) <span class="kw">as</span> f:
+        <span class="kw">await</span> f.<span class="fn">write</span>(<span class="str">f"{file_size}:{sha256}:0"</span>)   <span class="cmt"># total:hash:offset</span>
+    <span class="kw">return</span> {<span class="str">"upload_id"</span>: upload_id, <span class="str">"offset"</span>: <span class="num">0</span>}
+
+<span class="dec">@app.patch</span>(<span class="str">"/upload/{upload_id}"</span>)
+<span class="kw">async def</span> <span class="fn">upload_chunk</span>(upload_id: str, chunk: <span class="cls">UploadFile</span>,
+                        content_range: str = <span class="fn">Header</span>(<span class="kw">None</span>)):
+    <span class="str">"""Step 2: Client sends chunks. Can be called multiple times."""</span>
+    meta = <span class="kw">await</span> <span class="fn">read_meta</span>(upload_id)
+    offset = meta[<span class="str">"offset"</span>]
+
+    <span class="cmt"># Parse Content-Range: bytes 0-65535/3145728</span>
+    start, end, total = <span class="fn">parse_range</span>(content_range)
+    <span class="kw">if</span> start != offset:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="num">409</span>, <span class="str">f"Expected offset {offset}, got {start}"</span>)
+
+    <span class="cmt"># Append chunk to partial file</span>
+    part_path = <span class="str">f"{UPLOAD_DIR}/{upload_id}.part"</span>
+    <span class="kw">async with</span> aiofiles.<span class="fn">open</span>(part_path, <span class="str">"ab"</span>) <span class="kw">as</span> f:
+        <span class="kw">await</span> f.<span class="fn">write</span>(<span class="kw">await</span> chunk.<span class="fn">read</span>())
+
+    new_offset = end + <span class="num">1</span>
+    <span class="kw">await</span> <span class="fn">update_meta</span>(upload_id, new_offset)
+
+    <span class="kw">if</span> new_offset >= total:   <span class="cmt"># upload complete</span>
+        <span class="kw">await</span> <span class="fn">finalize_upload</span>(upload_id, part_path)
+        <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"complete"</span>}
+
+    <span class="kw">return</span> <span class="cls">Response</span>(status_code=<span class="num">204</span>,
+                    headers={<span class="str">"Upload-Offset"</span>: <span class="fn">str</span>(new_offset)})</pre></div>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle">Image <em>Processing Pipeline</em></div>
+    <p class="psub">Raw uploaded images must be transformed into multiple device-optimised variants before serving. This happens asynchronously via a Kafka-driven worker pipeline.</p>
+    <h3>What Processing Happens</h3>
+    <div class="g g3">
+      <div class="card ct-c">
+        <h4>Resize Variants</h4>
+        <ul class="rl">
+          <li><strong>thumbnail</strong> — 150×150px (profile grid, search results)</li>
+          <li><strong>medium</strong> — 400×400px (feed on mobile)</li>
+          <li><strong>large</strong> — 1080×1080px (detail view on desktop)</li>
+          <li>Maintain aspect ratio with smart cropping</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Format Conversion</h4>
+        <ul class="rl">
+          <li>Convert HEIC/PNG → <strong>WebP</strong> (30% smaller than JPEG at same quality)</li>
+          <li>Convert to <strong>AVIF</strong> for modern browsers (50% smaller than JPEG)</li>
+          <li>Keep original for download requests</li>
+          <li>Strip EXIF metadata (privacy: GPS coordinates)</li>
+        </ul>
+      </div>
+      <div class="card ct-p">
+        <h4>Content Moderation</h4>
+        <ul class="rl">
+          <li>NSFW detection via ML model (async, non-blocking)</li>
+          <li>Object/scene detection for feed ranking signals</li>
+          <li>Perceptual hash (pHash) for duplicate detection</li>
+          <li>Face detection for tagging suggestions</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Processing Pipeline Code</h3>
+    <div class="cwrap"><div class="ctop"><span>image_processor.py — Kafka consumer pipeline</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> PIL <span class="kw">import</span> Image
+<span class="kw">import</span> io, boto3, aiokafka
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+<span class="cls">VARIANTS</span> = [
+    {<span class="str">"suffix"</span>: <span class="str">"thumb"</span>,  <span class="str">"size"</span>: (<span class="num">150</span>, <span class="num">150</span>)},
+    {<span class="str">"suffix"</span>: <span class="str">"medium"</span>, <span class="str">"size"</span>: (<span class="num">400</span>, <span class="num">400</span>)},
+    {<span class="str">"suffix"</span>: <span class="str">"large"</span>,  <span class="str">"size"</span>: (<span class="num">1080</span>, <span class="num">1080</span>)},
+]
+s3 = boto3.<span class="fn">client</span>(<span class="str">"s3"</span>)
+
+<span class="kw">async def</span> <span class="fn">process_photo</span>(photo_id: str, s3_key: str):
+    <span class="str">"""Download raw, generate all variants, upload processed versions."""</span>
+    <span class="cmt"># 1. Download original from S3</span>
+    raw_bytes = s3.<span class="fn">get_object</span>(Bucket=<span class="str">"raw-uploads"</span>, Key=s3_key)[<span class="str">"Body"</span>].<span class="fn">read</span>()
+    img = <span class="cls">Image</span>.<span class="fn">open</span>(io.<span class="cls">BytesIO</span>(raw_bytes))
+
+    <span class="cmt"># 2. Strip EXIF (privacy — removes GPS coordinates)</span>
+    img_clean = <span class="cls">Image</span>.<span class="fn">frombytes</span>(img.mode, img.size, img.<span class="fn">tobytes</span>())
+
+    <span class="cmt"># 3. Generate each size variant in WebP</span>
+    <span class="kw">for</span> v <span class="kw">in</span> VARIANTS:
+        resized = img_clean.<span class="fn">copy</span>()
+        resized.<span class="fn">thumbnail</span>(v[<span class="str">"size"</span>], <span class="cls">Image</span>.<span class="cls">LANCZOS</span>)   <span class="cmt"># high-quality downscale</span>
+        buf = io.<span class="cls">BytesIO</span>()
+        resized.<span class="fn">save</span>(buf, format=<span class="str">"WEBP"</span>, quality=<span class="num">85</span>, method=<span class="num">6</span>)
+        buf.<span class="fn">seek</span>(<span class="num">0</span>)
+
+        dest_key = <span class="str">f"processed/{photo_id}/{v['suffix']}.webp"</span>
+        s3.<span class="fn">put_object</span>(
+            Bucket=<span class="str">"cdn-origin"</span>, Key=dest_key,
+            Body=buf, ContentType=<span class="str">"image/webp"</span>,
+            CacheControl=<span class="str">"public, max-age=31536000, immutable"</span>  <span class="cmt"># 1-year cache</span>
+        )
+
+    <span class="cmt"># 4. Update DB: mark photo as processed</span>
+    <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"UPDATE photos SET status='processed' WHERE id=?"</span>, photo_id)
+
+    <span class="cmt"># 5. Publish completion event (triggers feed update, notifications)</span>
+    <span class="kw">await</span> kafka.<span class="fn">publish</span>(<span class="str">"photo.processed"</span>, {<span class="str">"photo_id"</span>: photo_id})</pre></div>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle">Serving &amp; <em>CDN Strategy</em></div>
+    <p class="psub">Images must be served with &lt;100ms p99 latency globally. This requires a Content Delivery Network (CDN) with intelligent edge caching, responsive image serving, and cache-busting on updates.</p>
+    <h3>CDN Architecture</h3>
+    <div class="diag">
+<svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="a2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+  <marker id="ag2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker>
+  <marker id="ar2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#ef4444" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="146" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Users -->
+  <rect x="14" y="40" width="80" height="70" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="54" y="58" text-anchor="middle" fill="#3a4a60" font-size="8">USERS</text>
+  <text x="54" y="74" text-anchor="middle" fill="#5a6a85" font-size="8">US-East</text>
+  <text x="54" y="88" text-anchor="middle" fill="#5a6a85" font-size="8">EU-West</text>
+  <text x="54" y="102" text-anchor="middle" fill="#5a6a85" font-size="8">APAC</text>
+  <!-- CDN PoPs -->
+  <rect x="150" y="25" width="220" height="100" rx="5" fill="#090d15" stroke="#f59e0b" stroke-dasharray="4,3"/>
+  <text x="260" y="41" text-anchor="middle" fill="#f59e0b" font-size="8" letter-spacing="1">CDN EDGE (300+ PoPs globally)</text>
+  <rect x="160" y="50" width="60" height="28" rx="3" fill="#131a2a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="190" y="65" text-anchor="middle" fill="#fcd34d" font-size="8">US-East</text>
+  <text x="190" y="74" text-anchor="middle" fill="#3a4a60" font-size="7">PoP cache</text>
+  <rect x="230" y="50" width="60" height="28" rx="3" fill="#131a2a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="260" y="65" text-anchor="middle" fill="#fcd34d" font-size="8">EU-West</text>
+  <text x="260" y="74" text-anchor="middle" fill="#3a4a60" font-size="7">PoP cache</text>
+  <rect x="300" y="50" width="60" height="28" rx="3" fill="#131a2a" stroke="#f59e0b" stroke-width="1"/>
+  <text x="330" y="65" text-anchor="middle" fill="#fcd34d" font-size="8">APAC</text>
+  <text x="330" y="74" text-anchor="middle" fill="#3a4a60" font-size="7">PoP cache</text>
+  <text x="260" y="110" text-anchor="middle" fill="#5a6a85" font-size="8">HIT: ~5ms latency · MISS: fetch from origin</text>
+  <!-- S3 Origin -->
+  <rect x="430" y="40" width="120" height="70" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="490" y="62" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">S3 Origin</text>
+  <text x="490" y="77" text-anchor="middle" fill="#5a6a85" font-size="8">cdn-origin bucket</text>
+  <text x="490" y="90" text-anchor="middle" fill="#5a6a85" font-size="8">Cache-Control: 1yr</text>
+  <text x="490" y="103" text-anchor="middle" fill="#5a6a85" font-size="8">immutable (by content hash)</text>
+  <!-- Image optimizer lambda -->
+  <rect x="564" y="50" width="120" height="50" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="624" y="70" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Edge Lambda</text>
+  <text x="624" y="83" text-anchor="middle" fill="#5a6a85" font-size="8">On-the-fly resize</text>
+  <text x="624" y="93" text-anchor="middle" fill="#5a6a85" font-size="7.5">?w=400&format=webp</text>
+  <!-- Arrows -->
+  <line x1="96" y1="68" x2="148" y2="68" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a2)"/>
+  <text x="121" y="62" fill="#00e5ff" font-size="7.5" text-anchor="middle">GET /img</text>
+  <line x1="372" y1="68" x2="428" y2="68" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag2)"/>
+  <text x="399" y="62" fill="#22c55e" font-size="7.5" text-anchor="middle">cache miss</text>
+  <line x1="552" y1="68" x2="562" y2="72" stroke="#a78bfa" stroke-width="1" marker-end="url(#a2)"/>
+</svg>
+    </div>
+    <h3>Cache-Control Strategy</h3>
+    <div class="g g2">
+      <div class="card ct-g">
+        <h4>Immutable URLs via content hash</h4>
+        <p>Store images at content-addressable URLs: <code>cdn.example.com/photos/{sha256_of_content}.webp</code>. Since URL = content hash, the file never changes. Set <code>Cache-Control: max-age=31536000, immutable</code> → CDN caches forever, never needs to revalidate.</p>
+      </div>
+      <div class="card ct-c">
+        <h4>Responsive Image URL pattern</h4>
+        <p>Instead of pre-generating every size variant, use query params + edge Lambda for on-the-fly transform: <code>cdn.example.com/photos/abc.webp?w=400&q=85</code>. Lambda processes and caches at the edge. Infinite size variants with zero pre-computation.</p>
+      </div>
+    </div>
+    <h3>Device-specific Serving</h3>
+    <table>
+      <tr><th>Device</th><th>Variant Served</th><th>Format</th><th>Cache TTL</th></tr>
+      <tr><td>Mobile thumbnail (feed)</td><td>150×150</td><td>WebP</td><td>1 year (immutable)</td></tr>
+      <tr><td>Mobile full view</td><td>1080×1080</td><td>WebP</td><td>1 year (immutable)</td></tr>
+      <tr><td>Desktop full view</td><td>2160×2160 or original</td><td>WebP / AVIF</td><td>1 year (immutable)</td></tr>
+      <tr><td>Retina (2×)</td><td>2× base size</td><td>WebP</td><td>1 year (immutable)</td></tr>
+      <tr><td>Low-bandwidth (Lite mode)</td><td>150×150</td><td>JPEG q=40</td><td>1 year (immutable)</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Schema &amp; <em>Capacity Planning</em></div>
+    <h3>Database Schema</h3>
+    <div class="cwrap"><div class="ctop"><span>photos schema — MySQL + S3 key mapping</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="kw">CREATE TABLE</span> photos (
+    id          <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span> <span class="kw">PRIMARY KEY</span>,  <span class="cmt">-- Snowflake ID</span>
+    user_id     <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+    s3_key      <span class="cls">VARCHAR</span>(<span class="num">256</span>) <span class="kw">NOT NULL</span>,   <span class="cmt">-- raw upload key</span>
+    cdn_key     <span class="cls">VARCHAR</span>(<span class="num">256</span>),              <span class="cmt">-- processed content-hash key (NULL until processed)</span>
+    width       <span class="cls">SMALLINT</span>,
+    height      <span class="cls">SMALLINT</span>,
+    size_bytes  <span class="cls">INT</span>,
+    format      <span class="cls">VARCHAR</span>(<span class="num">8</span>),              <span class="cmt">-- jpeg / png / heic</span>
+    caption     <span class="cls">TEXT</span>,
+    location_lat <span class="cls">DECIMAL</span>(<span class="num">9</span>,<span class="num">6</span>),
+    location_lng <span class="cls">DECIMAL</span>(<span class="num">9</span>,<span class="num">6</span>),
+    status      <span class="cls">ENUM</span>(<span class="str">'uploading'</span>,<span class="str">'processing'</span>,<span class="str">'live'</span>,<span class="str">'deleted'</span>) <span class="kw">DEFAULT</span> <span class="str">'uploading'</span>,
+    created_at  <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,   <span class="cmt">-- epoch ms</span>
+    deleted_at  <span class="cls">BIGINT</span>       <span class="kw">DEFAULT</span> <span class="kw">NULL</span>,
+
+    <span class="kw">INDEX</span> idx_user_created (user_id, created_at <span class="kw">DESC</span>),  <span class="cmt">-- user's photo feed</span>
+    <span class="kw">INDEX</span> idx_status       (status, created_at)           <span class="cmt">-- processing queue query</span>
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="kw">CREATE TABLE</span> photo_variants (
+    photo_id    <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+    variant     <span class="cls">ENUM</span>(<span class="str">'thumb'</span>,<span class="str">'medium'</span>,<span class="str">'large'</span>,<span class="str">'original'</span>) <span class="kw">NOT NULL</span>,
+    cdn_url     <span class="cls">VARCHAR</span>(<span class="num">512</span>) <span class="kw">NOT NULL</span>,
+    width       <span class="cls">SMALLINT</span>,
+    height      <span class="cls">SMALLINT</span>,
+    size_bytes  <span class="cls">INT</span>,
+    <span class="kw">PRIMARY KEY</span> (photo_id, variant)
+);</pre></div>
+
+    <h3>Capacity Estimation</h3>
+    <table>
+      <tr><th>Metric</th><th>Calculation</th><th>Result</th></tr>
+      <tr><td>Upload rate</td><td>5M/hr ÷ 3600</td><td>~1,400 uploads/sec</td></tr>
+      <tr><td>Upload bandwidth</td><td>1,400 × 3 MB avg</td><td>~4.2 GB/s write</td></tr>
+      <tr><td>Processed variants per photo</td><td>thumb + medium + large = 3</td><td>4,200 writes/sec to S3</td></tr>
+      <tr><td>Storage per photo (processed)</td><td>0.1 + 0.5 + 1.5 + 3 = 5.1 MB</td><td>5.1 MB per photo</td></tr>
+      <tr><td>1-year storage</td><td>5M × 24 × 365 × 5.1 MB</td><td>~223 PB</td></tr>
+      <tr><td>CDN serve rate</td><td>50 reads per upload × 1400</td><td>70,000 req/sec</td></tr>
+      <tr><td>CDN bandwidth</td><td>70,000 × 0.3 MB avg serve</td><td>~21 GB/s read from CDN</td></tr>
+      <tr><td>Metadata DB rows/sec</td><td>1,400 INSERTs + 70K reads</td><td>~72K DB ops/sec (need sharding)</td></tr>
+    </table>
+    <div class="call cw"><strong>Storage at 200+ PB/year:</strong> Use S3 Intelligent Tiering — hot photos (recent) stay in S3 Standard; photos older than 30 days auto-move to S3 Infrequent Access (40% cheaper); photos older than 90 days to S3 Glacier (68% cheaper). Automatic, no code changes.</div>
+  </div>
+
+  <div class="spanel" id="t1f">
+    <div class="ptitle">Code — <em>Complete Upload Service</em></div>
+    <div class="ltabs"><div class="ltab on" data-l="u1py">🐍 Python</div><div class="ltab" data-l="u1java">☕ Java</div></div>
+    <div class="lpanel on" id="u1py">
+      <div class="cwrap"><div class="ctop"><span>upload_service.py — pre-signed URL + metadata + Kafka</span><span class="ltag lpy">Python</span></div>
+      <pre><span class="kw">import</span> time, uuid, boto3
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+
+app = <span class="fn">FastAPI</span>()
+s3  = boto3.<span class="fn">client</span>(<span class="str">"s3"</span>)
+
+<span class="kw">class</span> <span class="cls">UploadRequest</span>(BaseModel):
+    user_id: int;  filename: str;  content_type: str;  size_bytes: int
+
+<span class="dec">@app.post</span>(<span class="str">"/photos/upload-url"</span>)
+<span class="kw">async def</span> <span class="fn">get_upload_url</span>(req: <span class="cls">UploadRequest</span>):
+    <span class="str">"""Return pre-signed S3 URL. Client uploads directly — never touches our servers."""</span>
+    photo_id = <span class="fn">generate_snowflake_id</span>()
+    s3_key   = <span class="str">f"raw/{req.user_id}/{photo_id}/{req.filename}"</span>
+
+    <span class="cmt"># Validate: content type and size</span>
+    <span class="kw">if</span> req.content_type <span class="kw">not in</span> {<span class="str">"image/jpeg"</span>,<span class="str">"image/png"</span>,<span class="str">"image/heic"</span>,<span class="str">"image/webp"</span>}:
+        <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"Unsupported type"</span>)
+    <span class="kw">if</span> req.size_bytes > <span class="num">8</span> * <span class="num">1024</span> * <span class="num">1024</span>:  <span class="cmt"># 8 MB max</span>
+        <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"File too large"</span>)
+
+    <span class="cmt"># Generate pre-signed URL valid for 15 minutes</span>
+    presigned = s3.<span class="fn">generate_presigned_url</span>(
+        <span class="str">"put_object"</span>,
+        Params={
+            <span class="str">"Bucket"</span>: <span class="str">"raw-uploads"</span>,
+            <span class="str">"Key"</span>: s3_key,
+            <span class="str">"ContentType"</span>: req.content_type,
+            <span class="str">"ContentLength"</span>: req.size_bytes,
+        },
+        ExpiresIn=<span class="num">900</span>  <span class="cmt"># 15 minutes</span>
+    )
+
+    <span class="cmt"># Store metadata in DB (status = uploading)</span>
+    now = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    <span class="kw">await</span> db.<span class="fn">execute</span>(
+        <span class="str">"INSERT INTO photos(id,user_id,s3_key,status,created_at) VALUES(?,?,?,'uploading',?)"</span>,
+        [photo_id, req.user_id, s3_key, now]
+    )
+
+    <span class="kw">return</span> {
+        <span class="str">"photo_id"</span>: photo_id,
+        <span class="str">"upload_url"</span>: presigned,      <span class="cmt"># client PUT directly to this URL</span>
+        <span class="str">"expires_in"</span>: <span class="num">900</span>
+    }
+
+<span class="dec">@app.post</span>(<span class="str">"/photos/{photo_id}/uploaded"</span>)
+<span class="kw">async def</span> <span class="fn">confirm_upload</span>(photo_id: int, caption: str = <span class="str">""</span>):
+    <span class="str">"""Client calls after S3 PUT succeeds. Triggers async processing."""</span>
+    <span class="kw">await</span> db.<span class="fn">execute</span>(
+        <span class="str">"UPDATE photos SET status='processing', caption=? WHERE id=?"</span>,
+        [caption, photo_id]
+    )
+    <span class="cmt"># Publish to Kafka — triggers resize, format conversion, CDN warm</span>
+    <span class="kw">await</span> kafka.<span class="fn">publish</span>(<span class="str">"photo.uploaded"</span>, {
+        <span class="str">"photo_id"</span>: photo_id,
+        <span class="str">"user_id"</span>:  <span class="kw">await</span> <span class="fn">get_user_id</span>(photo_id)
+    })
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"processing"</span>, <span class="str">"photo_id"</span>: photo_id}</pre></div>
+    </div>
+    <div class="lpanel" id="u1java">
+      <div class="cwrap"><div class="ctop"><span>PhotoUploadController.java — Spring Boot</span><span class="ltag ljv">Java</span></div>
+      <pre><span class="dec">@RestController</span> <span class="dec">@RequestMapping</span>(<span class="str">"/photos"</span>)
+<span class="kw">public class</span> <span class="cls">PhotoUploadController</span> {
+    <span class="kw">private final</span> <span class="cls">S3Presigner</span>    presigner;
+    <span class="kw">private final</span> <span class="cls">PhotoRepository</span> repo;
+    <span class="kw">private final</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">PhotoEvent</span>&gt; kafka;
+
+    <span class="dec">@PostMapping</span>(<span class="str">"/upload-url"</span>)
+    <span class="kw">public</span> <span class="cls">UploadResponse</span> <span class="fn">getUploadUrl</span>(<span class="dec">@RequestBody</span> <span class="cls">UploadRequest</span> req) {
+        <span class="fn">validateRequest</span>(req);
+
+        <span class="kw">long</span> photoId = <span class="fn">generateSnowflakeId</span>();
+        <span class="cls">String</span> s3Key = <span class="str">"raw/"</span> + req.<span class="fn">getUserId</span>() + <span class="str">"/"</span> + photoId + <span class="str">"/"</span> + req.<span class="fn">getFilename</span>();
+
+        <span class="cmt">// Generate pre-signed PUT URL</span>
+        <span class="cls">PutObjectPresignRequest</span> presignReq = <span class="cls">PutObjectPresignRequest</span>.<span class="fn">builder</span>()
+            .<span class="fn">signatureDuration</span>(<span class="cls">Duration</span>.<span class="fn">ofMinutes</span>(<span class="num">15</span>))
+            .<span class="fn">putObjectRequest</span>(p -> p.<span class="fn">bucket</span>(<span class="str">"raw-uploads"</span>)
+                .<span class="fn">key</span>(s3Key).<span class="fn">contentType</span>(req.<span class="fn">getContentType</span>()))
+            .<span class="fn">build</span>();
+
+        <span class="cls">PresignedPutObjectRequest</span> presigned = presigner.<span class="fn">presignPutObject</span>(presignReq);
+
+        <span class="cmt">// Save metadata</span>
+        repo.<span class="fn">save</span>(<span class="cls">Photo</span>.<span class="fn">builder</span>()
+            .id(photoId).userId(req.<span class="fn">getUserId</span>()).s3Key(s3Key)
+            .status(<span class="str">"uploading"</span>).createdAt(<span class="cls">System</span>.<span class="fn">currentTimeMillis</span>())
+            .<span class="fn">build</span>());
+
+        <span class="kw">return</span> <span class="kw">new</span> <span class="cls">UploadResponse</span>(photoId, presigned.<span class="fn">url</span>().<span class="fn">toString</span>(), <span class="num">900</span>);
+    }
+
+    <span class="dec">@PostMapping</span>(<span class="str">"/{photoId}/uploaded"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;?&gt; <span class="fn">confirmUpload</span>(<span class="dec">@PathVariable</span> <span class="kw">long</span> photoId,
+                                              <span class="dec">@RequestParam</span> <span class="cls">String</span> caption) {
+        repo.<span class="fn">updateStatus</span>(photoId, <span class="str">"processing"</span>, caption);
+        kafka.<span class="fn">send</span>(<span class="str">"photo.uploaded"</span>, <span class="kw">new</span> <span class="cls">PhotoEvent</span>(photoId));
+        <span class="kw">return</span> <span class="cls">ResponseEntity</span>.<span class="fn">accepted</span>().<span class="fn">body</span>(<span class="cls">Map</span>.<span class="fn">of</span>(<span class="str">"status"</span>,<span class="str">"processing"</span>));
+    }
+}</pre></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1g">
+    <div class="ptitle">Trade<em>offs &amp; Outcome</em></div>
+    <table>
+      <tr><th>Decision</th><th>Choice</th><th>Alternative</th><th>Why Chosen</th></tr>
+      <tr><td>Upload path</td><td>Pre-signed URL (direct to S3)</td><td>Upload through API server</td><td>API server not in critical path; S3 handles 4.2 GB/s</td></tr>
+      <tr><td>Processing trigger</td><td>Kafka event</td><td>S3 trigger Lambda / synchronous</td><td>Decoupled; retryable; multiple consumers possible</td></tr>
+      <tr><td>Image format</td><td>WebP (convert all)</td><td>Serve original format</td><td>30% smaller than JPEG at same quality; broad support</td></tr>
+      <tr><td>CDN cache key</td><td>Content hash in URL</td><td>URL + version param</td><td>Immutable URLs = max cache lifetime, never invalidate</td></tr>
+      <tr><td>DB for metadata</td><td>MySQL (sharded by user_id)</td><td>Cassandra or DynamoDB</td><td>Rich queries needed (joins with likes, comments)</td></tr>
+      <tr><td>Storage tiering</td><td>S3 Intelligent Tiering</td><td>Manual lifecycle rules</td><td>Auto-migrates; no code changes; 60–80% cost saving</td></tr>
+    </table>
+    <ul class="ol" style="margin-top:12px">
+      <li><strong>Pre-signed URL is the canonical upload pattern</strong> — client uploads directly to S3, bypassing your API servers entirely. API server only handles auth, metadata, and event publishing.</li>
+      <li><strong>Async processing via Kafka decouples upload from processing</strong> — upload acknowledgment in &lt;200ms; processing (resize, format conversion) happens in the background without blocking the user.</li>
+      <li><strong>Content-addressed immutable URLs = maximum CDN efficiency</strong> — URL = SHA-256 of content. File never changes. CDN caches forever. Zero cache invalidation infrastructure needed.</li>
+      <li><strong>WebP/AVIF saves 30–50% storage and bandwidth</strong> — at 200+ PB/year, every percentage point of compression translates to millions in storage costs.</li>
+      <li><strong>S3 Intelligent Tiering handles 80% of storage cost optimization automatically</strong> — recent photos (hot) in Standard; older photos auto-tiered to IA/Glacier without any application changes.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T2: PRIVATE PHOTOS ══════════════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t2a">Problem & Design</div>
+    <div class="stab" data-s="t2b">Access Control Models</div>
+    <div class="stab" data-s="t2c">Signed URL Pattern</div>
+    <div class="stab" data-s="t2d">Code</div>
+    <div class="stab" data-s="t2e">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">Implementing <em>Private Photos</em> (Instagram Model)</div>
+    <p class="psub">Instagram allows users to set their account private — photos are visible only to approved followers. This changes the serving architecture dramatically: you can no longer cache images at the CDN without access control.</p>
+    <div class="g g2">
+      <div class="card ct-r">
+        <h4>The Core Problem</h4>
+        <p>Public photos: URL is the permission — anyone with the URL can view. CDN cache forever.</p>
+        <p>Private photos: URL is NOT the permission — you must check <em>at serve time</em> whether the requesting user is an approved follower. This kills naive CDN caching.</p>
+        <div class="call cr" style="font-size:12px;padding:7px">If you store private photos at a guessable URL (e.g., <code>/photos/12345.jpg</code>), anyone who finds the URL can view it — regardless of account privacy. This is the IDOR vulnerability.</div>
+      </div>
+      <div class="card ct-c">
+        <h4>IDOR — Insecure Direct Object Reference</h4>
+        <p>The vulnerability: <code>GET /photos/photo_id=42</code> — attacker changes 42 to 43 and sees someone else's private photo. Prevention requires:</p>
+        <ul class="rl">
+          <li>Non-guessable IDs (Snowflake or UUID)</li>
+          <li>Authorization check on every request: "Can user X see photo Y?"</li>
+          <li>Never expose sequential or predictable IDs</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Privacy Levels</h3>
+    <table>
+      <tr><th>Level</th><th>Visible to</th><th>CDN Cacheable?</th><th>Access Check</th></tr>
+      <tr><td>Public</td><td>Everyone</td><td>✅ Yes — long TTL</td><td>None</td></tr>
+      <tr><td>Followers only</td><td>Approved followers</td><td>⚠️ Only with signed URLs + user scope</td><td>Is requester an approved follower?</td></tr>
+      <tr><td>Close Friends</td><td>Selected subset of followers</td><td>❌ Effectively no</td><td>Is requester in close_friends list?</td></tr>
+      <tr><td>Only Me</td><td>Owner only</td><td>❌</td><td>Is requester the owner?</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle">Access Control <em>Models</em></div>
+    <h3>Option A: Check-before-redirect (ACL at serve time)</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Client requests: <code>GET /photos/view/photo_id=42</code></div><div class="fd">Request goes to your API server (not directly to CDN/S3).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">API server checks ACL</div><div class="fd">Is requesting user a follower of the photo owner? Query: <code>SELECT 1 FROM follows WHERE follower_id=? AND following_id=? AND status='approved'</code></div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">If authorized: generate time-limited S3 signed URL</div><div class="fd">Redirect client to <code>s3.amazonaws.com/bucket/photos/42.webp?Signature=xxx&Expires=1711000000</code>. Valid for 1 hour. Client's browser caches it locally.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">If unauthorized: return 403 Forbidden</div><div class="fd">Never expose the underlying S3 URL to unauthorized users. The signed URL itself is the access token.</div></div></div>
+    </div>
+
+    <h3>Option B: Token-in-URL with CDN (Instagram's approach)</h3>
+    <p>Instagram embeds a short-lived cryptographic token in the CDN URL. The CDN edge validates the token (via Lambda@Edge or Cloudflare Worker) without calling back to the auth server — preserving CDN cache efficiency while enforcing access control.</p>
+    <div class="cwrap"><div class="ctop"><span>Signed CDN URL structure</span><span class="ltag lsq">Pattern</span></div>
+    <pre><span class="cmt">URL structure: https://cdn.instagram.com/photos/photo_42.webp
+               ?user_id=1234&expires=1711000000&sig=HMAC_SHA256(secret, "1234:1711000000:photo_42")</span>
+
+<span class="cmt">CDN edge (Lambda@Edge / CF Worker) validates:</span>
+<span class="cmt">1. sig = HMAC(secret, user_id + expires + path)  ← prevents tampering</span>
+<span class="cmt">2. expires > now  ← prevents replay after expiry</span>
+<span class="cmt">3. user_id matches authenticated session  ← prevents sharing URLs</span>
+
+<span class="cmt">If valid → serve image from CDN cache</span>
+<span class="cmt">If invalid → 403 (never reveals the image)</span></pre></div>
+    <div class="call cg">Benefit: Most requests are CDN cache hits — no call back to origin. Only first access per user generates the token via the API server. Token is scoped to user_id, so the same CDN-cached image can be served to multiple authorized users with different tokens.</div>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">Signed URL <em>Deep Dive</em></div>
+    <h3>S3 Pre-Signed URL vs CloudFront Signed URL</h3>
+    <table>
+      <tr><th>Feature</th><th>S3 Pre-Signed URL</th><th>CloudFront Signed URL</th></tr>
+      <tr><td>Signed by</td><td>AWS credentials (SDK)</td><td>CloudFront key pair (RSA)</td></tr>
+      <tr><td>Bypasses CloudFront?</td><td>Yes — direct S3 access</td><td>No — goes through CDN</td></tr>
+      <tr><td>Can restrict by IP?</td><td>No</td><td>Yes (IP condition)</td></tr>
+      <tr><td>Can restrict by date range?</td><td>Yes (expiry only)</td><td>Yes (start+end)</td></tr>
+      <tr><td>CDN caching</td><td>❌ Each URL is unique</td><td>✅ Cache path without query params</td></tr>
+      <tr><td>Performance</td><td>Direct to S3 (~50ms)</td><td>Through CDN (~5ms if cached)</td></tr>
+    </table>
+
+    <h3>ACL Lookup Performance</h3>
+    <div class="g g2">
+      <div class="card ct-a">
+        <h4>Problem: ACL lookup on every photo serve</h4>
+        <p>If every image request requires a DB query to check "is user X a follower of photo owner Y?", and you serve 70,000 images/sec, that's 70,000 DB queries/sec just for ACL checks.</p>
+      </div>
+      <div class="card ct-g">
+        <h4>Solution: Cache follower relationships</h4>
+        <p>Cache <code>follows:{user_id}:set</code> in Redis as a Set of following IDs. ACL check = Redis SISMEMBER (O(1)). Cache invalidated when follow/unfollow happens. Typical follower list = 500 IDs = ~4 KB in Redis.</p>
+        <div class="call cg" style="font-size:12px;padding:7px"><code>SISMEMBER follows:owner_id follower_id</code> — O(1), ~0.5ms. Replace 70K DB queries/sec with 70K Redis ops/sec.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle">Code — <em>Private Photo Access Control</em></div>
+    <div class="cwrap"><div class="ctop"><span>private_photos.py — ACL + Signed URL generation</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> hmac, hashlib, time
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, HTTPException, Depends
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+app    = <span class="fn">FastAPI</span>()
+redis  = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+SECRET = <span class="str">b"super-secret-key"</span>   <span class="cmt"># rotate periodically</span>
+
+<span class="kw">async def</span> <span class="fn">check_photo_access</span>(requester_id: int, photo_id: int) -> bool:
+    <span class="str">"""Returns True if requester can view this photo."""</span>
+    photo = <span class="kw">await</span> <span class="fn">get_photo_meta</span>(photo_id)
+
+    <span class="kw">if</span> photo[<span class="str">"user_id"</span>] == requester_id:
+        <span class="kw">return True</span>   <span class="cmt"># owner always can view own photos</span>
+
+    <span class="kw">if</span> photo[<span class="str">"privacy"</span>] == <span class="str">"public"</span>:
+        <span class="kw">return True</span>
+
+    <span class="kw">if</span> photo[<span class="str">"privacy"</span>] == <span class="str">"followers"</span>:
+        <span class="cmt"># O(1) Redis Set lookup — avoid DB query</span>
+        is_follower = <span class="kw">await</span> redis.<span class="fn">sismember</span>(
+            <span class="str">f"follows:{photo['user_id']}:approved"</span>,
+            requester_id
+        )
+        <span class="kw">return bool</span>(is_follower)
+
+    <span class="kw">if</span> photo[<span class="str">"privacy"</span>] == <span class="str">"close_friends"</span>:
+        <span class="kw">return</span> <span class="kw">await</span> redis.<span class="fn">sismember</span>(
+            <span class="str">f"close_friends:{photo['user_id']}"</span>,
+            requester_id
+        )
+
+    <span class="kw">return False</span>   <span class="cmt"># only_me</span>
+
+<span class="kw">def</span> <span class="fn">generate_signed_cdn_url</span>(photo_id: int, user_id: int, ttl_seconds: int = <span class="num">3600</span>) -> str:
+    <span class="str">"""Generate CDN URL with HMAC token. Token = HMAC(secret, user:expires:photo_id)."""</span>
+    expires = <span class="fn">int</span>(time.<span class="fn">time</span>()) + ttl_seconds
+    message = <span class="str">f"{user_id}:{expires}:{photo_id}"</span>.<span class="fn">encode</span>()
+    sig     = hmac.<span class="fn">new</span>(SECRET, message, hashlib.<span class="fn">sha256</span>).<span class="fn">hexdigest</span>()[:16]
+    path    = <span class="str">f"processed/{photo_id}/large.webp"</span>
+    <span class="kw">return</span> <span class="str">f"https://cdn.example.com/{path}?uid={user_id}&exp={expires}&sig={sig}"</span>
+
+<span class="dec">@app.get</span>(<span class="str">"/photos/{photo_id}/url"</span>)
+<span class="kw">async def</span> <span class="fn">get_photo_url</span>(photo_id: int, current_user_id: int = <span class="fn">Depends</span>(<span class="fn">get_current_user</span>)):
+    <span class="str">"""
+    Returns a time-limited signed CDN URL.
+    ACL checked here — CDN edge re-validates the HMAC token.
+    """</span>
+    <span class="kw">if not await</span> <span class="fn">check_photo_access</span>(current_user_id, photo_id):
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="num">403</span>, <span class="str">"Access denied"</span>)
+
+    url = <span class="fn">generate_signed_cdn_url</span>(photo_id, current_user_id, ttl_seconds=<span class="num">3600</span>)
+    <span class="kw">return</span> {<span class="str">"url"</span>: url, <span class="str">"expires_in"</span>: <span class="num">3600</span>}</pre></div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>IDOR is the #1 private photo vulnerability</strong> — sequential IDs + no ACL check = anyone can view any photo by guessing IDs. Always use non-guessable IDs (Snowflake/UUID) and enforce ACL on every access.</li>
+      <li><strong>CDN + private photos requires signed URLs</strong> — you can't use standard CDN caching for private content. Signed CDN URLs (CloudFront/CF) allow CDN caching while enforcing per-user access control at the edge.</li>
+      <li><strong>Cache follower relationships in Redis Sets</strong> — <code>SISMEMBER</code> is O(1), ~0.5ms. Replace 70K DB queries/sec (for ACL checks) with 70K Redis ops/sec. Cache invalidated on follow/unfollow events.</li>
+      <li><strong>HMAC-signed tokens prevent URL sharing</strong> — token encodes user_id + expiry. Sharing a signed URL to an unauthorized user won't work — the CDN edge validates the token and rejects mismatched user sessions.</li>
+      <li><strong>Token expiry length is a security/UX tradeoff</strong> — short TTL (5 min) = very secure but requires frequent re-generation. Long TTL (24h) = better UX but revocation is slower. Instagram uses ~6h for stories.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T3: GRAVATAR & OG IMAGES ══════════════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t3a">Gravatar Design</div>
+    <div class="stab" data-s="t3b">Dynamic OG Images</div>
+    <div class="stab" data-s="t3c">On-the-fly Generation</div>
+    <div class="stab" data-s="t3d">Code</div>
+    <div class="stab" data-s="t3e">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">Designing <em>Gravatar</em> — Global Avatar Service</div>
+    <p class="psub">Gravatar (Globally Recognised Avatar) is a service where users register an avatar tied to their email. Any website that knows the user's email can show their avatar without storing it locally. How do you design a system that generates and serves millions of personalised default avatars?</p>
+    <h3>How Gravatar Works</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Hash the user's email with MD5</div><div class="fd"><code>hash = MD5(email.strip().lower())</code> → deterministic, privacy-preserving. No email stored on the serving server.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Construct CDN URL with hash</div><div class="fd"><code>https://www.gravatar.com/avatar/{hash}?s=200&d=identicon</code>. Size (<code>s</code>) and default (<code>d</code>) in query params.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Serve custom avatar or generate default</div><div class="fd">If user registered a custom avatar → serve it. If not → generate a deterministic default (identicon, monsterid, robohash) based on the hash.</div></div></div>
+    </div>
+    <h3>Default Avatar Generation</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Identicon (GitHub style)</h4><p>Deterministic pixel pattern generated from the email hash. Same hash → always same pattern. 5×5 pixel grid, mirrored for symmetry, colored by hash bits.</p></div>
+      <div class="card ct-g"><h4>Initial-based (Slack style)</h4><p>Take first letter of name, pick background color from hash. Simple, clean. <code>color = COLORS[hash[0] % len(COLORS)]</code>. Infinitely scalable — generated on-the-fly with zero storage.</p></div>
+      <div class="card ct-p"><h4>Robohash / Monsterid</h4><p>Composite avatar: combine image parts (head + body + eyes) by hash → unique "monster" per user. Parts stored as sprite sheets. Assembled by hash at serve time.</p></div>
+    </div>
+    <h3>Why MD5 for Gravatar (not SHA-256)?</h3>
+    <div class="call cw">MD5 was chosen for backwards compatibility and URL length (32 chars vs 64 for SHA-256). While MD5 is cryptographically broken for security purposes, for Gravatar it's used purely as a consistent hash (not for security). The email is never transmitted — only its hash. If you're building a new system, use SHA-256.</div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Initial-based Avatar Generator Demo</span>
+      </div>
+      <div class="demo-body">
+        <div class="av-grid" id="av-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle">Dynamic <em>OG Image Generation</em></div>
+    <p class="psub">Open Graph (OG) images are the preview images shown when a link is shared on Slack, Twitter, WhatsApp, iMessage. Dynamic OG images generate a customised preview for every piece of content — at request time.</p>
+    <h3>What is an OG Image?</h3>
+    <p>When you share a URL, platforms fetch <code>&lt;meta property="og:image" content="https://..."/&gt;</code> and display that image in the link preview. Static OG images are the same for all users. Dynamic OG images generate a custom preview per content item (article, profile, post).</p>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>Examples of Dynamic OG Images</h4>
+        <ul class="rl">
+          <li>GitHub repo preview — shows stars, language, description on a card</li>
+          <li>Vercel deployment preview — shows project name, status, deploy time</li>
+          <li>Dev.to article preview — author avatar, title, tags on styled background</li>
+          <li>Twitter/X card — user profile with follower count and recent activity</li>
+          <li>YouTube thumbnail — video title, channel, view count</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Why It Matters</h4>
+        <ul class="rl">
+          <li>80% of engagement on shared links comes from the preview card</li>
+          <li>Custom OG images increase CTR by 3–5×</li>
+          <li>Enables marketing information in the preview without changing the page</li>
+          <li>A/B testable without code deploys</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Architecture: Two Approaches</h3>
+    <div class="tdp">
+      <div class="tdc pro">
+        <h4>On-the-fly with CDN caching</h4>
+        <ul>
+          <li>First request: Edge Lambda renders image (100–300ms)</li>
+          <li>Result cached at CDN edge for 24h</li>
+          <li>Subsequent requests: ~5ms CDN cache hit</li>
+          <li>Cache key = URL path + query params (content_id, version)</li>
+          <li>✅ Zero pre-computation, infinite variants</li>
+          <li>✅ Immediately reflects content changes (after cache TTL)</li>
+        </ul>
+      </div>
+      <div class="tdc con">
+        <h4>Pre-generated on content publish</h4>
+        <ul>
+          <li>Kafka consumer triggers OG generation when content is published</li>
+          <li>Generated image stored in S3 → served via CDN</li>
+          <li>First serve is always fast (already in CDN)</li>
+          <li>❌ Requires storage for every content item</li>
+          <li>❌ Must regenerate if template or content changes</li>
+          <li>Used by: Twitter cards, YouTube thumbnails</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">On-the-fly Image <em>Generation</em></div>
+    <h3>Rendering Pipeline</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Request comes in: <code>GET /og/article/42.png</code></div><div class="fd">CDN edge checks cache. Cache miss → forwards to origin Lambda function.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Lambda fetches content metadata</div><div class="fd">Queries article service or DB: title, author, avatar URL, tags, publish date. All in-memory or Redis-cached for speed.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Render HTML template → screenshot via headless Chrome</div><div class="fd">Lambda runs Puppeteer (headless Chrome). Renders HTML template with data injected. Screenshots 1200×630px. Convert to PNG/WebP.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Cache at CDN + S3</div><div class="fd">Response cached at CDN edge with <code>Cache-Control: max-age=86400</code>. Optionally store in S3 for backup / pre-warming other PoPs.</div></div></div>
+    </div>
+    <h3>Performance Optimisations</h3>
+    <table>
+      <tr><th>Optimisation</th><th>Technique</th><th>Impact</th></tr>
+      <tr><td>Chrome warm-up</td><td>Keep Lambda container warm (provisioned concurrency). Pre-launch Chrome on container start.</td><td>Reduces cold start from 3s → 100ms</td></tr>
+      <tr><td>Font preloading</td><td>Bundle fonts in Lambda package — no CDN fetch needed at render time.</td><td>Eliminates 200ms+ font load</td></tr>
+      <tr><td>Template caching</td><td>Compile HTML template once per Lambda container lifetime.</td><td>Saves 10–20ms per render</td></tr>
+      <tr><td>Canvas-based rendering</td><td>Replace Puppeteer with @vercel/og (canvas API). 10× faster than headless Chrome.</td><td>Render time: 300ms → 30ms</td></tr>
+      <tr><td>CDN caching</td><td><code>Cache-Control: s-maxage=86400</code>. Most OG images are immutable for content lifetime.</td><td>Only 1st request per PoP hits Lambda</td></tr>
+    </table>
+    <div class="call ci"><strong>Vercel OG library</strong> (<code>@vercel/og</code>) uses Satori (SVG renderer) + Resvg instead of headless Chrome, achieving 30ms render time vs 300ms for Puppeteer. For production OG generation, this is the state-of-the-art approach.</div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle">Code — <em>OG Image Generator</em></div>
+    <div class="cwrap"><div class="ctop"><span>og_generator.py — FastAPI + Pillow OG image service</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> PIL <span class="kw">import</span> Image, ImageDraw, ImageFont
+<span class="kw">import</span> io, hashlib, requests
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> Response
+
+app = <span class="fn">FastAPI</span>()
+<span class="cmt"># Pre-load fonts at startup (not per-request)</span>
+FONT_TITLE  = <span class="cls">ImageFont</span>.<span class="fn">truetype</span>(<span class="str">"Syne-Bold.ttf"</span>, <span class="num">56</span>)
+FONT_META   = <span class="cls">ImageFont</span>.<span class="fn">truetype</span>(<span class="str">"DM-Sans.ttf"</span>,  <span class="num">28</span>)
+BRAND_COLOR = (<span class="num">0</span>, <span class="num">229</span>, <span class="num">255</span>)   <span class="cmt"># --accent cyan</span>
+
+<span class="dec">@app.get</span>(<span class="str">"/og/article/{article_id}.png"</span>)
+<span class="kw">async def</span> <span class="fn">og_article</span>(article_id: int):
+    <span class="str">"""Generate 1200×630 OG image for an article. Cached by CDN for 24h."""</span>
+    meta = <span class="kw">await</span> <span class="fn">get_article_meta</span>(article_id)
+
+    <span class="cmt"># Create blank 1200×630 canvas</span>
+    img  = <span class="cls">Image</span>.<span class="fn">new</span>(<span class="str">"RGB"</span>, (<span class="num">1200</span>, <span class="num">630</span>), color=(<span class="num">9</span>, <span class="num">13</span>, <span class="num">21</span>))  <span class="cmt"># dark bg</span>
+    draw = <span class="cls">ImageDraw</span>.<span class="fn">Draw</span>(img)
+
+    <span class="cmt"># Accent bar on left</span>
+    draw.<span class="fn">rectangle</span>([(<span class="num">60</span>, <span class="num">80</span>), (<span class="num">68</span>, <span class="num">550</span>)], fill=BRAND_COLOR)
+
+    <span class="cmt"># Title — word-wrap at 900px</span>
+    title = meta[<span class="str">"title"</span>]
+    draw.<span class="fn">text</span>((<span class="num">100</span>, <span class="num">120</span>), title, font=FONT_TITLE, fill=(<span class="num">255</span>,<span class="num">255</span>,<span class="num">255</span>))
+
+    <span class="cmt"># Author name + avatar</span>
+    avatar_bytes = <span class="fn">requests</span>.<span class="fn">get</span>(meta[<span class="str">"author_avatar_url"</span>]).<span class="fn">content</span>
+    avatar = <span class="cls">Image</span>.<span class="fn">open</span>(io.<span class="cls">BytesIO</span>(avatar_bytes)).<span class="fn">resize</span>((<span class="num">64</span>, <span class="num">64</span>))
+    <span class="cmt"># Make circular</span>
+    mask = <span class="cls">Image</span>.<span class="fn">new</span>(<span class="str">"L"</span>, (<span class="num">64</span>, <span class="num">64</span>), <span class="num">0</span>)
+    <span class="cls">ImageDraw</span>.<span class="fn">Draw</span>(mask).<span class="fn">ellipse</span>([(0,0),(64,64)], fill=<span class="num">255</span>)
+    img.<span class="fn">paste</span>(avatar, (<span class="num">100</span>, <span class="num">480</span>), mask)
+
+    draw.<span class="fn">text</span>((<span class="num">180</span>, <span class="num">492</span>), meta[<span class="str">"author_name"</span>], font=FONT_META, fill=(<span class="num">150</span>,<span class="num">180</span>,<span class="num">200</span>))
+    draw.<span class="fn">text</span>((<span class="num">900</span>, <span class="num">492</span>), meta[<span class="str">"publish_date"</span>], font=FONT_META, fill=(<span class="num">90</span>,<span class="num">100</span>,<span class="num">130</span>))
+
+    <span class="cmt"># Export to PNG</span>
+    buf = io.<span class="cls">BytesIO</span>()
+    img.<span class="fn">save</span>(buf, format=<span class="str">"PNG"</span>, optimize=<span class="kw">True</span>)
+    buf.<span class="fn">seek</span>(<span class="num">0</span>)
+
+    <span class="kw">return</span> <span class="cls">Response</span>(
+        content=buf.<span class="fn">read</span>(),
+        media_type=<span class="str">"image/png"</span>,
+        headers={<span class="str">"Cache-Control"</span>: <span class="str">"public, s-maxage=86400, stale-while-revalidate=3600"</span>}
+    )</pre></div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>MD5(email) → deterministic avatar URL</strong> — Gravatar's core insight: the email is the identity, its hash is the lookup key. Any site knowing only the email can display the avatar without storing it.</li>
+      <li><strong>Default avatars are generated on-the-fly with zero storage</strong> — identicons, initials-based, and composite avatars are deterministically computed from the hash. Storage cost = zero. Infinite scale at near-zero marginal cost.</li>
+      <li><strong>OG images drive 80% of shared link engagement</strong> — dynamic OG images per content item significantly increase CTR. The architecture (on-the-fly rendering + CDN caching) makes this feasible at scale.</li>
+      <li><strong>Headless Chrome → Canvas-based rendering (30ms vs 300ms)</strong> — Puppeteer-based OG generation is too slow for edge rendering. Libraries like <code>@vercel/og</code> use SVG/Canvas and achieve 10× faster render times.</li>
+      <li><strong>CDN caching makes on-the-fly generation scalable</strong> — first request generates and caches; all subsequent requests are cache hits. A single OG image for a viral post may be requested millions of times — CDN handles all of it.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T4: CONCURRENT HASHTAG COUNTER ══════════════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t4a">Problem & Scale</div>
+    <div class="stab" data-s="t4b">Counter Approaches</div>
+    <div class="stab" data-s="t4c">Redis Counters</div>
+    <div class="stab" data-s="t4d">Approximate Counting</div>
+    <div class="stab" data-s="t4e">Code</div>
+    <div class="stab" data-s="t4f">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="ptitle">Designing a Concurrent <em>HashTag Counter</em></div>
+    <p class="psub">Every Instagram post can contain hashtags like <code>#travel</code>. The system must count how many posts use each hashtag, support trending hashtags in real-time, and handle millions of concurrent updates without race conditions or performance degradation.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">100M</div><div class="slbl">Posts per day (Instagram scale)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">5-10</div><div class="slbl">Avg hashtags per post</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">1B+</div><div class="slbl">Counter updates/day</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">&lt;1s</div><div class="slbl">Trending update latency</div></div>
+    </div>
+    <h3>The Challenge</h3>
+    <div class="g g2">
+      <div class="card ct-r">
+        <h4>Naive DB approach</h4>
+        <p>For every post with <code>#travel</code>, do: <code>UPDATE hashtags SET count = count + 1 WHERE tag = 'travel'</code></p>
+        <p>At 100M posts/day × 7 hashtags = 700M UPDATEs/day = 8,000 UPDATEs/sec on a single hot row. InnoDB max = ~50K simple writes/sec. Locks on the <code>travel</code> row create massive contention at peak.</p>
+        <div class="call cr" style="font-size:12px;padding:7px">A viral post with #worldcup can receive 100,000 posts per minute → all hitting the same DB row → lock queue → timeouts → system failure.</div>
+      </div>
+      <div class="card ct-g">
+        <h4>What we need</h4>
+        <ul class="rl">
+          <li>Lock-free or minimal-contention counter increment</li>
+          <li>Exact count for display (or close enough — users don't notice ±100)</li>
+          <li>Real-time trending: top-N hashtags in the last 1 hour</li>
+          <li>Persistent count that survives Redis restarts</li>
+          <li>Efficient bulk extraction of trending tags</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle">Counter <em>Approaches</em></div>
+    <table>
+      <tr><th>Approach</th><th>Mechanism</th><th>Throughput</th><th>Accuracy</th><th>Verdict</th></tr>
+      <tr><td>DB row per hashtag</td><td>UPDATE … SET count=count+1</td><td>~50K/s (hot-row lock)</td><td>Exact</td><td>❌ Doesn't scale</td></tr>
+      <tr><td>Sharded DB counters</td><td>N rows per hashtag, sum on read</td><td>N× better writes</td><td>Exact (slow reads)</td><td>⚠️ Operational complexity</td></tr>
+      <tr><td>Redis INCR</td><td>Atomic in-memory increment</td><td>~1M ops/s per node</td><td>Exact (in-memory)</td><td>✅ Best for hot counters</td></tr>
+      <tr><td>Redis Sorted Set (trending)</td><td>ZINCRBY hashtag:{window} tag score</td><td>~500K/s</td><td>Exact</td><td>✅ For top-N queries</td></tr>
+      <tr><td>Count-Min Sketch</td><td>Probabilistic, sub-linear space</td><td>Millions/s</td><td>~95% (overestimates)</td><td>✅ For very high cardinality</td></tr>
+      <tr><td>HyperLogLog</td><td>Approximate distinct count</td><td>Millions/s</td><td>~1% error</td><td>✅ For unique user counts</td></tr>
+      <tr><td>Batched Kafka + DB flush</td><td>Events → Kafka → batch UPDATE</td><td>Unlimited (async)</td><td>Eventual</td><td>✅ For durable storage</td></tr>
+    </table>
+    <h3>Architecture: Two-tier Counter System</h3>
+    <div class="call cg"><strong>Hot tier (Redis):</strong> Real-time approximate counts for display and trending. Redis INCR + ZINCRBY. Fast, in-memory. Potentially lossy on crash (acceptable).<br><br><strong>Cold tier (DB + Kafka):</strong> Exact counts for reporting, analytics, historical trending. Kafka events batch-aggregated and flushed to MySQL every 60 seconds. Durable.</div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">Redis <em>Counter Patterns</em></div>
+    <h3>Pattern 1: Simple INCR (exact, atomic)</h3>
+    <div class="cwrap"><div class="ctop"><span>Redis counter patterns</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- Atomic increment: no lock needed, O(1)</span>
+INCR  hashtag:count:travel         <span class="cmt">→ returns new count (e.g., 4238917)</span>
+INCRBY hashtag:count:travel 5      <span class="cmt">→ batch increment (e.g., processing 5 posts)</span>
+DECR  hashtag:count:travel         <span class="cmt">→ on post deletion</span>
+
+<span class="cmt">-- Trending: Sorted Set with sliding window (1-hour buckets)</span>
+<span class="cmt">Key: hashtag:trending:{hour_bucket} → members: tag names, scores: counts</span>
+ZINCRBY  hashtag:trending:2024031214 1 "travel"  <span class="cmt">→ add 1 to travel's score in 14:00 bucket</span>
+EXPIRE   hashtag:trending:2024031214 7200         <span class="cmt">→ expire bucket after 2h</span>
+
+<span class="cmt">-- Get top 10 trending hashtags in current hour</span>
+ZREVRANGE hashtag:trending:2024031214 0 9 WITHSCORES
+<span class="cmt">→ ["worldcup" 450234, "messi" 380000, "travel" 290000, ...]</span>
+
+<span class="cmt">-- Merge sliding window (past 3 hours)</span>
+ZUNIONSTORE trending:merged 3 \
+    hashtag:trending:2024031212 \
+    hashtag:trending:2024031213 \
+    hashtag:trending:2024031214
+ZREVRANGE trending:merged 0 9 WITHSCORES  <span class="cmt">→ top 10 of last 3 hours</span></pre></div>
+
+    <h3>Pattern 2: Counter Salting (for extreme hot tags)</h3>
+    <p>For viral hashtags like <code>#worldcup</code> during a major event (millions of increments per minute), even Redis INCR on a single key becomes a bottleneck. Use salting: distribute across 100 virtual keys, aggregate on read.</p>
+    <div class="cwrap"><div class="ctop"><span>salted_counter.py — hot hashtag distributed counter</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> random
+
+<span class="cls">SALT_COUNT</span> = <span class="num">100</span>   <span class="cmt"># 100 virtual shards per hot tag</span>
+
+<span class="kw">async def</span> <span class="fn">increment_hashtag</span>(redis, tag: str):
+    <span class="str">"""Distribute increment across SALT_COUNT keys to avoid hot-key."""</span>
+    salt = random.<span class="fn">randint</span>(<span class="num">0</span>, SALT_COUNT - <span class="num">1</span>)
+    <span class="kw">await</span> redis.<span class="fn">incr</span>(<span class="str">f"htag:{tag}:{salt}"</span>)
+
+<span class="kw">async def</span> <span class="fn">get_hashtag_count</span>(redis, tag: str) -> int:
+    <span class="str">"""Aggregate all salt shards — O(SALT_COUNT) keys but batched via MGET."""</span>
+    keys = [<span class="str">f"htag:{tag}:{i}"</span> <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(SALT_COUNT)]
+    values = <span class="kw">await</span> redis.<span class="fn">mget</span>(keys)
+    <span class="kw">return</span> <span class="fn">sum</span>(<span class="fn">int</span>(v <span class="kw">or</span> <span class="num">0</span>) <span class="kw">for</span> v <span class="kw">in</span> values)
+
+<span class="cmt"># At 1M increments/sec on #worldcup:</span>
+<span class="cmt"># Without salting: 1M INCR on 1 key → Redis bottleneck</span>
+<span class="cmt"># With 100 salts: 10K INCR/sec on each key → 100× below Redis limit</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">Approximate Counting — <em>Count-Min Sketch</em></div>
+    <p class="psub">When you need to count millions of distinct hashtags and exact counts aren't required, probabilistic data structures can reduce memory by 99% while maintaining ~95% accuracy.</p>
+    <h3>Count-Min Sketch</h3>
+    <p>A 2D array of counters with D hash functions. To increment tag T: for each row i, increment <code>table[i][hash_i(T) % width]</code>. To read count: take the minimum across all rows (hence "min"). Overestimates (never underestimates) by a bounded amount.</p>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>Parameters &amp; Accuracy</h4>
+        <ul class="rl">
+          <li>Width w = ⌈e/ε⌉ where ε = acceptable error fraction</li>
+          <li>Depth d = ⌈ln(1/δ)⌉ where δ = failure probability</li>
+          <li>For 1% error, 99% confidence: w=272, d=7 → ~13KB for any N</li>
+          <li>Exact counting 100M hashtags at 8 bytes each = 800 MB</li>
+          <li>Count-Min for same = <strong>13 KB</strong> — 60,000× less memory</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>When to Use</h4>
+        <ul class="rl">
+          <li>Top-N trending where approximate rank is fine</li>
+          <li>DDoS detection: approximate request count per IP</li>
+          <li>Real-time analytics where exact counts aren't needed</li>
+          <li><strong>NOT for billing or financial counts</strong> — overestimation is unacceptable</li>
+          <li>Redis has native Count-Min Sketch: <code>CMS.INITBYDIM</code></li>
+        </ul>
+      </div>
+    </div>
+    <h3>HyperLogLog for Unique Users per Hashtag</h3>
+    <div class="cwrap"><div class="ctop"><span>Redis HyperLogLog + Count-Min Sketch</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- HyperLogLog: approximate unique users who used #travel</span>
+<span class="cmt">-- Only 12KB per key regardless of cardinality, ~1% error</span>
+PFADD  htag:unique_users:travel  user:42 user:99 user:201
+PFCOUNT htag:unique_users:travel    <span class="cmt">→ ~38,420,000 (approximately)</span>
+
+<span class="cmt">-- Count-Min Sketch (Redis Stack): count hashtag occurrences</span>
+CMS.INITBYDIM  hashtag_cms  1000  5    <span class="cmt">-- width=1000, depth=5</span>
+CMS.INCRBY     hashtag_cms  travel 1   <span class="cmt">-- increment #travel</span>
+CMS.QUERY      hashtag_cms  travel     <span class="cmt">-- query approximate count</span>
+
+<span class="cmt">-- Top-K filter (Redis Stack): maintain top-100 trending hashtags</span>
+TOPK.ADD    trending:topk  travel  messi  worldcup  sunset
+TOPK.LIST   trending:topk         <span class="cmt">-- returns current top-K list</span>
+<span class="cmt">→ ["worldcup", "travel", "messi", ...]</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t4e">
+    <div class="ptitle">Code — <em>Full HashTag Counter Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>hashtag_service.py — extract tags + update counters</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> re, time, asyncio
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> aiokafka <span class="kw">import</span> AIOKafkaConsumer
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+app   = <span class="fn">FastAPI</span>()
+redis = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+
+<span class="kw">def</span> <span class="fn">extract_hashtags</span>(caption: str) -> <span class="fn">list</span>[str]:
+    <span class="str">"""Extract lowercase hashtags from post caption."""</span>
+    <span class="kw">return</span> [tag.<span class="fn">lower</span>() <span class="kw">for</span> tag <span class="kw">in</span> re.<span class="fn">findall</span>(<span class="str">r'#(\w+)'</span>, caption)]
+
+<span class="kw">async def</span> <span class="fn">process_post</span>(post_id: int, user_id: int, caption: str):
+    <span class="str">"""Called on post creation. Updates counters and sorted set for trending."""</span>
+    tags = <span class="fn">extract_hashtags</span>(caption)
+    <span class="kw">if not</span> tags: <span class="kw">return</span>
+
+    hour_bucket = <span class="fn">int</span>(time.<span class="fn">time</span>()) // <span class="num">3600</span>   <span class="cmt"># e.g., 473618</span>
+    trending_key = <span class="str">f"htag:trending:{hour_bucket}"</span>
+
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>() <span class="kw">as</span> pipe:   <span class="cmt"># batch all Redis commands</span>
+        <span class="kw">for</span> tag <span class="kw">in</span> tags:
+            <span class="cmt"># 1. Increment total count</span>
+            pipe.<span class="fn">incr</span>(<span class="str">f"htag:count:{tag}"</span>)
+            <span class="cmt"># 2. Increment trending score for current hour</span>
+            pipe.<span class="fn">zincrby</span>(trending_key, <span class="num">1</span>, tag)
+            <span class="cmt"># 3. Track unique users (HLL) — for analytics</span>
+            pipe.<span class="fn">pfadd</span>(<span class="str">f"htag:users:{tag}"</span>, user_id)
+        <span class="cmt"># 4. Auto-expire trending bucket after 2 hours</span>
+        pipe.<span class="fn">expire</span>(trending_key, <span class="num">7200</span>)
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()   <span class="cmt"># single round-trip for all commands</span>
+
+    <span class="cmt"># 5. Store hashtag→post mapping (for feed/search)</span>
+    <span class="kw">for</span> tag <span class="kw">in</span> tags:
+        <span class="kw">await</span> db.<span class="fn">execute</span>(
+            <span class="str">"INSERT INTO photo_hashtags(photo_id,tag) VALUES(?,?)"</span>, [post_id, tag]
+        )
+
+<span class="dec">@app.get</span>(<span class="str">"/trending"</span>)
+<span class="kw">async def</span> <span class="fn">trending</span>(window_hours: int = <span class="num">3</span>, top_n: int = <span class="num">10</span>):
+    <span class="str">"""Trending hashtags over last N hours via ZUNIONSTORE."""</span>
+    now = <span class="fn">int</span>(time.<span class="fn">time</span>()) // <span class="num">3600</span>
+    buckets = [<span class="str">f"htag:trending:{now-i}"</span> <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(window_hours)]
+    merged  = <span class="str">f"htag:merged:{now}:{window_hours}"</span>
+
+    <span class="kw">await</span> redis.<span class="fn">zunionstore</span>(merged, buckets)
+    <span class="kw">await</span> redis.<span class="fn">expire</span>(merged, <span class="num">300</span>)   <span class="cmt"># cache merged result 5 min</span>
+
+    results = <span class="kw">await</span> redis.<span class="fn">zrevrange</span>(merged, <span class="num">0</span>, top_n-<span class="num">1</span>, withscores=<span class="kw">True</span>)
+    <span class="kw">return</span> [{<span class="str">"tag"</span>: tag, <span class="str">"posts"</span>: <span class="fn">int</span>(score)} <span class="kw">for</span> tag, score <span class="kw">in</span> results]</pre></div>
+  </div>
+
+  <div class="spanel" id="t4f">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Hashtag Counter Demo</span>
+        <button class="dbtn dbtn-c" onclick="postWithTags()" style="margin-left:auto">📸 New Post</button>
+        <button class="dbtn dbtn-a" onclick="viralBurst()" style="margin-left:6px">🔥 Viral #worldcup</button>
+        <button class="dbtn dbtn-g" onclick="renderTrending()" style="margin-left:6px">📊 Trending</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Post Counts</h4>
+            <div id="htag-counts" style="font-family:'JetBrains Mono',monospace;font-size:12px;display:grid;gap:4px"></div>
+          </div>
+          <div>
+            <h4>Trending (last hour)</h4>
+            <div id="htag-trending" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:12px">
+      <li><strong>Redis INCR is lock-free and atomic</strong> — at 1M increments/sec for a viral hashtag, Redis handles it without any lock contention. No deadlocks possible on simple INCR commands.</li>
+      <li><strong>Redis Sorted Sets enable O(log N) trending</strong> — ZINCRBY increments a score, ZREVRANGE returns top-N in sorted order. Perfect for real-time trending with sliding window buckets.</li>
+      <li><strong>Pipeline reduces RTT by 10×</strong> — batching 10 Redis commands in one pipeline call uses 1 round-trip instead of 10. Critical at 100M posts/day generating 1B+ counter updates.</li>
+      <li><strong>Count-Min Sketch uses 60,000× less memory than exact counting</strong> — for very high cardinality (billions of unique hashtags), probabilistic structures enable tracking impossible with exact counters.</li>
+      <li><strong>Two-tier architecture (Redis + Kafka → DB)</strong> — Redis handles the hot path (real-time display, trending); Kafka + batch DB flush handles the cold path (durable counts, analytics, reporting).</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T5: MESSAGE INDICATORS ══════════════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t5a">Problem & Design</div>
+    <div class="stab" data-s="t5b">Architecture</div>
+    <div class="stab" data-s="t5c">Delivery Receipts</div>
+    <div class="stab" data-s="t5d">Code</div>
+    <div class="stab" data-s="t5e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t5a">
+    <div class="ptitle">Designing <em>Message Indicators</em></div>
+    <p class="psub">Message indicators are the "1 new message from 3 people" badge on the chat icon. The system must track: how many unread messages exist per sender, show real-time updates, and mark messages as read when viewed.</p>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>What Needs to Be Tracked</h4>
+        <ul class="rl">
+          <li><strong>Unread count</strong> — how many unread messages from each sender</li>
+          <li><strong>Total unread</strong> — aggregate across all senders (badge number)</li>
+          <li><strong>Delivery status</strong> — sent / delivered / read (double tick)</li>
+          <li><strong>Last message preview</strong> — first N chars for conversation list</li>
+          <li><strong>Real-time update</strong> — badge increments as new messages arrive</li>
+        </ul>
+      </div>
+      <div class="card ct-a">
+        <h4>Scale</h4>
+        <ul class="rl">
+          <li>WhatsApp: <strong>100B messages/day</strong> across 2B users</li>
+          <li>Each message generates 1–3 receipt events (sent/delivered/read)</li>
+          <li>Unread count per user can be 0 to thousands</li>
+          <li>Badge must update within <strong>1 second</strong> of new message</li>
+          <li>Read receipts must propagate to sender within <strong>2 seconds</strong></li>
+        </ul>
+      </div>
+    </div>
+    <h3>Data Model for Indicators</h3>
+    <div class="cwrap"><div class="ctop"><span>message indicator schema</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="cmt">-- Per-user inbox state: how many unread from each sender</span>
+<span class="kw">CREATE TABLE</span> inbox_state (
+    user_id     <span class="cls">BIGINT</span>   <span class="kw">NOT NULL</span>,    <span class="cmt">-- the recipient</span>
+    sender_id   <span class="cls">BIGINT</span>   <span class="kw">NOT NULL</span>,    <span class="cmt">-- the sender</span>
+    unread_count <span class="cls">INT</span>     <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    last_msg_id  <span class="cls">BIGINT</span>,              <span class="cmt">-- Snowflake ID of latest msg</span>
+    last_msg_preview <span class="cls">VARCHAR</span>(<span class="num">200</span>),
+    updated_at  <span class="cls">BIGINT</span>   <span class="kw">NOT NULL</span>,
+    <span class="kw">PRIMARY KEY</span> (user_id, sender_id),
+    <span class="kw">INDEX</span> idx_unread (user_id, unread_count <span class="kw">DESC</span>)
+);
+
+<span class="cmt">-- Total unread per user (denormalized for fast badge queries)</span>
+<span class="cmt">-- In Redis: HINCRBY user:{id}:unread {sender_id} 1</span>
+<span class="cmt">--            HGETALL user:{id}:unread  → all sender → count pairs</span>
+<span class="cmt">-- Total badge = sum of all values in hash</span>
+
+<span class="cmt">-- Delivery receipts table</span>
+<span class="kw">CREATE TABLE</span> message_receipts (
+    message_id   <span class="cls">BIGINT</span>  <span class="kw">NOT NULL</span>,
+    recipient_id <span class="cls">BIGINT</span>  <span class="kw">NOT NULL</span>,
+    status       <span class="cls">TINYINT</span> <span class="kw">NOT NULL</span>,  <span class="cmt">-- 1=sent, 2=delivered, 3=read</span>
+    updated_at   <span class="cls">BIGINT</span>  <span class="kw">NOT NULL</span>,
+    <span class="kw">PRIMARY KEY</span> (message_id, recipient_id)
+);</pre></div>
+  </div>
+
+  <div class="spanel" id="t5b">
+    <div class="ptitle">Architecture — <em>Real-time Indicators</em></div>
+    <h3>End-to-end Flow</h3>
+    <div class="diag">
+<svg viewBox="0 0 720 190" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs>
+    <marker id="am" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="amg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker>
+    <marker id="ama" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#f59e0b" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="716" height="186" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Alice (sender) -->
+  <rect x="14" y="50" width="88" height="90" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="58" y="70" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Alice</text>
+  <text x="58" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">sends message</text>
+  <text x="58" y="100" text-anchor="middle" fill="#5a6a85" font-size="8">WS connected</text>
+  <text x="58" y="113" text-anchor="middle" fill="#5a6a85" font-size="8">to Server 1</text>
+  <text x="58" y="130" text-anchor="middle" fill="#22c55e" font-size="8">✓✓ read receipt</text>
+  <!-- Msg Server 1 -->
+  <rect x="158" y="30" width="100" height="130" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="208" y="48" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Msg Server 1</text>
+  <text x="208" y="63" text-anchor="middle" fill="#5a6a85" font-size="8">1. Persist msg</text>
+  <text x="208" y="77" text-anchor="middle" fill="#5a6a85" font-size="8">2. HINCRBY</text>
+  <text x="208" y="89" text-anchor="middle" fill="#5a6a85" font-size="8">   Redis unread+1</text>
+  <text x="208" y="103" text-anchor="middle" fill="#5a6a85" font-size="8">3. Publish Redis</text>
+  <text x="208" y="115" text-anchor="middle" fill="#5a6a85" font-size="8">   channel:bob</text>
+  <text x="208" y="130" text-anchor="middle" fill="#5a6a85" font-size="8">4. Kafka event</text>
+  <text x="208" y="143" text-anchor="middle" fill="#5a6a85" font-size="8">   msg.sent</text>
+  <!-- Redis -->
+  <rect x="316" y="40" width="110" height="110" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="371" y="58" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Redis</text>
+  <text x="371" y="73" text-anchor="middle" fill="#5a6a85" font-size="8">HASH user:bob:unread</text>
+  <text x="371" y="86" text-anchor="middle" fill="#5a6a85" font-size="8">{alice: 3, carol: 1}</text>
+  <text x="371" y="103" text-anchor="middle" fill="#5a6a85" font-size="8">PubSub chan:bob</text>
+  <text x="371" y="116" text-anchor="middle" fill="#5a6a85" font-size="8">→ notify all servers</text>
+  <text x="371" y="131" text-anchor="middle" fill="#5a6a85" font-size="8">with Bob's WS</text>
+  <!-- Msg Server 2 -->
+  <rect x="484" y="30" width="100" height="90" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="534" y="48" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Msg Server 2</text>
+  <text x="534" y="63" text-anchor="middle" fill="#5a6a85" font-size="8">Bob connected here</text>
+  <text x="534" y="77" text-anchor="middle" fill="#5a6a85" font-size="8">SUB chan:bob</text>
+  <text x="534" y="91" text-anchor="middle" fill="#5a6a85" font-size="8">→ push to Bob's WS</text>
+  <text x="534" y="105" text-anchor="middle" fill="#5a6a85" font-size="8">badge count update</text>
+  <!-- Bob -->
+  <rect x="642" y="50" width="62" height="90" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="673" y="70" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Bob</text>
+  <text x="673" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">badge: 4</text>
+  <text x="673" y="100" text-anchor="middle" fill="#ec4899" font-size="11" font-weight="700">4</text>
+  <text x="673" y="118" text-anchor="middle" fill="#5a6a85" font-size="8">(updated</text>
+  <text x="673" y="130" text-anchor="middle" fill="#5a6a85" font-size="8">via WS push)</text>
+  <!-- Arrows -->
+  <line x1="102" y1="88" x2="156" y2="88" stroke="#22c55e" stroke-width="1.5" marker-end="url(#am)"/>
+  <text x="128" y="82" fill="#22c55e" font-size="7.5" text-anchor="middle">send msg</text>
+  <line x1="258" y1="80" x2="314" y2="80" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ama)"/>
+  <text x="285" y="74" fill="#f59e0b" font-size="7.5" text-anchor="middle">HINCRBY</text>
+  <line x1="426" y1="92" x2="482" y2="78" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#am)"/>
+  <text x="452" y="78" fill="#00e5ff" font-size="7.5" text-anchor="middle">PubSub</text>
+  <line x1="584" y1="70" x2="640" y2="75" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#am)"/>
+  <text x="611" y="65" fill="#a78bfa" font-size="7.5" text-anchor="middle">WS push</text>
+  <!-- Read receipt flow -->
+  <line x1="640" y1="120" x2="586" y2="120" stroke="#22c55e" stroke-width="1" marker-end="url(#amg)" stroke-dasharray="3,2" opacity=".6"/>
+  <text x="614" y="135" fill="#22c55e" font-size="7.5" text-anchor="middle" opacity=".7">read → clear unread</text>
+  <line x1="482" y1="120" x2="426" y2="120" stroke="#22c55e" stroke-width="1" marker-end="url(#amg)" stroke-dasharray="3,2" opacity=".6"/>
+  <line x1="314" y1="120" x2="258" y2="120" stroke="#22c55e" stroke-width="1" marker-end="url(#amg)" stroke-dasharray="3,2" opacity=".6"/>
+  <line x1="156" y1="120" x2="104" y2="120" stroke="#22c55e" stroke-width="1" marker-end="url(#amg)" stroke-dasharray="3,2" opacity=".6"/>
+</svg>
+    </div>
+    <h3>Redis Hash for Unread Counts</h3>
+    <p>Store per-sender unread counts in a Redis Hash per user. HINCRBY is atomic, O(1). HGETALL returns all sender→count pairs in one call. Total badge = HVALS sum.</p>
+    <div class="cwrap"><div class="ctop"><span>Redis unread counter operations</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- New message from Alice to Bob: increment Alice's count in Bob's hash</span>
+HINCRBY  user:bob:unread  alice  1       <span class="cmt">→ alice now shows 3</span>
+HSET     user:bob:preview alice  "Hey!…" <span class="cmt">→ preview for conversation list</span>
+PUBLISH  chan:bob  '{"type":"new_msg","sender":"alice","count":3}'
+
+<span class="cmt">-- Bob's app opens. Get all unread counts</span>
+HGETALL  user:bob:unread
+<span class="cmt">→ {"alice": "3", "carol": "1"}  → badge total = 4</span>
+
+<span class="cmt">-- Bob reads Alice's messages: reset her count to 0</span>
+HSET     user:bob:unread  alice  0
+PUBLISH  chan:alice  '{"type":"read_receipt","reader":"bob","msg_id":999}'
+
+<span class="cmt">-- Alice's app receives ✓✓ (read receipt) via WebSocket push</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t5c">
+    <div class="ptitle">Delivery <em>Receipts</em> — Sent, Delivered, Read</div>
+    <p class="psub">Delivery receipts (the ticks on WhatsApp/iMessage) track the journey of a message from sent to delivered to read. Each state transition must be propagated back to the sender in real-time.</p>
+    <h3>Three-state Receipt System</h3>
+    <table>
+      <tr><th>State</th><th>When Set</th><th>WhatsApp Icon</th><th>Mechanism</th></tr>
+      <tr><td>Sent (1 tick)</td><td>Server persists message to Cassandra</td><td>✓</td><td>Server ACKs the send to sender's WS</td></tr>
+      <tr><td>Delivered (2 ticks)</td><td>Recipient's device receives message via WS or push notification</td><td>✓✓</td><td>Client sends POST /receipt/{msg_id}/delivered</td></tr>
+      <tr><td>Read (blue ticks)</td><td>Recipient opens and views the message</td><td>🔵✓✓</td><td>Client sends POST /receipt/{msg_id}/read on view event</td></tr>
+    </table>
+    <h3>Receipt Propagation</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Bob's device receives message</div><div class="fd">App sends <code>POST /receipts/msg_id/delivered</code>. Server updates <code>message_receipts</code> table: status = 2.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Server publishes receipt event to Redis channel</div><div class="fd"><code>PUBLISH chan:alice '{"type":"delivered","msg_id":42,"by":"bob"}'</code>. Alice's server (subscribed to chan:alice) gets this.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Alice's server pushes ✓✓ to Alice's WebSocket</div><div class="fd">Alice's chat interface updates the single tick to double tick. No polling needed.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Bob opens the conversation → blue ticks</div><div class="fd">App fires <code>POST /receipts/msg_id/read</code>. Same propagation path → Alice sees 🔵✓✓.</div></div></div>
+    </div>
+    <h3>Group Message Receipts</h3>
+    <div class="call cw"><strong>Complication:</strong> In a group of 100 people, message is "delivered" only when delivered to all 100, "read" when read by all 100. Need to track N receipts per message. Show individual per-user receipt status. System must not mark as "delivered to all" until last member receives it. Implement with a counter: <code>delivered_count</code>, <code>read_count</code> — increment atomically until they hit group size.</div>
+  </div>
+
+  <div class="spanel" id="t5d">
+    <div class="ptitle">Code — <em>Message Indicators Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>message_indicator.py — unread counters + receipt propagation</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, Depends
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+app   = <span class="fn">FastAPI</span>()
+redis = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+
+<span class="cmt">───────────────────────────────────────────
+ MESSAGE SEND: update indicator for receiver
+───────────────────────────────────────────</span>
+<span class="kw">async def</span> <span class="fn">on_message_sent</span>(sender_id: int, receiver_id: int,
+                           msg_id: int, preview: str):
+    <span class="str">"""Called when a message is persisted. Updates receiver's unread state."""</span>
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>(transaction=<span class="kw">True</span>) <span class="kw">as</span> pipe:
+        <span class="cmt"># 1. Increment unread count for this sender</span>
+        pipe.<span class="fn">hincrby</span>(<span class="str">f"user:{receiver_id}:unread"</span>,
+                     <span class="fn">str</span>(sender_id), <span class="num">1</span>)
+        <span class="cmt"># 2. Update conversation preview</span>
+        pipe.<span class="fn">hset</span>(<span class="str">f"user:{receiver_id}:preview"</span>,
+                   <span class="fn">str</span>(sender_id), preview[:<span class="num">100</span>])
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()
+
+    <span class="cmt"># 3. Push real-time badge update to receiver via Redis PubSub</span>
+    <span class="kw">await</span> redis.<span class="fn">publish</span>(<span class="str">f"indicator:{receiver_id}"</span>, <span class="fn">json</span>.<span class="fn">dumps</span>({
+        <span class="str">"type"</span>: <span class="str">"new_message"</span>,
+        <span class="str">"from"</span>: sender_id,
+        <span class="str">"msg_id"</span>: msg_id,
+        <span class="str">"preview"</span>: preview[:<span class="num">60</span>]
+    }))
+
+<span class="cmt">───────────────────────────────────────────
+ GET BADGE: total unread across all senders
+───────────────────────────────────────────</span>
+<span class="dec">@app.get</span>(<span class="str">"/badge/{user_id}"</span>)
+<span class="kw">async def</span> <span class="fn">get_badge</span>(user_id: int):
+    <span class="str">"""Returns total unread count + per-sender breakdown."""</span>
+    raw = <span class="kw">await</span> redis.<span class="fn">hgetall</span>(<span class="str">f"user:{user_id}:unread"</span>)
+    counts = {k: <span class="fn">int</span>(v) <span class="kw">for</span> k, v <span class="kw">in</span> raw.<span class="fn">items</span>() <span class="kw">if</span> <span class="fn">int</span>(v) > <span class="num">0</span>}
+    <span class="kw">return</span> {
+        <span class="str">"total_unread"</span>:   <span class="fn">sum</span>(counts.<span class="fn">values</span>()),
+        <span class="str">"per_sender"</span>:     counts,
+        <span class="str">"badge_display"</span>: <span class="fn">min</span>(<span class="fn">sum</span>(counts.<span class="fn">values</span>()), <span class="num">99</span>)  <span class="cmt"># cap at "99+"</span>
+    }
+
+<span class="cmt">───────────────────────────────────────────
+ MARK READ: clear unread + send read receipt
+───────────────────────────────────────────</span>
+<span class="dec">@app.post</span>(<span class="str">"/conversations/{sender_id}/read"</span>)
+<span class="kw">async def</span> <span class="fn">mark_read</span>(sender_id: int, user_id: int = <span class="fn">Depends</span>(<span class="fn">get_current_user</span>)):
+    <span class="str">"""User opened conversation with sender — clear unread, send read receipt."""</span>
+    <span class="cmt"># 1. Reset unread count for this sender</span>
+    <span class="kw">await</span> redis.<span class="fn">hset</span>(<span class="str">f"user:{user_id}:unread"</span>, <span class="fn">str</span>(sender_id), <span class="num">0</span>)
+
+    <span class="cmt"># 2. Get last message ID for receipt</span>
+    last_msg_id = <span class="kw">await</span> <span class="fn">get_last_msg_id</span>(user_id, sender_id)
+
+    <span class="cmt"># 3. Update receipt in DB (batch via Kafka for performance)</span>
+    <span class="kw">await</span> kafka.<span class="fn">publish</span>(<span class="str">"msg.receipts"</span>, {
+        <span class="str">"msg_id"</span>: last_msg_id, <span class="str">"reader"</span>: user_id,
+        <span class="str">"status"</span>: <span class="num">3</span>,  <span class="cmt"># read</span>
+        <span class="str">"ts"</span>: <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    })
+
+    <span class="cmt"># 4. Push read receipt to sender (blue ticks)</span>
+    <span class="kw">await</span> redis.<span class="fn">publish</span>(<span class="str">f"indicator:{sender_id}"</span>, <span class="fn">json</span>.<span class="fn">dumps</span>({
+        <span class="str">"type"</span>: <span class="str">"read_receipt"</span>,
+        <span class="str">"by"</span>:   user_id,
+        <span class="str">"msg_id"</span>: last_msg_id
+    }))
+    <span class="kw">return</span> {<span class="str">"cleared"</span>: <span class="kw">True</span>}</pre></div>
+  </div>
+
+  <div class="spanel" id="t5e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Message Indicator Demo</span>
+        <button class="dbtn dbtn-c" onclick="sendMsg('alice')" style="margin-left:auto">Alice → msg</button>
+        <button class="dbtn dbtn-p" onclick="sendMsg('carol')" style="margin-left:6px">Carol → msg</button>
+        <button class="dbtn dbtn-a" onclick="sendMsg('bob')" style="margin-left:6px">Bob → msg</button>
+        <button class="dbtn dbtn-g" onclick="readFrom('alice')" style="margin-left:6px">Read Alice</button>
+        <button class="dbtn dbtn-r" onclick="readAll()" style="margin-left:6px">Read All</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Bob's Inbox</h4>
+            <div id="msg-inbox"></div>
+          </div>
+          <div>
+            <h4>Badge State</h4>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+              <div style="font-size:28px">💬</div>
+              <div id="msg-badge" style="background:var(--red);color:#fff;border-radius:12px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;min-width:40px;text-align:center">0</div>
+            </div>
+            <div id="msg-log" style="margin-top:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:100px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:12px">
+      <li><strong>Redis Hash is the right data structure for unread counts</strong> — <code>user:{id}:unread</code> hash stores per-sender counts. HINCRBY is atomic and O(1). HGETALL returns all senders in one call.</li>
+      <li><strong>Redis Pub/Sub propagates indicator updates across servers</strong> — Bob may be on Server 2; Alice's message arrives at Server 1. Pub/Sub bridges the servers without any direct coupling.</li>
+      <li><strong>Read receipts follow the same fan-out pattern in reverse</strong> — reading a message clears unread count AND publishes a receipt event back to the sender's channel → blue ticks appear in real-time.</li>
+      <li><strong>Batch receipt updates via Kafka</strong> — receipt events (delivered/read) don't need instant DB persistence. Buffer in Kafka, batch-write to Cassandra every few seconds. Reduces DB write load by 100×.</li>
+      <li><strong>Badge capped at "99+"</strong> — UX detail: display "99+" rather than exact count above 99. Prevents layout issues and masks exact magnitude (which users don't care about at high counts).</li>
+    </ul>
+    <div class="done">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 4 — Building Social Networks Complete ✦</div>
+      <p style="font-size:13px;color:var(--muted)">All 5 social network topics covered. Next: <strong>Week 5 — Building Storages</strong> · Single-node Cache · DiceDB Internals · Consistent Hashing Ops · No-downtime Migration · Word Dictionary · Log-Structured KV Store</p>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="hbadge hb-c">Week 4 of 8 Complete</span>
+        <span class="hbadge hb-g">5/5 Topics Done</span>
+        <span class="hbadge hb-p">Week 5 → Storage Engines</span>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ── TAB WIRING ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(id).classList.add('active');
+    tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(stab => {
+  stab.addEventListener('click', () => {
+    const sid = stab.dataset.s;
+    stab.closest('.subtabwrap').querySelectorAll('.stab').forEach(s => s.classList.remove('active'));
+    stab.closest('.topic').querySelectorAll('.spanel').forEach(p => p.classList.remove('active'));
+    stab.classList.add('active');
+    document.getElementById(sid).classList.add('active');
+    stab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.ltab').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l;
+    if (!l) return;
+    const wrap = lt.closest('.ltabs');
+    wrap.querySelectorAll('.ltab').forEach(x => x.classList.remove('on'));
+    lt.classList.add('on');
+    const container = wrap.parentElement;
+    container.querySelectorAll('.lpanel').forEach(p => p.classList.toggle('on', p.id === l));
+  });
+});
+
+// ── GRAVATAR DEMO ─────────────────────────────────────────────────────────────
+const avColors = ['#7c3aed','#0891b2','#059669','#d97706','#be185d','#1d4ed8','#0f766e','#9333ea','#dc2626','#0369a1','#047857','#b45309'];
+const avUsers  = ['Arpit','Priya','Rahul','Sneha','Vikram','Ananya','Deepa','Rohan','Sanjay','Meera','Arun','Pooja'];
+
+function initials(name) { return name.slice(0,1).toUpperCase(); }
+
+function renderAvatars() {
+  const el = document.getElementById('av-grid');
+  if (!el) return;
+  el.innerHTML = avUsers.map((name,i) => `
+    <div class="av-item">
+      <div class="av-circle" style="background:${avColors[i%avColors.length]}">${initials(name)}</div>
+      <span>${name}</span>
+    </div>`).join('');
+}
+renderAvatars();
+
+// ── HASHTAG DEMO ──────────────────────────────────────────────────────────────
+const htagCounts = {};
+const SAMPLE_TAGS = [
+  ['travel','sunset','photography'],
+  ['food','cooking','recipe'],
+  ['fitness','gym','workout'],
+  ['travel','nature','hiking'],
+  ['worldcup','football','messi'],
+  ['music','concert','live'],
+  ['travel','europe','paris'],
+  ['pets','dogs','cute'],
+];
+
+function postWithTags() {
+  const tagSet = SAMPLE_TAGS[Math.floor(Math.random()*SAMPLE_TAGS.length)];
+  tagSet.forEach(tag => { htagCounts[tag] = (htagCounts[tag] || 0) + 1; });
+  renderHtagCounts();
+  renderTrending();
+}
+
+function viralBurst() {
+  for (let i = 0; i < 20; i++) {
+    htagCounts['worldcup'] = (htagCounts['worldcup'] || 0) + Math.floor(Math.random()*50+50);
+    htagCounts['football'] = (htagCounts['football'] || 0) + Math.floor(Math.random()*20+10);
+  }
+  renderHtagCounts();
+  renderTrending();
+}
+
+function renderHtagCounts() {
+  const el = document.getElementById('htag-counts');
+  if (!el) return;
+  const sorted = Object.entries(htagCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  el.innerHTML = sorted.map(([tag,cnt]) =>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+       <span style="color:var(--accent)">#${tag}</span>
+       <span style="color:var(--text)">${cnt.toLocaleString()}</span>
+     </div>`).join('');
+}
+
+function renderTrending() {
+  const el = document.getElementById('htag-trending');
+  if (!el) return;
+  const sorted = Object.entries(htagCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  el.innerHTML = sorted.map(([tag,cnt]) =>
+    `<span class="htag">#${tag} <span style="color:var(--muted);font-size:9px">${cnt}</span></span>`).join('');
+}
+
+// ── MESSAGE INDICATOR DEMO ────────────────────────────────────────────────────
+const inbox = {alice:0, carol:0, bob:0};
+const colors = {alice:'var(--accent)', carol:'#a78bfa', bob:'var(--green)'};
+const previews = {
+  alice: ['Hey there!','What are you up to?','Check this out 👀','Let me know when free'],
+  carol: ['Hi!','Are you coming tonight?','Sounds good!'],
+  bob:   ['👋','Did you see the news?','Wanna grab lunch?'],
+};
+
+function sendMsg(from) {
+  inbox[from]++;
+  const pre = previews[from][Math.floor(Math.random()*previews[from].length)];
+  msgLog(`<span style="color:${colors[from]}">${from}</span>: "${pre}" → badge +1`);
+  renderInbox();
+}
+
+function readFrom(from) {
+  if (!inbox[from]) { msgLog(`No unread from ${from}`); return; }
+  const cnt = inbox[from];
+  inbox[from] = 0;
+  msgLog(`✓✓ Read ${cnt} msgs from <span style="color:${colors[from]}">${from}</span> → receipt sent`);
+  renderInbox();
+}
+
+function readAll() {
+  const total = Object.values(inbox).reduce((a,b)=>a+b,0);
+  if (!total) { msgLog('No unread messages'); return; }
+  Object.keys(inbox).forEach(k => inbox[k]=0);
+  msgLog(`All ${total} messages marked read`);
+  renderInbox();
+}
+
+function msgLog(msg) {
+  const el = document.getElementById('msg-log');
+  if (!el) return;
+  const ts = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += `<div style="margin-bottom:2px;color:var(--muted)">[${ts}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderInbox() {
+  const total = Object.values(inbox).reduce((a,b)=>a+b,0);
+  const badge = document.getElementById('msg-badge');
+  if (badge) {
+    badge.textContent = total > 99 ? '99+' : String(total);
+    badge.style.background = total > 0 ? 'var(--red)' : 'var(--border)';
+    badge.style.color = total > 0 ? '#fff' : 'var(--muted)';
+  }
+
+  const inboxEl = document.getElementById('msg-inbox');
+  if (!inboxEl) return;
+  inboxEl.innerHTML = Object.entries(inbox).map(([name, cnt]) => `
+    <div class="msg-ind">
+      <div style="width:34px;height:34px;border-radius:50%;background:${colors[name]};display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-weight:800;color:#fff">${name[0].toUpperCase()}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${name.charAt(0).toUpperCase()+name.slice(1)}</div>
+        <div style="font-size:11px;color:var(--muted)">${cnt>0?previews[name][0]:'No new messages'}</div>
+      </div>
+      <div class="badge-count ${cnt===0?'zero':''}">${cnt>0?cnt:''}</div>
+    </div>`).join('');
+}
+renderInbox();
+</script>
+</body>
+</html>
