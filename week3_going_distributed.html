@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 3 — Going Distributed</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--green:#22c55e;--amber:#f59e0b;
+  --red:#ef4444;--purple:#7c3aed;--pink:#ec4899;--teal:#14b8a6;
+  --text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+.hb-t{color:var(--teal);border-color:var(--teal);background:rgba(20,184,166,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-t{border-top:2px solid var(--teal)}
+
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;border:1px solid;transition:all .15s}
+.dbtn-c{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--accent)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+.dbtn-a{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+
+.node-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.node{display:flex;flex-direction:column;align-items:center;background:var(--surf2);border:2px solid var(--border);border-radius:8px;padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;min-width:80px;transition:all .4s;cursor:default}
+.node.leader{border-color:var(--green);background:rgba(34,197,94,.08);box-shadow:0 0 12px rgba(34,197,94,.2)}
+.node.candidate{border-color:var(--amber);background:rgba(245,158,11,.08)}
+.node.dead{border-color:var(--red);opacity:.4}
+.node .role{font-size:9px;margin-top:3px}
+.node.leader .role{color:var(--green)}
+.node.candidate .role{color:var(--amber)}
+.node.dead .role{color:var(--red)}
+
+.lb-algo{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.lb-server{background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;min-width:90px;transition:all .3s}
+.lb-server.hit{border-color:var(--accent);background:rgba(0,229,255,.08);box-shadow:0 0 8px rgba(0,229,255,.15)}
+.lb-server.unhealthy{border-color:var(--red);opacity:.4}
+
+.id-display{font-family:'JetBrains Mono',monospace;font-size:13px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin:6px 0;word-break:break-all}
+.id-bit{display:inline-block;padding:1px 4px;border-radius:3px;font-size:10px;margin:1px}
+
+.shard-vis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+.shard{background:var(--surf2);border:2px solid var(--border);border-radius:6px;padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;transition:all .3s}
+.shard.hot{border-color:var(--red);background:rgba(239,68,68,.1);animation:pulse .8s ease infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 4px rgba(239,68,68,.3)}to{box-shadow:0 0 14px rgba(239,68,68,.6)}}
+.shard .load-bar{height:6px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden}
+.shard .load-fill{height:100%;border-radius:3px;transition:width .5s ease}
+
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 3 · Going Distributed — All 5 Topics</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">Load Balancers</span>
+    <span class="hbadge hb-g">Leader Election</span>
+    <span class="hbadge hb-p">Dist Locks</span>
+    <span class="hbadge hb-a">ID Generators</span>
+    <span class="hbadge hb-t">Hot Shard</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>Load Balancers</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>Leader Election</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>Distributed Locks</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>Distributed ID Generators</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Hot-Shard Problem</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════ T1: LOAD BALANCERS ══════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t1a">Overview</div>
+    <div class="stab" data-s="t1b">Algorithms</div>
+    <div class="stab" data-s="t1c">Health Checks</div>
+    <div class="stab" data-s="t1d">HA Design</div>
+    <div class="stab" data-s="t1e">Demo</div>
+    <div class="stab" data-s="t1f">Code</div>
+    <div class="stab" data-s="t1g">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">Designing <em>Load Balancers</em></div>
+    <p class="psub">A load balancer distributes incoming traffic across a pool of backend servers, preventing any single server from becoming a bottleneck — while also detecting and bypassing unhealthy servers. The challenge: the LB itself must not become a Single Point of Failure (SPoF).</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">L4</div><div class="slbl">Transport layer (TCP/UDP)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">L7</div><div class="slbl">Application layer (HTTP)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">99.99%</div><div class="slbl">Target availability</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">Active-Active</div><div class="slbl">HA LB pattern</div></div>
+    </div>
+    <h3>L4 vs L7 Load Balancers</h3>
+    <table>
+      <tr><th>Feature</th><th>L4 (Transport)</th><th>L7 (Application)</th></tr>
+      <tr><td>Works at</td><td>TCP/UDP — sees IP + port only</td><td>HTTP — sees URL, headers, cookies, body</td></tr>
+      <tr><td>Routing rules</td><td>By IP/port only</td><td>By path, host, header, method, cookie</td></tr>
+      <tr><td>TLS termination</td><td>Pass-through (TLS to backend)</td><td>Terminates TLS, re-encrypts or plain to backend</td></tr>
+      <tr><td>Sticky sessions</td><td>IP-hash only</td><td>Cookie-based, rich session affinity</td></tr>
+      <tr><td>Performance</td><td>Ultra-fast (kernel bypass)</td><td>Slightly more overhead (HTTP parse)</td></tr>
+      <tr><td>Examples</td><td>AWS NLB, HAProxy TCP mode, IPVS</td><td>AWS ALB, nginx, Envoy, Traefik</td></tr>
+      <tr><td>Best for</td><td>WebSocket, raw TCP, ultra-low latency</td><td>Microservices, REST APIs, path routing</td></tr>
+    </table>
+    <div class="call ci"><strong>Rule:</strong> Use L7 (ALB/nginx) for most web services — path-based routing, rich health checks, TLS termination. Use L4 (NLB) for WebSockets, gRPC streaming, or when you need &lt;1ms overhead.</div>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle">LB <em>Algorithms</em></div>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Round Robin</h4><p>Requests cycle through servers in order: S1, S2, S3, S1, S2… Simple, even distribution. Ignores server load or response time. Best when servers are identical and requests are uniform.</p><div class="call ci" style="font-size:11.5px;padding:7px 10px">Default for most LBs. Use when all servers are the same spec.</div></div>
+      <div class="card ct-g"><h4>Weighted Round Robin</h4><p>Assign weights: S1=3, S2=1. S1 handles 75% of requests. Use when servers have different capacities (e.g., c5.xlarge vs c5.2xlarge). Weights can be static or auto-tuned.</p></div>
+      <div class="card ct-a"><h4>Least Connections</h4><p>Route to the server with fewest active connections. Better than round-robin when requests have variable processing time (e.g., some requests take 10ms, some take 2s). Prevents overloading slow servers.</p></div>
+      <div class="card ct-p"><h4>Least Response Time</h4><p>Route to server with lowest avg response time AND fewest connections. More sophisticated — tracks real performance. Used by Envoy (P2C: Power of Two Choices), nginx plus.</p></div>
+      <div class="card ct-t"><h4>IP Hash (Sticky)</h4><p><code>server = hash(client_ip) % N</code>. Same client always goes to same server. Enables server-side session state. Problem: hot IPs (NAT → thousands of users behind one IP). Breaks on server add/remove.</p></div>
+      <div class="card ct-r"><h4>Random with Two Choices (P2C)</h4><p>Pick 2 random servers, route to the less loaded one. Provably near-optimal distribution. Low overhead. Used by Envoy, Finagle. Better than least-connections at scale (avoids herd effect).</p></div>
+    </div>
+    <h3>Algorithm Selection Guide</h3>
+    <table>
+      <tr><th>Scenario</th><th>Algorithm</th><th>Why</th></tr>
+      <tr><td>Uniform stateless API requests</td><td>Round Robin</td><td>Simplest, works perfectly</td></tr>
+      <tr><td>Mixed server specs</td><td>Weighted Round Robin</td><td>Proportional to capacity</td></tr>
+      <tr><td>Long-running requests (uploads, streaming)</td><td>Least Connections</td><td>Prevents overloading busy servers</td></tr>
+      <tr><td>WebSocket / stateful sessions</td><td>IP Hash or Cookie Sticky</td><td>Client pinned to same server</td></tr>
+      <tr><td>High-scale microservices</td><td>P2C (Power of Two Choices)</td><td>Near-optimal, low overhead</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle">Health <em>Checks</em></div>
+    <p class="psub">The LB must know which backends are healthy. If it routes to a dead server, requests fail. Health checks are the mechanism that keeps the routing table accurate.</p>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Passive Health Checks</h4><p>Monitor real request outcomes. If a server returns 5xx errors or times out N times, mark it unhealthy. No extra traffic. Latency: may route a few real requests to a failing server before detection.</p></div>
+      <div class="card ct-g"><h4>Active Health Checks ✓</h4><p>LB sends periodic probe requests (<code>GET /health</code>). Server must respond 200. If it fails K consecutive checks, mark unhealthy. Faster detection. Use short intervals (5–10s) with 2–3 failure threshold.</p></div>
+    </div>
+    <h3>Health Check Configuration</h3>
+    <div class="cwrap"><div class="ctop"><span>nginx upstream health check config</span><span class="ltag lsq">nginx</span></div>
+    <pre>upstream backend {
+    server app1:8080;
+    server app2:8080;
+    server app3:8080;
+
+    <span class="cmt"># Active health check (nginx plus / nginx with module)</span>
+    check interval=5000 rise=<span class="num">2</span> fall=<span class="num">3</span> timeout=<span class="num">1000</span> type=http;
+    check_http_send <span class="str">"GET /health HTTP/1.0\r\n\r\n"</span>;
+    check_http_expect_alive http_2xx;
+}
+
+server {
+    listen <span class="num">80</span>;
+    location / {
+        proxy_pass http://backend;
+        proxy_connect_timeout <span class="num">2s</span>;
+        proxy_next_upstream error timeout http_500 http_502 http_503;
+        <span class="cmt"># Retry on failure to next healthy server</span>
+    }
+}</pre></div>
+    <h3>What a Good /health Endpoint Returns</h3>
+    <div class="cwrap"><div class="ctop"><span>health.py — deep health check</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="dec">@app.get</span>(<span class="str">"/health"</span>)
+<span class="kw">async def</span> <span class="fn">health</span>():
+    checks = {}
+    <span class="cmt"># Check DB connectivity</span>
+    <span class="kw">try</span>:
+        <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"SELECT 1"</span>)
+        checks[<span class="str">"db"</span>] = <span class="str">"ok"</span>
+    <span class="kw">except</span>:
+        checks[<span class="str">"db"</span>] = <span class="str">"fail"</span>
+    <span class="cmt"># Check Redis connectivity</span>
+    <span class="kw">try</span>:
+        <span class="kw">await</span> cache.<span class="fn">ping</span>()
+        checks[<span class="str">"cache"</span>] = <span class="str">"ok"</span>
+    <span class="kw">except</span>:
+        checks[<span class="str">"cache"</span>] = <span class="str">"fail"</span>
+
+    healthy = <span class="fn">all</span>(v == <span class="str">"ok"</span> <span class="kw">for</span> v <span class="kw">in</span> checks.<span class="fn">values</span>())
+    <span class="kw">return</span> <span class="cls">JSONResponse</span>(
+        status_code=<span class="num">200</span> <span class="kw">if</span> healthy <span class="kw">else</span> <span class="num">503</span>,
+        content={<span class="str">"status"</span>: <span class="str">"healthy"</span> <span class="kw">if</span> healthy <span class="kw">else</span> <span class="str">"degraded"</span>, <span class="str">"checks"</span>: checks}
+    )</pre></div>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle">High Availability — <em>No SPoF LB</em></div>
+    <p class="psub">If your LB itself fails, everything goes down. A single LB is itself a single point of failure. The solution: Active-Active or Active-Passive LB pairs with a shared virtual IP.</p>
+    <h3>Active-Passive (Failover)</h3>
+    <div class="diag">
+<svg viewBox="0 0 620 140" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+  <marker id="ag" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="616" height="136" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="14" y="30" width="90" height="40" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="59" y="52" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="700">Clients</text>
+  <text x="59" y="64" text-anchor="middle" fill="#5a6a85" font-size="8">→ VIP 10.0.0.1</text>
+  <rect x="150" y="20" width="110" height="40" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="205" y="38" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">LB Primary</text>
+  <text x="205" y="52" text-anchor="middle" fill="#5a6a85" font-size="8">ACTIVE — owns VIP</text>
+  <rect x="150" y="78" width="110" height="40" rx="5" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="205" y="96" text-anchor="middle" fill="#8a9bb5" font-size="10">LB Standby</text>
+  <text x="205" y="109" text-anchor="middle" fill="#5a6a85" font-size="8">PASSIVE — VRRP heartbeat</text>
+  <rect x="360" y="20" width="220" height="100" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="470" y="36" text-anchor="middle" fill="#3a4a60" font-size="8" letter-spacing="1">BACKEND SERVERS</text>
+  <rect x="370" y="44" width="60" height="26" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="400" y="61" text-anchor="middle" fill="#8a9bb5" font-size="9">App 1</text>
+  <rect x="440" y="44" width="60" height="26" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="470" y="61" text-anchor="middle" fill="#8a9bb5" font-size="9">App 2</text>
+  <rect x="510" y="44" width="60" height="26" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="540" y="61" text-anchor="middle" fill="#8a9bb5" font-size="9">App 3</text>
+  <line x1="104" y1="48" x2="148" y2="42" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a)" opacity=".8"/>
+  <line x1="260" y1="40" x2="358" y2="58" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag)" opacity=".8"/>
+  <line x1="205" y1="60" x2="205" y2="76" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,2" opacity=".6"/>
+  <text x="220" y="72" fill="#f59e0b" font-size="8">VRRP heartbeat</text>
+  <text x="205" y="126" text-anchor="middle" fill="#3a4a60" font-size="8">Primary fails → Standby takes VIP in &lt;2s via VRRP/Keepalived</text>
+</svg>
+    </div>
+    <h3>Active-Active (Better Throughput)</h3>
+    <div class="diag">
+<svg viewBox="0 0 620 130" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="a2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="616" height="126" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="14" y="45" width="90" height="40" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="59" y="63" text-anchor="middle" fill="#e2e8f0" font-size="10">DNS Round</text>
+  <text x="59" y="75" text-anchor="middle" fill="#e2e8f0" font-size="10">Robin / Anycast</text>
+  <rect x="148" y="25" width="110" height="40" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="203" y="43" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">LB-1 ACTIVE</text>
+  <text x="203" y="56" text-anchor="middle" fill="#5a6a85" font-size="8">handles 50% traffic</text>
+  <rect x="148" y="78" width="110" height="40" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="203" y="96" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">LB-2 ACTIVE</text>
+  <text x="203" y="109" text-anchor="middle" fill="#5a6a85" font-size="8">handles 50% traffic</text>
+  <rect x="356" y="25" width="240" height="90" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="476" y="41" text-anchor="middle" fill="#3a4a60" font-size="8">SHARED BACKEND POOL</text>
+  <rect x="366" y="49" width="52" height="24" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="392" y="65" text-anchor="middle" fill="#8a9bb5" font-size="8">App 1</text>
+  <rect x="428" y="49" width="52" height="24" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="454" y="65" text-anchor="middle" fill="#8a9bb5" font-size="8">App 2</text>
+  <rect x="490" y="49" width="52" height="24" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="516" y="65" text-anchor="middle" fill="#8a9bb5" font-size="8">App 3</text>
+  <rect x="428" y="79" width="52" height="24" rx="3" fill="#131a2a" stroke="#1e2d45"/><text x="454" y="95" text-anchor="middle" fill="#8a9bb5" font-size="8">App 4</text>
+  <line x1="104" y1="60" x2="146" y2="48" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a2)" opacity=".8"/>
+  <line x1="104" y1="68" x2="146" y2="95" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a2)" opacity=".8"/>
+  <line x1="258" y1="50" x2="354" y2="64" stroke="#22c55e" stroke-width="1" marker-end="url(#a2)" opacity=".6"/>
+  <line x1="258" y1="100" x2="354" y2="80" stroke="#22c55e" stroke-width="1" marker-end="url(#a2)" opacity=".6"/>
+  <text x="310" y="118" text-anchor="middle" fill="#3a4a60" font-size="8">Either LB fails → DNS/Anycast routes all traffic to survivor</text>
+</svg>
+    </div>
+    <div class="call cg">Active-Active is preferred for production: 2× throughput capacity, automatic failover. Use AWS ALB (which is inherently Active-Active across AZs) or deploy two nginx/HAProxy instances behind Route53 with health-check-based failover.</div>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Interactive <em>LB Demo</em></div>
+    <p class="psub">Simulate a round-robin load balancer with health checks. Kill a server and watch traffic reroute.</p>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Round-Robin LB — 4 backend servers</span>
+        <button class="dbtn dbtn-c" onclick="lbSend()" style="margin-left:auto">⚡ Send Request</button>
+        <button class="dbtn dbtn-c" onclick="lbSendBatch()" style="margin-left:6px">Send 10</button>
+        <button class="dbtn dbtn-r" onclick="lbKill()" style="margin-left:6px">💀 Kill Server</button>
+        <button class="dbtn dbtn-g" onclick="lbRevive()" style="margin-left:6px">♻ Revive</button>
+      </div>
+      <div class="demo-body">
+        <div class="lb-algo" id="lb-servers"></div>
+        <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">
+          Requests: <span id="lb-total" style="color:var(--accent)">0</span> &nbsp;|&nbsp;
+          Healthy servers: <span id="lb-healthy" style="color:var(--green)">4</span> &nbsp;|&nbsp;
+          Last routed to: <span id="lb-last" style="color:var(--text)">—</span>
+        </div>
+        <div id="lb-log" style="margin-top:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:120px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1f">
+    <div class="ptitle">Code — <em>Build a Simple LB</em></div>
+    <div class="cwrap"><div class="ctop"><span>load_balancer.py — Round-robin + health check</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, httpx, itertools
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, Request
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> Response
+
+app = <span class="fn">FastAPI</span>()
+
+<span class="cls">BACKENDS</span> = [
+    {<span class="str">"url"</span>: <span class="str">"http://app1:8080"</span>, <span class="str">"healthy"</span>: <span class="kw">True</span>, <span class="str">"failures"</span>: <span class="num">0</span>},
+    {<span class="str">"url"</span>: <span class="str">"http://app2:8080"</span>, <span class="str">"healthy"</span>: <span class="kw">True</span>, <span class="str">"failures"</span>: <span class="num">0</span>},
+    {<span class="str">"url"</span>: <span class="str">"http://app3:8080"</span>, <span class="str">"healthy"</span>: <span class="kw">True</span>, <span class="str">"failures"</span>: <span class="num">0</span>},
+]
+_rr = <span class="fn">itertools</span>.<span class="fn">cycle</span>(<span class="fn">range</span>(<span class="fn">len</span>(BACKENDS)))  <span class="cmt"># round-robin pointer</span>
+<span class="cls">FAIL_THRESHOLD</span> = <span class="num">3</span>
+
+<span class="kw">def</span> <span class="fn">next_healthy</span>():
+    <span class="str">"""Pick next healthy backend (skip unhealthy ones)."""</span>
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(BACKENDS)):
+        idx  = <span class="fn">next</span>(_rr)
+        back = BACKENDS[idx]
+        <span class="kw">if</span> back[<span class="str">"healthy"</span>]:
+            <span class="kw">return</span> back
+    <span class="kw">raise</span> <span class="cls">RuntimeError</span>(<span class="str">"No healthy backends"</span>)
+
+<span class="dec">@app.api_route</span>(<span class="str">"/{path:path}"</span>, methods=[<span class="str">"GET"</span>,<span class="str">"POST"</span>,<span class="str">"PUT"</span>,<span class="str">"DELETE"</span>])
+<span class="kw">async def</span> <span class="fn">proxy</span>(request: <span class="cls">Request</span>, path: str):
+    backend = <span class="fn">next_healthy</span>()
+    url = <span class="str">f"{backend['url']}/{path}"</span>
+    <span class="kw">async with</span> httpx.<span class="cls">AsyncClient</span>(timeout=<span class="num">5.0</span>) <span class="kw">as</span> client:
+        <span class="kw">try</span>:
+            resp = <span class="kw">await</span> client.<span class="fn">request</span>(
+                method=request.method, url=url,
+                headers=<span class="fn">dict</span>(request.headers),
+                content=<span class="kw">await</span> request.<span class="fn">body</span>()
+            )
+            backend[<span class="str">"failures"</span>] = <span class="num">0</span>   <span class="cmt"># reset on success</span>
+            <span class="kw">return</span> <span class="cls">Response</span>(content=resp.content,
+                            status_code=resp.status_code,
+                            headers=<span class="fn">dict</span>(resp.headers))
+        <span class="kw">except</span> (httpx.<span class="cls">RequestError</span>, httpx.<span class="cls">TimeoutException</span>):
+            backend[<span class="str">"failures"</span>] += <span class="num">1</span>
+            <span class="kw">if</span> backend[<span class="str">"failures"</span>] >= FAIL_THRESHOLD:
+                backend[<span class="str">"healthy"</span>] = <span class="kw">False</span>   <span class="cmt"># passive health check</span>
+            <span class="kw">raise</span>
+
+<span class="kw">async def</span> <span class="fn">active_health_check</span>():
+    <span class="str">"""Background task: probe each backend every 10s."""</span>
+    <span class="kw">async with</span> httpx.<span class="cls">AsyncClient</span>(timeout=<span class="num">2.0</span>) <span class="kw">as</span> client:
+        <span class="kw">while True</span>:
+            <span class="kw">for</span> b <span class="kw">in</span> BACKENDS:
+                <span class="kw">try</span>:
+                    r = <span class="kw">await</span> client.<span class="fn">get</span>(<span class="str">f"{b['url']}/health"</span>)
+                    b[<span class="str">"healthy"</span>] = r.status_code == <span class="num">200</span>
+                    b[<span class="str">"failures"</span>] = <span class="num">0</span>
+                <span class="kw">except</span>:
+                    b[<span class="str">"failures"</span>] += <span class="num">1</span>
+                    <span class="kw">if</span> b[<span class="str">"failures"</span>] >= <span class="num">2</span>:
+                        b[<span class="str">"healthy"</span>] = <span class="kw">False</span>
+            <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="num">10</span>)</pre></div>
+  </div>
+
+  <div class="spanel" id="t1g">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>L4 vs L7 is a routing capability decision</strong> — L7 for HTTP path routing, header manipulation, TLS termination; L4 for WebSocket, raw TCP, ultra-low overhead.</li>
+      <li><strong>Active health checks are mandatory in production</strong> — passive (observing errors) is too slow. Probing <code>/health</code> every 5–10s with fail-fast ensures unhealthy backends are bypassed before users see errors.</li>
+      <li><strong>Active-Active LB pairs eliminate SPoF</strong> — deploy two LB instances, use DNS failover or Anycast. Each handles 50% normally; survivor takes 100% on failure. VRRP/Keepalived for bare-metal.</li>
+      <li><strong>Power of Two Choices (P2C)</strong> — pick 2 random servers, route to the less loaded one. Provably near-optimal distribution at scale. Envoy uses this. Better than least-connections for high-throughput services.</li>
+      <li><strong>The LB itself needs monitoring</strong> — track: request rate, error rate, active connections per backend, health check failures. Alert on: backend pool &lt;50% healthy, error rate &gt;1%, p99 &gt; threshold.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T2: LEADER ELECTION ══════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t2a">Overview</div>
+    <div class="stab" data-s="t2b">Raft Algorithm</div>
+    <div class="stab" data-s="t2c">Bully Algorithm</div>
+    <div class="stab" data-s="t2d">Self-healing</div>
+    <div class="stab" data-s="t2e">Demo</div>
+    <div class="stab" data-s="t2f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">Leader Election &amp; <em>Self-healing Distributed Systems</em></div>
+    <p class="psub">In a distributed cluster, exactly one node must be the "leader" — responsible for coordination tasks like log replication, lock granting, or primary DB writes. Leader election is the algorithm by which nodes agree on who that leader is.</p>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Why a Leader?</h4><ul class="rl"><li>Avoids split-brain — two nodes thinking they're primary</li><li>Simplifies coordination — one decision-maker</li><li>Enables <strong>Paxos/Raft consensus</strong> for distributed log replication</li><li>Kafka: partition leader handles all reads/writes</li></ul></div>
+      <div class="card ct-g"><h4>Properties a Leader Election Must Have</h4><ul class="rl"><li><strong>Safety</strong> — at most one leader at any time</li><li><strong>Liveness</strong> — if the leader dies, a new one is elected eventually</li><li><strong>Fault tolerance</strong> — survives minority node failures</li></ul></div>
+      <div class="card ct-a"><h4>Real-world Uses</h4><ul class="rl"><li><strong>etcd</strong> — Kubernetes control plane (Raft)</li><li><strong>Kafka</strong> — partition leader election (ZooKeeper/KRaft)</li><li><strong>MySQL Group Replication</strong> — primary election</li><li><strong>Elasticsearch</strong> — master node election</li></ul></div>
+    </div>
+    <div class="call ci"><strong>Split-brain</strong>: When a network partition causes two nodes to each think they are the leader and accept writes independently. The result: diverged state, data corruption, two conflicting primaries. Preventing split-brain is the #1 requirement of any leader election algorithm.</div>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle">The <em>Raft Algorithm</em></div>
+    <p class="psub">Raft is the most widely used consensus algorithm today. It's designed to be understandable (unlike Paxos) while providing the same safety guarantees. Used in etcd, CockroachDB, TiKV, Consul.</p>
+    <h3>Raft Node States</h3>
+    <div class="g g3">
+      <div class="card ct-a"><h4>Follower</h4><p>Default state. Receives log entries from leader. If no heartbeat from leader within election timeout (150–300ms random), transitions to Candidate.</p></div>
+      <div class="card ct-c"><h4>Candidate</h4><p>Increments term, votes for itself, sends RequestVote RPCs to all peers. If majority grant votes → becomes Leader. If another leader emerges → reverts to Follower.</p></div>
+      <div class="card ct-g"><h4>Leader</h4><p>Sends periodic heartbeats (AppendEntries with empty payload) to prevent elections. Replicates log entries. Handles all client writes. At most one per term.</p></div>
+    </div>
+    <h3>Raft Election Flow</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Election timeout fires (no heartbeat received)</div><div class="fd">Each follower has a random timeout (150–300ms). Randomization prevents split votes — one node almost always fires first.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Node increments term and becomes Candidate</div><div class="fd">Sends <code>RequestVote(term, candidateId, lastLogIndex, lastLogTerm)</code> to all other nodes.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Peers grant or deny vote</div><div class="fd">Grant if: haven't voted this term AND candidate's log is at least as up-to-date as theirs. Each node votes for at most one candidate per term.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Majority wins → becomes Leader</div><div class="fd">Needs ⌊N/2⌋ + 1 votes (majority). With 5 nodes: needs 3. This prevents split-brain: two candidates cannot both get majority simultaneously.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">New leader sends heartbeats immediately</div><div class="fd">Suppresses new elections. Begins log replication. All followers reset their election timers on receiving the heartbeat.</div></div></div>
+    </div>
+    <div class="call cg"><strong>Why randomized timeouts prevent split votes:</strong> If all nodes had the same timeout, they'd all become candidates simultaneously and split the votes. Random timeouts (150–300ms range) ensure one node almost always starts election first and wins before others even fire.</div>
+    <table>
+      <tr><th>Cluster Size</th><th>Majority Needed</th><th>Tolerable Failures</th></tr>
+      <tr><td>3 nodes</td><td>2</td><td>1</td></tr>
+      <tr><td>5 nodes</td><td>3</td><td>2</td></tr>
+      <tr><td>7 nodes</td><td>4</td><td>3</td></tr>
+      <tr><td>Even numbers</td><td colspan="2">⚠️ Avoid — higher split-vote risk</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">The <em>Bully Algorithm</em></div>
+    <p class="psub">A simpler election algorithm for small clusters. The node with the highest ID that is alive "bullies" its way to leadership. Simpler than Raft but doesn't provide log replication safety.</p>
+    <h3>How Bully Works</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Node P detects leader is dead (heartbeat timeout)</div><div class="fd">Sends <code>ELECTION</code> message to all nodes with higher ID than itself.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Higher-ID nodes respond with OK</div><div class="fd">Any node receiving ELECTION from a lower-ID node sends back OK (taking over the election process) and starts their own election.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">If no OK received → declare self as leader</div><div class="fd">P sends <code>COORDINATOR</code> message to all: "I am the new leader." If P later receives an OK, it steps down.</div></div></div>
+    </div>
+    <div class="tdp">
+      <div class="tdc pro"><h4>✅ Bully Pros</h4><ul><li>Simple to implement</li><li>Fast election (O(N²) messages in worst case)</li><li>Deterministic: highest ID always wins</li></ul></div>
+      <div class="tdc con"><h4>❌ Bully Cons</h4><ul><li>No log replication safety</li><li>Message complexity O(N²)</li><li>The "best" node (highest ID) may not be the most appropriate leader</li><li>Fragile with frequent failures (election storms)</li></ul></div>
+    </div>
+    <div class="call cw">Bully is used in simple coordination systems. For production distributed databases and consensus systems, always use Raft or Paxos — they provide both election AND safe log replication.</div>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle">Self-healing <em>Distributed Systems</em></div>
+    <p class="psub">Self-healing means the cluster automatically recovers from node failures without human intervention. Leader election is the core mechanism.</p>
+    <h3>Self-healing Patterns</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Auto re-election on leader failure</h4><p>When leader stops sending heartbeats, followers detect the timeout and trigger election. New leader elected within 2× election timeout (typically &lt;1 second for well-tuned clusters). Zero manual intervention.</p></div>
+      <div class="card ct-g"><h4>Cluster membership changes</h4><p>When a new node joins, the leader adds it to the cluster via a special "joint consensus" configuration change — a 2-phase approach that ensures safety during membership transitions. No downtime.</p></div>
+      <div class="card ct-a"><h4>Log catch-up on rejoin</h4><p>When a previously crashed follower rejoins, the leader detects its log is behind and sends missing entries (AppendEntries). The follower catches up without manual resync.</p></div>
+      <div class="card ct-p"><h4>etcd / ZooKeeper in practice</h4><p>Don't implement election yourself. Use etcd (Raft-based) or ZooKeeper (ZAB-based). These battle-tested systems handle election, log replication, membership changes, and client failover transparently.</p></div>
+    </div>
+    <h3>Using etcd for Leader Election</h3>
+    <div class="cwrap"><div class="ctop"><span>etcd_election.py — leader election via etcd</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio
+<span class="kw">import</span> etcd3
+
+etcd = etcd3.<span class="fn">client</span>(host=<span class="str">'etcd'</span>, port=<span class="num">2379</span>)
+
+<span class="kw">async def</span> <span class="fn">run_as_leader_or_follower</span>(node_id: str):
+    <span class="str">"""
+    Campaign for leadership. If we win, run leader duties.
+    If we lose, run follower duties and watch for leader change.
+    """</span>
+    election = etcd.<span class="fn">elections</span>.<span class="fn">Campaign</span>(<span class="str">"/service/leader"</span>, node_id)
+
+    <span class="kw">while True</span>:
+        <span class="fn">print</span>(<span class="str">f"[{node_id}] Campaigning for leadership..."</span>)
+        <span class="cmt"># Blocks until this node becomes leader (TTL-based lease)</span>
+        <span class="kw">await</span> asyncio.<span class="fn">to_thread</span>(election.<span class="fn">campaign</span>)   <span class="cmt"># etcd handles the Raft election</span>
+        <span class="fn">print</span>(<span class="str">f"[{node_id}] *** BECAME LEADER ***"</span>)
+
+        <span class="kw">try</span>:
+            <span class="kw">await</span> <span class="fn">do_leader_work</span>(node_id)   <span class="cmt"># perform primary duties</span>
+        <span class="kw">except</span> <span class="cls">Exception</span> <span class="kw">as</span> e:
+            <span class="fn">print</span>(<span class="str">f"[{node_id}] Leader work failed: {e}, resigning"</span>)
+            election.<span class="fn">resign</span>()               <span class="cmt"># graceful handoff</span>
+
+<span class="kw">async def</span> <span class="fn">do_leader_work</span>(node_id: str):
+    <span class="str">"""Runs only on the leader node."""</span>
+    <span class="kw">while True</span>:
+        <span class="fn">print</span>(<span class="str">f"[{node_id}] Running scheduled job (leader only)"</span>)
+        <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="num">5</span>)</pre></div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Interactive <em>Raft Election Demo</em></div>
+    <p class="psub">5-node Raft cluster. Kill the leader and watch the election unfold.</p>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">5-node Raft cluster</span>
+        <button class="dbtn dbtn-r" onclick="raftKillLeader()" style="margin-left:auto">💀 Kill Leader</button>
+        <button class="dbtn dbtn-g" onclick="raftElect()" style="margin-left:6px">⚡ Trigger Election</button>
+        <button class="dbtn dbtn-c" onclick="raftReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="node-row" id="raft-nodes"></div>
+        <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px">
+          Term: <span id="raft-term" style="color:var(--accent)">1</span> &nbsp;|&nbsp;
+          Leader: <span id="raft-leader" style="color:var(--green)">—</span>
+        </div>
+        <div id="raft-log" style="margin-top:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:100px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Safety requires majority (quorum)</strong> — Raft requires ⌊N/2⌋+1 votes to elect a leader. This makes split-brain mathematically impossible: two candidates cannot both achieve majority simultaneously.</li>
+      <li><strong>Randomized timeouts prevent split votes</strong> — the single most elegant insight in Raft. Different timeouts ensure one node almost always starts and finishes an election before others even begin.</li>
+      <li><strong>Use odd-numbered clusters</strong> — 3, 5, 7 nodes. Even numbers increase split-vote risk and don't improve fault tolerance (5-node tolerates 2 failures; 6-node also tolerates 2 failures — wasteful).</li>
+      <li><strong>Use etcd or ZooKeeper, don't DIY</strong> — implementing Raft correctly is extremely hard. etcd (Go), ZooKeeper (Java), and Consul (Go) are battle-tested. Use them as your coordination layer.</li>
+      <li><strong>Self-healing = election + log catch-up</strong> — when a failed node rejoins, the leader sends it all missing log entries. The cluster is self-repairing without manual intervention.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T3: DISTRIBUTED LOCKS ══════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t3a">Overview</div>
+    <div class="stab" data-s="t3b">Redis Redlock</div>
+    <div class="stab" data-s="t3c">DB-based Locks</div>
+    <div class="stab" data-s="t3d">Code</div>
+    <div class="stab" data-s="t3e">Tradeoffs</div>
+    <div class="stab" data-s="t3f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">Implementing <em>Remote &amp; Distributed Locks</em></div>
+    <p class="psub">In distributed systems, multiple processes across different machines may need exclusive access to a shared resource. A distributed lock coordinates this — ensuring only one process holds the lock at a time across the network.</p>
+    <div class="g g3">
+      <div class="card ct-c"><h4>When You Need a Distributed Lock</h4><ul class="rl"><li><strong>Cron job deduplication</strong> — only one instance runs a scheduled task</li><li><strong>Inventory reservation</strong> — prevent overselling across app nodes</li><li><strong>Rate limiting per user</strong> — atomic increment across servers</li><li><strong>Leader election</strong> — who writes to the primary DB</li></ul></div>
+      <div class="card ct-a"><h4>Requirements</h4><ul class="rl"><li><strong>Mutual exclusion</strong> — only one lock holder at a time</li><li><strong>Deadlock-free</strong> — lock always eventually released (TTL)</li><li><strong>Fault tolerant</strong> — lock holder crash doesn't freeze the system</li><li><strong>No false releases</strong> — only the lock owner can release it</li></ul></div>
+      <div class="card ct-g"><h4>Lock Implementations</h4><ul class="rl"><li><strong>Redis SETNX + TTL</strong> — simplest, single Redis node</li><li><strong>Redlock</strong> — Redis multi-node, quorum-based</li><li><strong>MySQL / Postgres advisory locks</strong> — DB-backed, ACID</li><li><strong>etcd / ZooKeeper</strong> — consensus-based, strongest guarantees</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle">Redis <em>Redlock Algorithm</em></div>
+    <p class="psub">Redlock is Redis's multi-node distributed lock algorithm. It acquires a lock on a majority of N Redis nodes independently, ensuring safety even if some nodes fail.</p>
+    <h3>Single-Node Redis Lock (Simple, Fragile)</h3>
+    <div class="cwrap"><div class="ctop"><span>Simple Redis lock — works until Redis restarts</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- Atomic acquire: SET if Not eXists + EXpiry</span>
+SET lock:resource-id {owner-uuid} NX PX 30000
+<span class="cmt">-- NX = only set if key doesn't exist (atomic check-and-set)</span>
+<span class="cmt">-- PX 30000 = expire in 30s (prevents deadlock if holder crashes)</span>
+<span class="cmt">-- Returns OK = acquired, nil = already locked</span>
+
+<span class="cmt">-- Release: Lua script ensures atomic check-and-delete</span>
+<span class="cmt">-- ONLY delete if the value matches our UUID (safety!)</span>
+<span class="dec">EVAL</span> <span class="str">"if redis.call('get', KEYS[1]) == ARGV[1] then
+       return redis.call('del', KEYS[1])
+     else
+       return 0
+     end"</span> 1 lock:resource-id {owner-uuid}</pre></div>
+
+    <h3>Redlock — Multi-Node Algorithm</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Get current time T1</div><div class="fd">Record start time in milliseconds. Used to calculate effective lock TTL after acquisition.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Try to acquire lock on all N Redis nodes sequentially</div><div class="fd">Send <code>SET key uuid NX PX ttl</code> to each of N=5 nodes with a short timeout (e.g., 50ms) to avoid blocking on a slow node.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Count successful acquisitions</div><div class="fd">If acquired on ≥ ⌊N/2⌋+1 nodes (majority = 3 of 5), proceed. Otherwise, release all acquired locks and fail.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Validate remaining TTL</div><div class="fd">Effective TTL = original_TTL − (T2 − T1) − clock_drift_margin. If effective TTL ≤ 0, the lock took too long — release and fail.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Lock acquired — proceed with critical section</div><div class="fd">On completion or crash, release by deleting key on all nodes with the Lua check-and-delete script.</div></div></div>
+    </div>
+    <div class="call cw"><strong>Redlock controversy (Martin Kleppmann):</strong> Even Redlock has edge cases with clock drift and process pauses that can lead to multiple lock holders. For critical correctness (financial transactions), use ZooKeeper/etcd-based locks with fencing tokens instead.</div>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">DB-based &amp; <em>etcd-based Locks</em></div>
+    <h3>PostgreSQL Advisory Locks</h3>
+    <div class="cwrap"><div class="ctop"><span>Postgres advisory lock — session or transaction scope</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="cmt">-- Session-level advisory lock (released on disconnect)</span>
+<span class="kw">SELECT</span> <span class="fn">pg_advisory_lock</span>(<span class="num">12345</span>);     <span class="cmt">-- blocks until acquired</span>
+<span class="cmt">-- ... critical section ...</span>
+<span class="kw">SELECT</span> <span class="fn">pg_advisory_unlock</span>(<span class="num">12345</span>);
+
+<span class="cmt">-- Try-lock (non-blocking)</span>
+<span class="kw">SELECT</span> <span class="fn">pg_try_advisory_lock</span>(<span class="num">12345</span>);  <span class="cmt">-- returns true/false immediately</span>
+
+<span class="cmt">-- Transaction-level lock (auto-released on COMMIT/ROLLBACK)</span>
+<span class="kw">SELECT</span> <span class="fn">pg_advisory_xact_lock</span>(<span class="fn">hashtext</span>(<span class="str">'resource:cron-job-1'</span>));
+<span class="cmt">-- Released automatically when transaction ends</span>
+
+<span class="cmt">-- MySQL: GET_LOCK (session-level, named lock)</span>
+<span class="kw">SELECT</span> <span class="fn">GET_LOCK</span>(<span class="str">'cron-job-1'</span>, <span class="num">0</span>);    <span class="cmt">-- 0 = non-blocking</span>
+<span class="cmt">-- returns 1=acquired, 0=timeout, null=error</span>
+<span class="kw">SELECT</span> <span class="fn">RELEASE_LOCK</span>(<span class="str">'cron-job-1'</span>);</pre></div>
+
+    <h3>Fencing Tokens — The Safe Pattern</h3>
+    <p>The problem: lock holder A gets paused (GC, slow network). Lock expires. B acquires lock and starts writing. A resumes and writes too — now both are writing. Solution: fencing tokens.</p>
+    <div class="cwrap"><div class="ctop"><span>fencing_token.py — monotonic token prevents stale writes</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="cmt"># Lock service returns a monotonically increasing token</span>
+<span class="cmt"># Every write to the storage service includes the token</span>
+<span class="cmt"># Storage rejects writes with tokens lower than the highest seen</span>
+
+<span class="kw">async def</span> <span class="fn">acquire_lock_with_fence</span>(resource: str):
+    <span class="str">"""Returns (success, token) — token is a monotonic counter."""</span>
+    token = <span class="kw">await</span> etcd.<span class="fn">increment</span>(<span class="str">f"fence:{resource}"</span>)  <span class="cmt"># atomic increment</span>
+    ok = <span class="kw">await</span> redis.<span class="fn">set</span>(<span class="str">f"lock:{resource}"</span>, token, nx=<span class="kw">True</span>, ex=<span class="num">30</span>)
+    <span class="kw">return</span> ok, token
+
+<span class="kw">async def</span> <span class="fn">write_with_fence</span>(storage, key: str, value: str, token: int):
+    <span class="str">"""Only applies if our token >= storage's current token."""</span>
+    <span class="kw">await</span> storage.<span class="fn">conditional_write</span>(key, value, min_token=token)
+    <span class="cmt"># If our token is stale → storage rejects → we know lock expired</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle">Code — <em>Production Redis Lock</em></div>
+    <div class="cwrap"><div class="ctop"><span>distributed_lock.py — production-grade Redis lock with retry</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> uuid, asyncio, time
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+<span class="kw">from</span> contextlib <span class="kw">import</span> asynccontextmanager
+
+<span class="kw">class</span> <span class="cls">DistributedLock</span>:
+    <span class="cls">RELEASE_SCRIPT</span> = <span class="str">"""
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+    else return 0 end"""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, redis: aioredis.<span class="cls">Redis</span>, name: str,
+                 ttl_ms: int = <span class="num">30000</span>, retry_times: int = <span class="num">3</span>,
+                 retry_delay_ms: int = <span class="num">200</span>):
+        <span class="kw">self</span>.redis       = redis
+        <span class="kw">self</span>.name        = <span class="str">f"lock:{name}"</span>
+        <span class="kw">self</span>.ttl_ms      = ttl_ms
+        <span class="kw">self</span>.retry_times  = retry_times
+        <span class="kw">self</span>.retry_delay  = retry_delay_ms / <span class="num">1000</span>
+        <span class="kw">self</span>._owner      = <span class="kw">None</span>
+
+    <span class="dec">@asynccontextmanager</span>
+    <span class="kw">async def</span> <span class="fn">acquire</span>(<span class="kw">self</span>):
+        owner = <span class="fn">str</span>(uuid.<span class="fn">uuid4</span>())   <span class="cmt"># unique per acquisition attempt</span>
+
+        <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(<span class="kw">self</span>.retry_times):
+            ok = <span class="kw">await</span> <span class="kw">self</span>.redis.<span class="fn">set</span>(
+                <span class="kw">self</span>.name, owner,
+                px=<span class="kw">self</span>.ttl_ms, nx=<span class="kw">True</span>   <span class="cmt"># NX = only if not exists</span>
+            )
+            <span class="kw">if</span> ok:
+                <span class="kw">self</span>._owner = owner
+                <span class="kw">try</span>:
+                    <span class="kw">yield self</span>             <span class="cmt"># critical section runs here</span>
+                <span class="kw">finally</span>:
+                    <span class="kw">await self</span>.<span class="fn">_release</span>(owner)
+                <span class="kw">return</span>
+
+            <span class="cmt"># Backoff before retry: base + jitter</span>
+            jitter = asyncio.<span class="fn">get_event_loop</span>().<span class="fn">call_later</span>
+            <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="kw">self</span>.retry_delay * (<span class="num">1.5</span> ** attempt))
+
+        <span class="kw">raise</span> <span class="cls">TimeoutError</span>(<span class="str">f"Could not acquire lock {self.name!r}"</span>)
+
+    <span class="kw">async def</span> <span class="fn">_release</span>(<span class="kw">self</span>, owner: str):
+        <span class="str">"""Atomic: only release if WE hold the lock (UUID match)."""</span>
+        <span class="kw">await</span> <span class="kw">self</span>.redis.<span class="fn">eval</span>(<span class="kw">self</span>.RELEASE_SCRIPT, <span class="num">1</span>, <span class="kw">self</span>.name, owner)
+
+<span class="cmt"># Usage</span>
+lock = <span class="cls">DistributedLock</span>(redis_client, <span class="str">"inventory:product:42"</span>, ttl_ms=<span class="num">5000</span>)
+
+<span class="kw">async def</span> <span class="fn">reserve_inventory</span>():
+    <span class="kw">async with</span> lock.<span class="fn">acquire</span>():
+        <span class="cmt"># Only ONE process runs this at a time across all app servers</span>
+        count = <span class="kw">await</span> db.<span class="fn">fetchval</span>(<span class="str">"SELECT qty FROM inventory WHERE id=42"</span>)
+        <span class="kw">if</span> count > <span class="num">0</span>:
+            <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"UPDATE inventory SET qty=qty-1 WHERE id=42"</span>)
+            <span class="kw">return True</span>
+    <span class="kw">return False</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">Trade<em>offs</em></div>
+    <table>
+      <tr><th>Implementation</th><th>Strength</th><th>Weakness</th><th>Best For</th></tr>
+      <tr><td>Redis SETNX (single node)</td><td>Simple, fast (&lt;1ms)</td><td>Fails if Redis crashes/restarts</td><td>Cron dedup, rate limiting</td></tr>
+      <tr><td>Redlock (5 Redis nodes)</td><td>Tolerates minority failure</td><td>Clock drift edge cases</td><td>Medium-criticality coordination</td></tr>
+      <tr><td>PostgreSQL advisory lock</td><td>ACID, no separate infra</td><td>Scales with DB; connection-scoped</td><td>Low-volume critical locks</td></tr>
+      <tr><td>etcd / ZooKeeper</td><td>Consensus-based, safest</td><td>Higher latency, more infra</td><td>Mission-critical: financial, elections</td></tr>
+      <tr><td>Fencing tokens + any lock</td><td>Safe against GC pauses</td><td>Storage must check tokens</td><td>Any high-correctness requirement</td></tr>
+    </table>
+    <div class="call cr"><strong>Common mistake:</strong> Using <code>GET</code> then <code>SET</code> separately to implement a lock. These two operations are not atomic — there's a race between them. Always use <code>SET NX PX</code> (one atomic command) for Redis locks.</div>
+    <div class="call cg"><strong>Lock TTL sizing:</strong> TTL must be longer than your critical section (including worst-case network latency), but short enough to recover quickly from crashes. For 100ms critical section: TTL = 5–10s. Monitor lock acquisition failures — growing failures = contention problem.</div>
+  </div>
+
+  <div class="spanel" id="t3f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>SET NX PX is the atomic primitive</strong> — not GET+SET. The NX flag makes the set conditional: succeed only if key doesn't exist. This is atomic at the Redis command level.</li>
+      <li><strong>Always use UUID as lock value</strong> — the Lua release script checks the value before deleting. Without this check, a crashed lock holder's TTL-expired key could be deleted from another holder, causing two concurrent lock holders.</li>
+      <li><strong>Fencing tokens are the safest pattern</strong> — GC pauses can cause a process to sleep through a lock expiry and wake up thinking it still holds the lock. Fencing tokens (monotonic counters checked by the storage layer) defeat this.</li>
+      <li><strong>For critical correctness: use etcd/ZooKeeper</strong> — Redis locks have edge cases (clock drift, network pauses). For financial transactions or anything where correctness is non-negotiable, use consensus-backed locks.</li>
+      <li><strong>Lock TTL = safety net, not the primary release mechanism</strong> — code should release locks explicitly. TTL is the deadlock prevention fallback for crash scenarios.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T4: DISTRIBUTED ID GENERATORS ══════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t4a">Overview</div>
+    <div class="stab" data-s="t4b">UUID vs Snowflake</div>
+    <div class="stab" data-s="t4c">Snowflake Deep Dive</div>
+    <div class="stab" data-s="t4d">Other Approaches</div>
+    <div class="stab" data-s="t4e">Demo</div>
+    <div class="stab" data-s="t4f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="ptitle">Distributed <em>ID Generators</em></div>
+    <p class="psub">When a database is sharded across N nodes, auto-increment IDs no longer work — each shard would generate the same IDs. You need a system that generates globally unique, ideally time-sortable IDs without coordination between nodes.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">128</div><div class="slbl">UUID bits</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">64</div><div class="slbl">Snowflake bits</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">4096</div><div class="slbl">IDs/ms/node (Snowflake)</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">0</div><div class="slbl">Coordination needed (Snowflake)</div></div>
+    </div>
+    <h3>Requirements for a Good Distributed ID</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Must have</h4><ul class="rl"><li><strong>Globally unique</strong> — no two IDs are the same across all shards</li><li><strong>Scalable</strong> — generated locally, no central coordinator</li><li><strong>High throughput</strong> — millions of IDs per second</li></ul></div>
+      <div class="card ct-g"><h4>Nice to have</h4><ul class="rl"><li><strong>Time-sortable</strong> — IDs generated later compare greater (enables index efficiency)</li><li><strong>Compact</strong> — 64-bit integer is much smaller than 128-bit UUID</li><li><strong>Debuggable</strong> — can decode timestamp from ID</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle">UUID vs <em>Snowflake</em></div>
+    <div class="tdp">
+      <div class="tdc pro">
+        <h4>UUID v4 (Random)</h4>
+        <ul>
+          <li>128-bit random — astronomically unique</li>
+          <li>No coordination needed — generate anywhere</li>
+          <li>Available in all languages natively</li>
+          <li>❌ <strong>Not time-sortable</strong> — random byte order</li>
+          <li>❌ <strong>B-tree fragmentation</strong> — random insertions scatter across index pages, causing page splits and poor cache utilization</li>
+          <li>❌ <strong>Large</strong> — 36 chars as string, 16 bytes binary</li>
+          <li>❌ Can't extract timestamp or node from ID</li>
+        </ul>
+      </div>
+      <div class="tdc con" style="border-color:rgba(34,197,94,.25)">
+        <h4>Snowflake (Twitter, 64-bit) ✓</h4>
+        <ul>
+          <li>64-bit integer — fits in BIGINT</li>
+          <li>Time-sortable — most significant bits = timestamp</li>
+          <li>✅ Sequential within same millisecond on same node</li>
+          <li>✅ Generates 4096 unique IDs per millisecond per node</li>
+          <li>✅ No coordination — each node generates independently</li>
+          <li>✅ Can decode: when was this created? by which machine?</li>
+          <li>❌ Clock skew risk — NTP adjustment can cause duplicate IDs</li>
+        </ul>
+      </div>
+    </div>
+    <h3>B-tree Index Performance</h3>
+    <div class="call ci"><strong>Why sequential IDs matter for DB performance:</strong> With auto-increment or Snowflake IDs, new rows are always inserted at the rightmost leaf of the B-tree. This is called a "right-hand insert pattern" and is cache-friendly — only the last few pages are hot. UUID v4 inserts are random across the entire tree, causing expensive page splits and cache misses at scale. At 100M rows, UUID insert throughput is ~5× worse than sequential IDs.</div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">Snowflake <em>Deep Dive</em></div>
+    <h3>Bit Layout</h3>
+    <div class="diag">
+<svg viewBox="0 0 680 80" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <rect x="2" y="2" width="676" height="76" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Bit fields -->
+  <rect x="14" y="20" width="20" height="36" rx="3" fill="#131a2a" stroke="#5a6a85"/>
+  <text x="24" y="42" text-anchor="middle" fill="#5a6a85" font-size="9">1</text>
+  <text x="24" y="68" text-anchor="middle" fill="#5a6a85" font-size="8">sign</text>
+
+  <rect x="38" y="20" width="280" height="36" rx="3" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="178" y="39" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">41 bits — Timestamp (ms since epoch)</text>
+  <text x="178" y="52" text-anchor="middle" fill="#5a6a85" font-size="9">~69 years from custom epoch (2010-11-04 for Twitter)</text>
+  <text x="178" y="68" text-anchor="middle" fill="#3a4a60" font-size="8">2^41 = 2,199,023,255,551 ms = 69.7 years</text>
+
+  <rect x="322" y="20" width="120" height="36" rx="3" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="382" y="39" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">10 bits — Machine ID</text>
+  <text x="382" y="52" text-anchor="middle" fill="#5a6a85" font-size="9">datacenter(5) + worker(5)</text>
+  <text x="382" y="68" text-anchor="middle" fill="#3a4a60" font-size="8">2^10 = 1024 unique nodes</text>
+
+  <rect x="446" y="20" width="120" height="36" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="506" y="39" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">12 bits — Sequence</text>
+  <text x="506" y="52" text-anchor="middle" fill="#5a6a85" font-size="9">per-ms counter (resets each ms)</text>
+  <text x="506" y="68" text-anchor="middle" fill="#3a4a60" font-size="8">2^12 = 4096 IDs/ms/node</text>
+
+  <text x="580" y="44" fill="#5a6a85" font-size="9">= 64 bits</text>
+  <text x="580" y="58" fill="#3a4a60" font-size="8">= BIGINT</text>
+</svg>
+    </div>
+    <h3>Throughput</h3>
+    <p>1024 nodes × 4096 IDs/ms = <strong>4,194,304 IDs/ms = ~4.2 billion IDs/second</strong> across the entire cluster. Twitter (with far fewer ID workers) generates billions of tweets without ever running out.</p>
+    <h3>Clock Skew Problem</h3>
+    <div class="call cr"><strong>Clock moves backward (NTP correction):</strong> If the system clock jumps backward by 1ms, the Snowflake generator could produce IDs with the same timestamp as previous IDs → duplicate IDs. Fix: detect clock regression, wait until current time catches up past the last timestamp before generating new IDs.</div>
+    <div class="cwrap"><div class="ctop"><span>snowflake.py — 64-bit ID generator</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> time, threading
+
+<span class="kw">class</span> <span class="cls">SnowflakeGenerator</span>:
+    <span class="cls">EPOCH</span>        = <span class="num">1288834974657</span>  <span class="cmt"># Twitter epoch: 2010-11-04</span>
+    <span class="cls">WORKER_BITS</span>  = <span class="num">5</span>
+    <span class="cls">DC_BITS</span>      = <span class="num">5</span>
+    <span class="cls">SEQ_BITS</span>     = <span class="num">12</span>
+    <span class="cls">MAX_SEQ</span>      = (<span class="num">1</span> &lt;&lt; <span class="cls">SEQ_BITS</span>) - <span class="num">1</span>   <span class="cmt"># 4095</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, worker_id: int, datacenter_id: int):
+        <span class="kw">self</span>.worker_id      = worker_id
+        <span class="kw">self</span>.datacenter_id  = datacenter_id
+        <span class="kw">self</span>.sequence       = <span class="num">0</span>
+        <span class="kw">self</span>.last_timestamp = <span class="num">-1</span>
+        <span class="kw">self</span>._lock           = threading.<span class="cls">Lock</span>()
+
+    <span class="kw">def</span> <span class="fn">generate</span>(<span class="kw">self</span>) -> int:
+        <span class="kw">with</span> <span class="kw">self</span>._lock:
+            now = <span class="kw">self</span>.<span class="fn">_ms</span>()
+
+            <span class="kw">if</span> now < <span class="kw">self</span>.last_timestamp:   <span class="cmt"># clock went backward!</span>
+                <span class="fn">raise</span> <span class="cls">RuntimeError</span>(<span class="str">f"Clock moved backward by {self.last_timestamp - now}ms"</span>)
+
+            <span class="kw">if</span> now == <span class="kw">self</span>.last_timestamp:
+                <span class="kw">self</span>.sequence = (<span class="kw">self</span>.sequence + <span class="num">1</span>) & <span class="kw">self</span>.<span class="cls">MAX_SEQ</span>
+                <span class="kw">if</span> <span class="kw">self</span>.sequence == <span class="num">0</span>:   <span class="cmt"># sequence exhausted in this ms</span>
+                    now = <span class="kw">self</span>.<span class="fn">_wait_next_ms</span>(<span class="kw">self</span>.last_timestamp)
+            <span class="kw">else</span>:
+                <span class="kw">self</span>.sequence = <span class="num">0</span>
+
+            <span class="kw">self</span>.last_timestamp = now
+            <span class="kw">return</span> (
+                ((now - <span class="kw">self</span>.<span class="cls">EPOCH</span>) &lt;&lt; <span class="num">22</span>)      |  <span class="cmt"># 41-bit timestamp</span>
+                (<span class="kw">self</span>.datacenter_id &lt;&lt; <span class="num">17</span>)       |  <span class="cmt"># 5-bit datacenter</span>
+                (<span class="kw">self</span>.worker_id &lt;&lt; <span class="num">12</span>)            |  <span class="cmt"># 5-bit worker</span>
+                <span class="kw">self</span>.sequence                       <span class="cmt"># 12-bit sequence</span>
+            )
+
+    <span class="kw">def</span> <span class="fn">_ms</span>(<span class="kw">self</span>): <span class="kw">return</span> <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    <span class="kw">def</span> <span class="fn">_wait_next_ms</span>(<span class="kw">self</span>, ts):
+        now = <span class="kw">self</span>.<span class="fn">_ms</span>()
+        <span class="kw">while</span> now <= ts: now = <span class="kw">self</span>.<span class="fn">_ms</span>()
+        <span class="kw">return</span> now</pre></div>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">Other <em>Approaches</em></div>
+    <h3>Comparison of All ID Generation Strategies</h3>
+    <table>
+      <tr><th>Strategy</th><th>Uniqueness</th><th>Sortable</th><th>Coordination</th><th>Size</th><th>Best For</th></tr>
+      <tr><td>Auto-increment</td><td>Single DB only</td><td>✅</td><td>Required (DB)</td><td>4–8 bytes</td><td>Single-node DB</td></tr>
+      <tr><td>UUID v4</td><td>✅ Global</td><td>❌</td><td>None</td><td>16 bytes</td><td>Simple, low-scale</td></tr>
+      <tr><td>UUID v7</td><td>✅ Global</td><td>✅ Time-based</td><td>None</td><td>16 bytes</td><td>UUID with sortability</td></tr>
+      <tr><td>Snowflake</td><td>✅ Global</td><td>✅</td><td>None (machine ID pre-assigned)</td><td>8 bytes</td><td>High-scale, sharded DBs</td></tr>
+      <tr><td>ULID</td><td>✅ Global</td><td>✅ Lexicographic</td><td>None</td><td>16 bytes (26 chars)</td><td>Human-readable sortable IDs</td></tr>
+      <tr><td>DB sequence server</td><td>✅ Global</td><td>✅</td><td>Centralized server</td><td>8 bytes</td><td>Controlled, low-throughput</td></tr>
+      <tr><td>Hi-Lo algorithm</td><td>✅ Global</td><td>✅ within ranges</td><td>Minimal (DB fetch range)</td><td>8 bytes</td><td>Hibernate, NHibernate ORM</td></tr>
+    </table>
+    <h3>UUID v7 — The Modern Choice</h3>
+    <div class="call cg"><strong>UUID v7</strong> (RFC 9562, 2024) encodes a Unix timestamp in the most significant bits, making it time-sortable like Snowflake while keeping the 128-bit UUID format. It's now supported natively in PostgreSQL 17. If you're starting a new project today, UUID v7 is often the best default: globally unique, time-sortable, no machine ID assignment needed.</div>
+  </div>
+
+  <div class="spanel" id="t4e">
+    <div class="ptitle">Interactive <em>ID Generator Demo</em></div>
+    <p class="psub">Generate Snowflake IDs and decode their components. See how IDs are time-sortable and machine-identifiable.</p>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Snowflake ID Generator</span>
+        <button class="dbtn dbtn-c" onclick="genSnowflake(1,1)" style="margin-left:auto">Gen: Worker 1</button>
+        <button class="dbtn dbtn-c" onclick="genSnowflake(1,2)" style="margin-left:6px">Gen: Worker 2</button>
+        <button class="dbtn dbtn-a" onclick="genBatch()" style="margin-left:6px">Batch × 5</button>
+        <button class="dbtn dbtn-g" onclick="clearIds()" style="margin-left:6px">Clear</button>
+      </div>
+      <div class="demo-body" id="id-demo-body">
+        <div style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px">Generate IDs to see their bit breakdown →</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>UUID v4 kills B-tree performance at scale</strong> — random insertions cause page splits across the entire index. Snowflake or UUID v7 (time-sorted) keep inserts sequential, preserving cache locality and write throughput.</li>
+      <li><strong>Snowflake = 41-bit timestamp + 10-bit machine + 12-bit sequence</strong> — no coordination needed. Each machine generates its own IDs. 4096 IDs/ms/node = 4.2B IDs/s across 1024 nodes.</li>
+      <li><strong>Machine ID assignment is the one coordination needed</strong> — assign machine IDs from a central store (etcd, ZooKeeper, or a simple DB table) at node startup. This is a one-time operation per node lifetime.</li>
+      <li><strong>Handle clock skew explicitly</strong> — detect when clock goes backward, wait until current time passes last-seen timestamp. NTP corrections can cause silent ID collisions in naive implementations.</li>
+      <li><strong>UUID v7 is the modern default</strong> — time-sortable, globally unique, no machine ID assignment, available in PostgreSQL 17. For new projects without strict 64-bit constraints, prefer UUID v7 over Snowflake.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T5: HOT-SHARD PROBLEM ══════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t5a">Overview</div>
+    <div class="stab" data-s="t5b">Detection</div>
+    <div class="stab" data-s="t5c">Solutions</div>
+    <div class="stab" data-s="t5d">Consistent Hashing</div>
+    <div class="stab" data-s="t5e">Demo</div>
+    <div class="stab" data-s="t5f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t5a">
+    <div class="ptitle">Handling the <em>Hot-Shard Problem</em></div>
+    <p class="psub">After sharding your database, you expect even load distribution. Reality: 80% of traffic hits 20% of keys — and those keys may cluster on the same shard. One shard becomes a bottleneck while others sit idle. This is the hot-shard problem.</p>
+    <div class="g g4">
+      <div class="card ct-r" style="text-align:center"><div class="snum">1</div><div class="slbl">Shard handling all hot traffic</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">80/20</div><div class="slbl">Pareto: 20% keys = 80% load</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">~1ms</div><div class="slbl">Normal shard latency</div></div>
+      <div class="card ct-c" style="text-align:center"><div class="snum">100ms+</div><div class="slbl">Hot shard latency under load</div></div>
+    </div>
+    <h3>Why Hot Shards Happen</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Natural skew</h4><p>Some entities are inherently more popular: Justin Bieber vs average user. Drake's new album vs an unknown artist. The World Cup vs a local league game. You can't eliminate natural popularity skew.</p></div>
+      <div class="card ct-a"><h4>Bad shard key choice</h4><p>Sharding by country where 40% of users are in the US → US shard is 40× hotter. Sharding by creation date → recent shard gets all writes. Key selection is critical and hard to change later.</p></div>
+      <div class="card ct-c"><h4>Temporal patterns</h4><p>Flash sale at 12:00: all requests for product:123 → one shard. Even distribution normally, extreme skew at peak. Impossible to predict and pre-shard for.</p></div>
+      <div class="card ct-p"><h4>Celebrity / influencer effect</h4><p>10M followers check Taylor Swift's status simultaneously. All requests hit the same Redis key on the same shard. Perfect hashing doesn't help — it's one real entity.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5b">
+    <div class="ptitle"><em>Detecting</em> Hot Shards</div>
+    <p class="psub">You can't fix what you can't see. Hot shard detection requires the right metrics at the right granularity.</p>
+    <h3>Metrics to Watch</h3>
+    <table>
+      <tr><th>Metric</th><th>Alert Threshold</th><th>What It Signals</th></tr>
+      <tr><td>Per-shard CPU %</td><td>Any shard &gt;70% while others &lt;20%</td><td>Compute hotspot — likely hot shard</td></tr>
+      <tr><td>Per-shard QPS</td><td>Max shard &gt;3× median shard</td><td>Traffic imbalance</td></tr>
+      <tr><td>Per-shard p99 latency</td><td>Hot shard &gt;10× other shards</td><td>Queue buildup from overload</td></tr>
+      <tr><td>Per-key hit rate (Redis)</td><td>Single key &gt;1% of total requests</td><td>Celebrity / hot key</td></tr>
+      <tr><td>Connection count per shard</td><td>Shard near max_connections</td><td>Connection exhaustion imminent</td></tr>
+    </table>
+    <h3>Identifying Hot Keys in Redis</h3>
+    <div class="cwrap"><div class="ctop"><span>Identifying hot keys</span><span class="ltag lsq">Redis / Shell</span></div>
+    <pre><span class="cmt"># Redis 4.0+: enable hot key tracking (runs on replica to avoid perf impact)</span>
+redis-cli --hotkeys
+
+<span class="cmt"># Redis 6.2+: CLIENT NO-EVICT + OBJECT FREQ for LFU stats</span>
+redis-cli OBJECT FREQ user:42:ts
+
+<span class="cmt"># Monitor commands in real-time (use only briefly — high overhead)</span>
+redis-cli MONITOR | head -<span class="num">1000</span> | <span class="fn">grep</span> <span class="str">"GET\|SET"</span> | <span class="fn">awk</span> <span class="str">'{print $4}'</span> | <span class="fn">sort</span> | <span class="fn">uniq</span> -c | <span class="fn">sort</span> -rn | head -<span class="num">10</span>
+
+<span class="cmt"># MySQL: identify hot rows</span>
+SELECT * FROM information_schema.INNODB_METRICS
+WHERE name LIKE <span class="str">'%lock%'</span> ORDER BY count_reset DESC;</pre></div>
+  </div>
+
+  <div class="spanel" id="t5c">
+    <div class="ptitle"><em>Solutions</em> for Hot Shards</div>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>1. Key Salting (Virtual Keys)</h4>
+        <p>Spread one hot key across N virtual keys. Distribute writes round-robin, aggregate on reads.</p>
+        <div class="cwrap" style="margin-top:8px"><div class="ctop"><span>key salting</span><span class="ltag lpy">Python</span></div>
+        <pre style="font-size:11px;padding:10px"><span class="cls">SALT_COUNT</span> = <span class="num">10</span>
+
+<span class="cmt"># Write: distribute to one of N virtual keys</span>
+<span class="kw">def</span> <span class="fn">incr_counter</span>(base_key: str):
+    salt = random.<span class="fn">randint</span>(<span class="num">0</span>, SALT_COUNT - <span class="num">1</span>)
+    redis.<span class="fn">incr</span>(<span class="str">f"{base_key}:{salt}"</span>)
+
+<span class="cmt"># Read: aggregate all virtual keys</span>
+<span class="kw">def</span> <span class="fn">get_counter</span>(base_key: str) -> int:
+    keys = [<span class="str">f"{base_key}:{i}"</span> <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(SALT_COUNT)]
+    <span class="kw">return</span> <span class="fn">sum</span>(<span class="fn">int</span>(v <span class="kw">or</span> <span class="num">0</span>) <span class="kw">for</span> v <span class="kw">in</span> redis.<span class="fn">mget</span>(keys))</pre></div>
+      </div>
+      <div class="card ct-g">
+        <h4>2. Local Cache for Hot Keys</h4>
+        <p>Cache the hottest keys (celebrity profiles, trending items) in application memory with a very short TTL (1–5s). Never hits the DB/cache at all for the hottest reads.</p>
+        <div class="cwrap" style="margin-top:8px"><div class="ctop"><span>local cache</span><span class="ltag lpy">Python</span></div>
+        <pre style="font-size:11px;padding:10px"><span class="kw">from</span> cachetools <span class="kw">import</span> TTLCache
+
+<span class="cmt"># In-process cache: 1000 keys, 2s TTL</span>
+local_cache = <span class="cls">TTLCache</span>(maxsize=<span class="num">1000</span>, ttl=<span class="num">2</span>)
+
+<span class="kw">async def</span> <span class="fn">get_user_status</span>(uid: str):
+    <span class="kw">if</span> uid <span class="kw">in</span> local_cache:
+        <span class="kw">return</span> local_cache[uid]   <span class="cmt"># zero network hops</span>
+    val = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">f"user:{uid}:ts"</span>)
+    local_cache[uid] = val
+    <span class="kw">return</span> val</pre></div>
+      </div>
+      <div class="card ct-p"><h4>3. Read Replicas for Hot Shards</h4><p>Add extra read replicas specifically for the hot shard. Route reads to the replica pool, writes to the primary. Works when the hot key is read-heavy (most celebrity/trending scenarios are reads).</p></div>
+      <div class="card ct-a"><h4>4. Re-shard with Better Key</h4><p>If the shard key itself is bad (e.g., all writes go to one shard by design), the only real fix is re-sharding with a different key. Expensive one-time cost; prevents chronic skew. Use consistent hashing to minimize data movement during re-shard.</p></div>
+      <div class="card ct-t"><h4>5. Application-level Rate Limiting</h4><p>For truly extreme hot entities, rate-limit queries per second. Return cached (slightly stale) responses for requests beyond the limit. Prevents a single celebrity from taking down your entire database.</p></div>
+      <div class="card ct-r"><h4>6. Move Hot Entities to Dedicated Infrastructure</h4><p>VIP tier: celebrities, trending items get their own Redis nodes or DB partition. Normal users share the standard pool. Used by Twitter (fat shard for VIPs), YouTube (dedicated serving for viral videos).</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5d">
+    <div class="ptitle">Consistent <em>Hashing</em></div>
+    <p class="psub">Standard sharding (<code>key % N</code>) requires rehashing ALL keys when N changes. Consistent hashing minimizes rehashing — only ~1/N of keys move when a node is added or removed.</p>
+    <div class="diag">
+<svg viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <rect x="2" y="2" width="496" height="156" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Hash ring -->
+  <circle cx="250" cy="80" r="60" fill="none" stroke="#1e2d45" stroke-width="2" stroke-dasharray="4,2"/>
+  <!-- Nodes on ring -->
+  <circle cx="310" cy="50" r="14" fill="#131a2a" stroke="#00e5ff" stroke-width="2"/>
+  <text x="310" y="54" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">N1</text>
+  <circle cx="310" cy="110" r="14" fill="#131a2a" stroke="#22c55e" stroke-width="2"/>
+  <text x="310" y="114" text-anchor="middle" fill="#22c55e" font-size="9" font-weight="700">N2</text>
+  <circle cx="190" cy="110" r="14" fill="#131a2a" stroke="#a78bfa" stroke-width="2"/>
+  <text x="190" y="114" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">N3</text>
+  <circle cx="190" cy="50" r="14" fill="#131a2a" stroke="#f59e0b" stroke-width="2"/>
+  <text x="190" y="54" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="700">N4</text>
+  <!-- Keys on ring -->
+  <circle cx="280" cy="24" r="8" fill="#1e2d45" stroke="#5a6a85"/>
+  <text x="280" y="27" text-anchor="middle" fill="#8a9bb5" font-size="8">K1</text>
+  <text x="320" y="22" fill="#5a6a85" font-size="8">→ N1</text>
+  <circle cx="340" cy="80" r="8" fill="#1e2d45" stroke="#5a6a85"/>
+  <text x="340" y="83" text-anchor="middle" fill="#8a9bb5" font-size="8">K2</text>
+  <text x="360" y="78" fill="#5a6a85" font-size="8">→ N2</text>
+  <circle cx="220" cy="138" r="8" fill="#1e2d45" stroke="#5a6a85"/>
+  <text x="220" y="141" text-anchor="middle" fill="#8a9bb5" font-size="8">K3</text>
+  <text x="150" y="148" fill="#5a6a85" font-size="8">→ N3</text>
+  <!-- Labels -->
+  <text x="60" y="30" fill="#5a6a85" font-size="8">Hash ring (0 to 2^32)</text>
+  <text x="60" y="44" fill="#3a4a60" font-size="8">Key → closest clockwise node</text>
+  <text x="60" y="130" fill="#5a6a85" font-size="8">Add N5 between N1 &amp; N2:</text>
+  <text x="60" y="144" fill="#3a4a60" font-size="8">Only keys in N1→N5 range move</text>
+  <text x="60" y="158" fill="#3a4a60" font-size="8">~1/N keys total (not all!)</text>
+</svg>
+    </div>
+    <h3>Virtual Nodes</h3>
+    <p>A single physical node maps to multiple "virtual nodes" (vnodes) on the ring. Each physical node owns ~150 positions. Benefits: even distribution even with heterogeneous hardware, graceful rebalancing when nodes join/leave.</p>
+    <div class="call ci"><strong>Consistent hashing in the wild:</strong> Redis Cluster uses it internally. Cassandra uses it for partition key routing. DynamoDB uses it. Memcached clients use consistent hashing for key-to-server mapping.</div>
+  </div>
+
+  <div class="spanel" id="t5e">
+    <div class="ptitle">Interactive <em>Hot-Shard Demo</em></div>
+    <p class="psub">Simulate shard load distribution. Toggle celebrity mode to see one shard get overwhelmed.</p>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">4-shard cluster — key % 4 routing</span>
+        <button class="dbtn dbtn-c" onclick="shardSend(false)" style="margin-left:auto">⚡ Normal Traffic</button>
+        <button class="dbtn dbtn-r" onclick="shardSend(true)" style="margin-left:6px">⭐ Celebrity Flash</button>
+        <button class="dbtn dbtn-a" onclick="shardReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="shard-vis" id="shard-vis"></div>
+        <div id="shard-log" style="margin-top:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:90px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Hot shards are inevitable with natural data skew</strong> — 80/20 rules, celebrity effects, and temporal bursts cannot be prevented. Design your system to detect and handle them, not just prevent them.</li>
+      <li><strong>Key salting distributes one hot key across N</strong> — splitting <code>user:bieber</code> into <code>user:bieber:0</code>…<code>user:bieber:9</code> and aggregating on read is the canonical solution for hot counters/writes.</li>
+      <li><strong>Local in-process cache is the most aggressive solution</strong> — zero network hops. 2s TTL + LRU eviction of top 1000 keys eliminates hot-shard reads almost entirely for read-heavy endpoints.</li>
+      <li><strong>Consistent hashing minimizes rehashing</strong> — when adding/removing shards, only ~1/N keys move. Essential for operational sanity at scale. Standard sharding rehashes all keys.</li>
+      <li><strong>Monitor per-key hit rates, not just per-shard totals</strong> — a hot shard won't show up in aggregate metrics until it's already causing latency. Per-key tracking (Redis HOTKEYS command) catches it early.</li>
+    </ul>
+    <div class="done">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 3 — Going Distributed Complete ✦</div>
+      <p style="font-size:13px;color:var(--muted)">All 5 distributed systems topics covered. Next: <strong>Week 4 — Building Social Networks</strong> · Photos Upload at Scale · Private Photos · Gravatar & OG Images · Concurrent HashTag Counter · Message Indicators</p>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="hbadge hb-c">Week 3 of 8 Complete</span>
+        <span class="hbadge hb-g">5/5 Topics Done</span>
+        <span class="hbadge hb-p">Week 4 → Social Networks</span>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ─── TAB WIRING ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(id).classList.add('active');
+    tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(stab => {
+  stab.addEventListener('click', () => {
+    const sid = stab.dataset.s;
+    stab.closest('.subtabwrap').querySelectorAll('.stab').forEach(s => s.classList.remove('active'));
+    stab.closest('.topic').querySelectorAll('.spanel').forEach(p => p.classList.remove('active'));
+    stab.classList.add('active');
+    document.getElementById(sid).classList.add('active');
+    stab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.ltab').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l;
+    if (!l) return;
+    const wrap = lt.closest('.ltabs');
+    wrap.querySelectorAll('.ltab').forEach(x => x.classList.remove('on'));
+    lt.classList.add('on');
+    const container = wrap.parentElement;
+    container.querySelectorAll('.lpanel').forEach(p => p.classList.toggle('on', p.id === l));
+  });
+});
+
+// ─── LB DEMO ─────────────────────────────────────────────────────────────────
+const lbServers = [
+  {name:'App-1', conns:0, healthy:true, total:0},
+  {name:'App-2', conns:0, healthy:true, total:0},
+  {name:'App-3', conns:0, healthy:true, total:0},
+  {name:'App-4', conns:0, healthy:true, total:0},
+];
+let lbTotal=0, lbRR=0;
+
+function lbRender() {
+  const el = document.getElementById('lb-servers');
+  if (!el) return;
+  el.innerHTML = lbServers.map((s,i) => `
+    <div class="lb-server ${!s.healthy?'unhealthy':''}" id="lbs-${i}">
+      <div style="color:${s.healthy?'var(--accent)':'var(--red)'}">${s.name}</div>
+      <div style="color:${s.healthy?'var(--green)':'var(--red)'}; font-size:10px">${s.healthy?'✓ healthy':'✗ down'}</div>
+      <div style="font-size:10px;color:var(--muted)">${s.total} reqs</div>
+    </div>`).join('');
+  document.getElementById('lb-total').textContent = lbTotal;
+  document.getElementById('lb-healthy').textContent = lbServers.filter(s=>s.healthy).length;
+}
+
+function lbLog(msg) {
+  const el = document.getElementById('lb-log');
+  if (!el) return;
+  const ts = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += `<div style="color:#5a6a85;margin-bottom:2px">[${ts}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function lbSend() {
+  const healthy = lbServers.filter(s=>s.healthy);
+  if (!healthy.length) { lbLog('❌ No healthy backends!'); return; }
+  const srv = healthy[lbRR % healthy.length];
+  lbRR++;
+  srv.total++; lbTotal++;
+  const idx = lbServers.indexOf(srv);
+  document.getElementById('lb-last').textContent = srv.name;
+  lbLog(`→ Routed to <span style="color:var(--accent)">${srv.name}</span> (total: ${srv.total})`);
+  const el = document.getElementById(`lbs-${idx}`);
+  if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 400); }
+  lbRender();
+}
+
+function lbSendBatch() { for(let i=0;i<10;i++) setTimeout(lbSend, i*80); }
+
+function lbKill() {
+  const alive = lbServers.filter(s=>s.healthy);
+  if (alive.length <= 1) { lbLog('⚠️ Cannot kill last healthy server'); return; }
+  const srv = alive[Math.floor(Math.random()*alive.length)];
+  srv.healthy = false;
+  lbLog(`💀 <span style="color:var(--red)">${srv.name}</span> went down — removed from pool`);
+  lbRender();
+}
+
+function lbRevive() {
+  const dead = lbServers.filter(s=>!s.healthy);
+  if (!dead.length) { lbLog('All servers healthy'); return; }
+  dead[0].healthy = true;
+  lbLog(`♻ <span style="color:var(--green)">${dead[0].name}</span> recovered — added back to pool`);
+  lbRender();
+}
+lbRender();
+
+// ─── RAFT DEMO ────────────────────────────────────────────────────────────────
+let raftNodes = [
+  {id:'N1',state:'follower',term:1,dead:false},
+  {id:'N2',state:'follower',term:1,dead:false},
+  {id:'N3',state:'leader', term:1,dead:false},
+  {id:'N4',state:'follower',term:1,dead:false},
+  {id:'N5',state:'follower',term:1,dead:false},
+];
+let raftTerm = 1;
+
+function raftRender() {
+  const el = document.getElementById('raft-nodes');
+  if (!el) return;
+  el.innerHTML = raftNodes.map(n => `
+    <div class="node ${n.dead?'dead':n.state}" title="${n.id}: ${n.dead?'DEAD':n.state} (term ${n.term})">
+      <span style="font-weight:700">${n.id}</span>
+      <span class="role">${n.dead?'DEAD':n.state.toUpperCase()}</span>
+    </div>`).join('');
+  const leader = raftNodes.find(n=>n.state==='leader'&&!n.dead);
+  document.getElementById('raft-term').textContent = raftTerm;
+  document.getElementById('raft-leader').textContent = leader ? leader.id : 'None (electing…)';
+}
+
+function raftLog(msg) {
+  const el = document.getElementById('raft-log');
+  if (!el) return;
+  const ts = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += `<div style="margin-bottom:2px">[${ts}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function raftKillLeader() {
+  const leader = raftNodes.find(n=>n.state==='leader'&&!n.dead);
+  if (!leader) { raftLog('No leader to kill'); return; }
+  leader.dead = true; leader.state = 'dead';
+  raftLog(`<span style="color:var(--red)">💀 ${leader.id} (leader) crashed</span> — election timeout starting…`);
+  raftRender();
+  setTimeout(raftElect, 800);
+}
+
+function raftElect() {
+  const alive = raftNodes.filter(n=>!n.dead);
+  if (alive.length < 2) { raftLog('Not enough nodes for election'); return; }
+  raftTerm++;
+  // Pick candidate (random alive non-leader)
+  const followers = alive.filter(n=>n.state!=='leader');
+  if (!followers.length) return;
+  const cand = followers[Math.floor(Math.random()*followers.length)];
+  cand.state = 'candidate';
+  raftLog(`<span style="color:var(--amber)">🗳 ${cand.id} became Candidate for term ${raftTerm}</span>`);
+  raftRender();
+  setTimeout(() => {
+    // Collect votes — need majority of alive nodes
+    const majority = Math.floor(alive.length/2)+1;
+    raftLog(`${cand.id} needs ${majority}/${alive.length} votes…`);
+    // Simulate vote granting
+    raftNodes.filter(n=>!n.dead&&n.id!==cand.id).forEach(n=>{
+      n.state='follower'; n.term=raftTerm;
+    });
+    cand.state = 'leader'; cand.term = raftTerm;
+    raftLog(`<span style="color:var(--green)">✅ ${cand.id} elected LEADER for term ${raftTerm}</span>`);
+    raftRender();
+  }, 600);
+}
+
+function raftReset() {
+  raftTerm = 1;
+  raftNodes = [
+    {id:'N1',state:'follower',term:1,dead:false},
+    {id:'N2',state:'follower',term:1,dead:false},
+    {id:'N3',state:'leader', term:1,dead:false},
+    {id:'N4',state:'follower',term:1,dead:false},
+    {id:'N5',state:'follower',term:1,dead:false},
+  ];
+  document.getElementById('raft-log').innerHTML = '';
+  raftRender();
+}
+raftRender();
+
+// ─── SNOWFLAKE DEMO ───────────────────────────────────────────────────────────
+const SF_EPOCH = 1288834974657n;
+let sfSeq = 0n, sfLastMs = 0n;
+const idList = [];
+
+function genSnowflakeId(workerId, dcId) {
+  const now = BigInt(Date.now());
+  if (now === sfLastMs) sfSeq = (sfSeq + 1n) & 4095n;
+  else { sfSeq = 0n; sfLastMs = now; }
+  const ts   = (now - SF_EPOCH) << 22n;
+  const dc   = BigInt(dcId)     << 17n;
+  const wk   = BigInt(workerId) << 12n;
+  return ts | dc | wk | sfSeq;
+}
+
+function decodeSnowflake(id) {
+  const ts    = Number((id >> 22n) + SF_EPOCH);
+  const dc    = Number((id >> 17n) & 31n);
+  const wk    = Number((id >> 12n) & 31n);
+  const seq   = Number(id & 4095n);
+  return { ts, dc, wk, seq, date: new Date(ts).toISOString() };
+}
+
+function genSnowflake(dc, wk) {
+  const id = genSnowflakeId(wk, dc);
+  const dec = decodeSnowflake(id);
+  idList.unshift({ id: id.toString(), dec, dc, wk });
+  if (idList.length > 8) idList.pop();
+  renderIds();
+}
+
+function genBatch() { for(let i=0;i<5;i++) genSnowflake(1, (i%2)+1); }
+function clearIds() { idList.length=0; renderIds(); }
+
+function renderIds() {
+  const el = document.getElementById('id-demo-body');
+  if (!el) return;
+  if (!idList.length) { el.innerHTML='<div style="color:var(--muted);font-family:JetBrains Mono,monospace;font-size:11px">Generate IDs →</div>'; return; }
+  el.innerHTML = idList.map(({id,dec,dc,wk}) => `
+    <div class="id-display" style="margin-bottom:6px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:3px">ID: <span style="color:var(--accent)">${id}</span></div>
+      <span class="id-bit" style="background:rgba(0,229,255,.12);color:var(--accent)">ts: ${dec.date.slice(0,23)}</span>
+      <span class="id-bit" style="background:rgba(124,58,237,.12);color:#a78bfa">dc: ${dec.dc}</span>
+      <span class="id-bit" style="background:rgba(34,197,94,.12);color:var(--green)">worker: ${dec.wk}</span>
+      <span class="id-bit" style="background:rgba(245,158,11,.12);color:var(--amber)">seq: ${dec.seq}</span>
+    </div>`).join('');
+}
+
+// ─── SHARD DEMO ───────────────────────────────────────────────────────────────
+const shards = [
+  {name:'Shard 0', load:0, reqs:0},
+  {name:'Shard 1', load:0, reqs:0},
+  {name:'Shard 2', load:0, reqs:0},
+  {name:'Shard 3', load:0, reqs:0},
+];
+
+function shardRender() {
+  const el = document.getElementById('shard-vis');
+  if (!el) return;
+  const maxLoad = Math.max(...shards.map(s=>s.load), 10);
+  el.innerHTML = shards.map((s,i) => {
+    const pct = Math.min(100, (s.load / 100) * 100);
+    const hot = s.load > 70;
+    const col = hot ? '#ef4444' : s.load > 40 ? '#f59e0b' : '#22c55e';
+    return `<div class="shard ${hot?'hot':''}" title="Shard ${i}: ${s.load}% load">
+      <div style="font-weight:700;color:${col}">${s.name}</div>
+      <div style="font-size:9px;color:var(--muted)">${s.reqs} reqs · ${s.load}%</div>
+      <div class="load-bar"><div class="load-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function shardLog(msg) {
+  const el = document.getElementById('shard-log');
+  if (!el) return;
+  el.innerHTML += `<div style="font-size:11px;margin-bottom:2px">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function shardSend(celebrity) {
+  if (celebrity) {
+    // All traffic hits user:0 → shard 0
+    for (let i=0; i<20; i++) {
+      const shard = 0;
+      shards[shard].reqs++; shards[shard].load = Math.min(100, shards[shard].load + 5);
+    }
+    shardLog(`<span style="color:var(--red)">⭐ Celebrity flash: 20 reqs → user:0 → Shard 0 OVERLOADED</span>`);
+  } else {
+    // Simulate normal traffic across random user IDs
+    const keys = ['user:42','user:99','user:201','user:88','user:147','user:55','user:303','user:17','user:256','user:79'];
+    keys.forEach(k => {
+      const id = parseInt(k.split(':')[1]);
+      const shard = id % 4;
+      shards[shard].reqs++;
+      shards[shard].load = Math.max(0, Math.min(100, shards[shard].load + Math.floor(Math.random()*3)+1));
+    });
+    // Gradually cool down shards
+    shards.forEach(s => { s.load = Math.max(0, s.load - 2); });
+    shardLog(`<span style="color:var(--green)">Normal traffic: 10 requests distributed across shards</span>`);
+  }
+  shardRender();
+}
+
+function shardReset() {
+  shards.forEach(s => { s.load=0; s.reqs=0; });
+  document.getElementById('shard-log').innerHTML = '';
+  shardRender();
+}
+
+shardRender();
+renderIds();
+</script>
+</body>
+</html>
