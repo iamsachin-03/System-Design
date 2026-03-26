@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 7 — IR Systems & Adhoc Designs</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--green:#22c55e;--amber:#f59e0b;
+  --red:#ef4444;--purple:#7c3aed;--pink:#ec4899;--teal:#14b8a6;
+  --orange:#f97316;--text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent)}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+.hb-pk{color:var(--pink);border-color:var(--pink);background:rgba(236,72,153,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+strong{color:var(--text)}
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-pk{border-top:2px solid var(--pink)}
+.ct-t{border-top:2px solid var(--teal)}.ct-o{border-top:2px solid var(--orange)}
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;border:1px solid;transition:all .15s}
+.dbtn-c{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--accent)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+.dbtn-a{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+.dbtn-p{background:rgba(124,58,237,.08);border-color:#a78bfa;color:#a78bfa}
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;margin-top:14px}
+
+/* Search demo */
+.search-chip{display:inline-block;background:var(--surf2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a9bb5;margin:3px;cursor:pointer;transition:all .2s}
+.search-chip:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Commentary feed */
+.comment-ball{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:6px;flex-shrink:0}
+.ball-dot{background:rgba(245,158,11,.2);border:1px solid var(--amber);color:var(--amber)}
+.ball-w{background:rgba(239,68,68,.2);border:1px solid var(--red);color:var(--red)}
+.ball-four{background:rgba(34,197,94,.2);border:1px solid var(--green);color:var(--green)}
+.ball-six{background:rgba(0,229,255,.2);border:1px solid var(--accent);color:var(--accent)}
+.ball-no{background:rgba(124,58,237,.2);border:1px solid #a78bfa;color:#a78bfa}
+.ball-wide{background:rgba(249,115,22,.2);border:1px solid var(--orange);color:var(--orange)}
+
+/* Flash sale */
+.queue-slot{background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;margin:3px;display:inline-block;transition:all .3s}
+.queue-slot.active{border-color:var(--green);color:var(--green);background:rgba(34,197,94,.07)}
+.queue-slot.waiting{border-color:var(--amber);color:var(--amber)}
+.queue-slot.failed{border-color:var(--red);color:var(--red);opacity:.5}
+
+/* Task scheduler */
+.task-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;margin:3px 0;font-family:'JetBrains Mono',monospace;font-size:11px;transition:all .3s}
+.task-row.pending{border-color:var(--amber)}
+.task-row.running{border-color:var(--green);background:rgba(34,197,94,.06)}
+.task-row.done{border-color:var(--border);opacity:.5}
+.task-row.failed{border-color:var(--red);background:rgba(239,68,68,.06)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 7 · IR Systems & Adhoc Designs — All 5 Topics</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">Recent Searches</span>
+    <span class="hbadge hb-g">Cricket Commentary</span>
+    <span class="hbadge hb-p">Live Reactions</span>
+    <span class="hbadge hb-a">Task Scheduler</span>
+    <span class="hbadge hb-pk">Flash Sale</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>Designing Recent Searches</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>Cricbuzz Text Commentary</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>Instagram Live Reactions</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>Distributed Task Scheduler</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Flash Sale System</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════ T1: RECENT SEARCHES ══════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t1a">Problem & Requirements</div>
+    <div class="stab" data-s="t1b">Data Model</div>
+    <div class="stab" data-s="t1c">Search Ranking</div>
+    <div class="stab" data-s="t1d">Code</div>
+    <div class="stab" data-s="t1e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">Designing <em>Recent Searches</em></div>
+    <p class="psub">When a user clicks the search bar, they see a personalised list of their recent searches. Design a system that stores, retrieves, deduplicates, and ranks recent queries for hundreds of millions of users — efficiently and at low latency.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">100M+</div><div class="slbl">DAU with search activity</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">&lt;50ms</div><div class="slbl">Recent searches load latency</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">5–10</div><div class="slbl">Queries shown per user</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">30 days</div><div class="slbl">Typical recency window</div></div>
+    </div>
+    <h3>Requirements</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Functional</h4><ul class="rl"><li>When user opens search box → show last N (5–10) unique searches</li><li>When user submits a search → save it to their history</li><li>User can delete individual searches or clear all history</li><li>Deduplicate: if "iPhone" searched 5 times, show it once (most recent timestamp)</li><li>Personalised: each user sees only their own history</li></ul></div>
+      <div class="card ct-g"><h4>Non-Functional</h4><ul class="rl"><li>Read latency &lt;50ms (opened on every search interaction)</li><li>Write is async-ok — slight delay in saving is fine</li><li>Data should persist across devices (server-side, not just local)</li><li>Privacy: user can delete all history at any time (GDPR right to erasure)</li><li>Scale: 100M users × avg 5 searches/day = 500M writes/day</li></ul></div>
+    </div>
+    <h3>Approaches Compared</h3>
+    <table>
+      <tr><th>Approach</th><th>Storage</th><th>Read Latency</th><th>Write Latency</th><th>Dedup</th></tr>
+      <tr><td>MySQL per-user table</td><td>Relational DB</td><td>~20ms (indexed)</td><td>~5ms</td><td>ON DUPLICATE KEY UPDATE</td></tr>
+      <tr><td>Redis Sorted Set ✓</td><td>Redis</td><td>~1ms</td><td>~1ms</td><td>ZADD (same member = update score)</td></tr>
+      <tr><td>Redis List</td><td>Redis</td><td>~1ms</td><td>~1ms</td><td>Manual: LREM + LPUSH</td></tr>
+      <tr><td>Local storage only</td><td>Client device</td><td>~0ms</td><td>~0ms</td><td>Client-side</td></tr>
+    </table>
+    <div class="call ci"><strong>Recommended: Redis Sorted Set per user.</strong> Key: <code>recent_searches:{user_id}</code>. Member: query string. Score: timestamp (Unix ms). ZADD updates score if member exists → natural deduplication. ZREVRANGE returns most recent first. ZCARD gives count. Trim with ZREMRANGEBYRANK to keep only last N.</div>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle"><em>Data Model</em> & Storage Design</div>
+    <h3>Redis Sorted Set Pattern</h3>
+    <div class="cwrap"><div class="ctop"><span>Redis operations for recent searches</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- Key per user: recent_searches:{user_id}</span>
+<span class="cmt">-- Score = Unix timestamp ms (higher = more recent)</span>
+<span class="cmt">-- Member = search query string</span>
+
+<span class="cmt">-- User searches "iPhone 16"</span>
+ZADD recent_searches:user_42  <span class="num">1711000000000</span>  <span class="str">"iPhone 16"</span>
+<span class="cmt">-- Same query searched again → updates score (dedup automatic!)</span>
+ZADD recent_searches:user_42  <span class="num">1711001000000</span>  <span class="str">"iPhone 16"</span>
+
+<span class="cmt">-- Trim to last 20 (keep latest 20, delete older)</span>
+ZREMRANGEBYRANK recent_searches:user_42  0  -21
+<span class="cmt">-- Rank 0 = lowest score (oldest). -21 means: keep top 20 (ranks -20 to -1)</span>
+
+<span class="cmt">-- Fetch last 10 searches (most recent first)</span>
+ZREVRANGE recent_searches:user_42  0  9  WITHSCORES
+
+<span class="cmt">-- Delete one search</span>
+ZREM recent_searches:user_42  <span class="str">"iPhone 16"</span>
+
+<span class="cmt">-- Clear all history (GDPR right to erasure)</span>
+DEL recent_searches:user_42
+
+<span class="cmt">-- Set TTL to auto-expire old history (30 days)</span>
+EXPIRE recent_searches:user_42  <span class="num">2592000</span>  <span class="cmt">-- 30 days in seconds</span></pre></div>
+
+    <h3>DB Persistence Layer</h3>
+    <p>Redis is the fast serving layer. But Redis can lose data on restart (unless AOF/RDB). For durability, also persist to MySQL/Postgres asynchronously via Kafka.</p>
+    <div class="cwrap"><div class="ctop"><span>search_history schema (MySQL — durable persistence)</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="kw">CREATE TABLE</span> search_history (
+    user_id      <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+    query        <span class="cls">VARCHAR</span>(<span class="num">500</span>) <span class="kw">NOT NULL</span>,
+    searched_at  <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,  <span class="cmt">-- epoch ms</span>
+    device_type  <span class="cls">VARCHAR</span>(<span class="num">20</span>),            <span class="cmt">-- mobile/desktop/tablet</span>
+
+    <span class="kw">PRIMARY KEY</span> (user_id, query),          <span class="cmt">-- prevents duplicates</span>
+    <span class="kw">INDEX</span> idx_user_time (user_id, searched_at <span class="kw">DESC</span>)
+) ENGINE=InnoDB;
+
+<span class="cmt">-- Upsert: insert or update timestamp on duplicate</span>
+<span class="kw">INSERT INTO</span> search_history (user_id, query, searched_at)
+<span class="kw">VALUES</span> (?, ?, ?)
+<span class="kw">ON DUPLICATE KEY UPDATE</span> searched_at = <span class="kw">VALUES</span>(searched_at);</pre></div>
+
+    <h3>Write Path (Async)</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">User submits search query</div><div class="fd">API receives <code>POST /search?q=iPhone&user_id=42</code>. Returns search results immediately (no waiting for history save).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Publish to Kafka (async, non-blocking)</div><div class="fd"><code>kafka.publish("search.events", {user_id, query, ts})</code>. This is fire-and-forget — the search results path is unaffected.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Search History Worker consumes event</div><div class="fd">Worker: ZADD Redis + EXPIRE + ZREMRANGEBYRANK (trim). Then async write to MySQL for durability.</div></div></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle">Search <em>Ranking & Suggestions</em></div>
+    <h3>Beyond Simple Recency: Personalised Ranking</h3>
+    <p>A naive recent-searches list shows queries in order of recency. More sophisticated systems rank by a combination of recency + frequency + result quality. This is how Google's "Search history" and YouTube's "Recent searches" work.</p>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Recency Score</h4><p>Queries searched more recently score higher. Simple: use timestamp as-is. Time-decayed: score = timestamp × exp(-λ × age). Older searches decay in importance over hours/days.</p></div>
+      <div class="card ct-g"><h4>Frequency Boost</h4><p>If "MacBook Pro" was searched 10 times and "keyboard shortcut" once, MacBook Pro ranks higher even if keyboard shortcut was more recent. Combine: <code>score = recency × log(frequency + 1)</code>.</p></div>
+      <div class="card ct-a"><h4>Contextual Ranking</h4><p>Boost queries matching the current prefix. User types "ip" → "iPhone 16" ranks higher than "iPad case" in recent searches because "ip" is a stronger prefix match for "iPhone". Combine prefix affinity with recency.</p></div>
+    </div>
+    <h3>Autocomplete from Recent Searches</h3>
+    <div class="cwrap"><div class="ctop"><span>recent_search_autocomplete.py — prefix match in recent history</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">async def</span> <span class="fn">get_recent_searches_for_prefix</span>(redis, user_id: int, prefix: str) -> list[str]:
+    <span class="str">"""Return recent searches matching prefix, ordered by recency."""</span>
+    <span class="cmt"># Fetch all recent searches (up to 50)</span>
+    all_recent = <span class="kw">await</span> redis.<span class="fn">zrevrange</span>(<span class="str">f"recent_searches:{user_id}"</span>, <span class="num">0</span>, <span class="num">49</span>)
+
+    <span class="cmt"># Filter to prefix matches (case-insensitive)</span>
+    prefix_lower = prefix.<span class="fn">lower</span>()
+    matches = [
+        q.<span class="fn">decode</span>() <span class="kw">for</span> q <span class="kw">in</span> all_recent
+        <span class="kw">if</span> q.<span class="fn">decode</span>().<span class="fn">lower</span>().<span class="fn">startswith</span>(prefix_lower)
+    ]
+    <span class="kw">return</span> matches[:<span class="num">5</span>]   <span class="cmt"># return top 5 prefix-matching recent searches</span>
+
+<span class="kw">async def</span> <span class="fn">get_suggestions</span>(user_id: int, prefix: str) -> dict:
+    <span class="str">"""Combine recent searches + global trending for suggestion dropdown."""</span>
+    personal  = <span class="kw">await</span> <span class="fn">get_recent_searches_for_prefix</span>(redis, user_id, prefix)
+    trending  = <span class="kw">await</span> <span class="fn">get_trending_queries</span>(prefix)  <span class="cmt"># from global trie</span>
+    <span class="kw">return</span> {
+        <span class="str">"recent"</span>:   personal,   <span class="cmt"># shown first: "Your recent searches"</span>
+        <span class="str">"trending"</span>: [q <span class="kw">for</span> q <span class="kw">in</span> trending <span class="kw">if</span> q <span class="kw">not in</span> personal]  <span class="cmt"># de-duped</span>
+    }</pre></div>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle">Code — <em>Full Recent Search Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>recent_search_service.py — FastAPI + Redis</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> time
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+app   = <span class="fn">FastAPI</span>()
+redis = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+
+<span class="cls">MAX_HISTORY</span> = <span class="num">20</span>     <span class="cmt"># keep at most 20 searches per user</span>
+<span class="cls">SHOW_TOP</span>    = <span class="num">10</span>     <span class="cmt"># show top 10 to user</span>
+<span class="cls">TTL_DAYS</span>    = <span class="num">30</span>     <span class="cmt"># auto-expire after 30 days of inactivity</span>
+
+<span class="kw">def</span> <span class="fn">_key</span>(user_id: int): <span class="kw">return</span> <span class="str">f"recent_searches:{user_id}"</span>
+
+<span class="dec">@app.post</span>(<span class="str">"/searches"</span>)
+<span class="kw">async def</span> <span class="fn">record_search</span>(user_id: int, query: str):
+    <span class="str">"""Record a search. Deduplicates and trims automatically."""</span>
+    q    = query.<span class="fn">strip</span>().<span class="fn">lower</span>()[:200]   <span class="cmt"># normalise, cap at 200 chars</span>
+    <span class="kw">if not</span> q: <span class="kw">return</span>
+    key  = <span class="fn">_key</span>(user_id)
+    now  = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>() <span class="kw">as</span> pipe:
+        pipe.<span class="fn">zadd</span>(key, {q: now})          <span class="cmt"># add or update score</span>
+        pipe.<span class="fn">zremrangebyrank</span>(key, <span class="num">0</span>, -<span class="cls">MAX_HISTORY</span>-<span class="num">1</span>)  <span class="cmt"># trim oldest</span>
+        pipe.<span class="fn">expire</span>(key, <span class="cls">TTL_DAYS</span> * <span class="num">86400</span>)  <span class="cmt"># reset TTL on activity</span>
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()
+
+    <span class="kw">return</span> {<span class="str">"recorded"</span>: <span class="kw">True</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/searches/{user_id}"</span>)
+<span class="kw">async def</span> <span class="fn">get_recent</span>(user_id: int, prefix: str = <span class="str">""</span>):
+    <span class="str">"""Return recent searches, optionally filtered by prefix."""</span>
+    raw = <span class="kw">await</span> redis.<span class="fn">zrevrange</span>(<span class="fn">_key</span>(user_id), <span class="num">0</span>, <span class="cls">MAX_HISTORY</span>-<span class="num">1</span>)
+    queries = [q.<span class="fn">decode</span>() <span class="kw">for</span> q <span class="kw">in</span> raw]
+    <span class="kw">if</span> prefix:
+        queries = [q <span class="kw">for</span> q <span class="kw">in</span> queries <span class="kw">if</span> q.<span class="fn">startswith</span>(prefix.<span class="fn">lower</span>())]
+    <span class="kw">return</span> {<span class="str">"searches"</span>: queries[:<span class="cls">SHOW_TOP</span>]}
+
+<span class="dec">@app.delete</span>(<span class="str">"/searches/{user_id}/{query}"</span>)
+<span class="kw">async def</span> <span class="fn">delete_search</span>(user_id: int, query: str):
+    <span class="kw">await</span> redis.<span class="fn">zrem</span>(<span class="fn">_key</span>(user_id), query.<span class="fn">lower</span>())
+    <span class="kw">return</span> {<span class="str">"deleted"</span>: <span class="kw">True</span>}
+
+<span class="dec">@app.delete</span>(<span class="str">"/searches/{user_id}"</span>)
+<span class="kw">async def</span> <span class="fn">clear_all</span>(user_id: int):
+    <span class="str">"""GDPR right to erasure — delete entire history."""</span>
+    <span class="kw">await</span> redis.<span class="fn">delete</span>(<span class="fn">_key</span>(user_id))
+    <span class="kw">return</span> {<span class="str">"cleared"</span>: <span class="kw">True</span>}</pre></div>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Recent Searches — Redis Sorted Set Demo</span>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Type a search query</h4>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <input id="srch-input" type="text" placeholder="Search…" style="flex:1;background:var(--surf2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px" onkeydown="if(event.key==='Enter')srchSubmit()"/>
+              <button class="dbtn dbtn-c" onclick="srchSubmit()">Search</button>
+            </div>
+            <h4>Recent History</h4>
+            <div id="srch-history"></div>
+            <button class="dbtn dbtn-r" onclick="srchClear()" style="margin-top:8px">Clear All History</button>
+          </div>
+          <div>
+            <h4>Suggestions (prefix match)</h4>
+            <div id="srch-suggestions" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+            <h4 style="margin-top:12px">Sorted Set State (score=timestamp)</h4>
+            <div id="srch-raw" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);max-height:140px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Redis Sorted Set is the canonical data structure for recent searches</strong> — ZADD with timestamp as score provides O(log N) insert, O(log N) deduplicate (update score), O(log N) range query. All operations in one call.</li>
+      <li><strong>Deduplication is automatic</strong> — ZADD on the same member updates the score. "iPhone 16" searched 10 times = one entry with the most recent timestamp. No extra logic needed.</li>
+      <li><strong>Write path is fully async</strong> — search results are returned immediately; the history record is written to Kafka → Redis in the background. No latency added to the critical path.</li>
+      <li><strong>30-day TTL with reset-on-activity</strong> — EXPIRE is reset to 30 days on every search. Inactive users' data auto-expires. Dramatically reduces memory footprint without manual cleanup jobs.</li>
+      <li><strong>GDPR compliance is a single DEL command</strong> — <code>DEL recent_searches:{user_id}</code> wipes all history instantly. Combined with Kafka event deletion for the durable MySQL layer, this completes the right-to-erasure requirement.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T2: CRICBUZZ TEXT COMMENTARY ══════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t2a">Problem & Architecture</div>
+    <div class="stab" data-s="t2b">Real-time Delivery</div>
+    <div class="stab" data-s="t2c">Data Model</div>
+    <div class="stab" data-s="t2d">Code</div>
+    <div class="stab" data-s="t2e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">Cricbuzz <em>Text Commentary</em> System</div>
+    <p class="psub">Cricbuzz delivers ball-by-ball text commentary to millions of users during a cricket match. Each delivery generates a commentary event (runs, wicket, wide, boundary) that must reach all connected users in real-time with sub-second latency — even during India vs Pakistan matches with 50M+ concurrent viewers.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">50M+</div><div class="slbl">Peak concurrent users (IND-PAK)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">~1</div><div class="slbl">Update per ball (every 3–5 minutes)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">&lt;1s</div><div class="slbl">Commentary delivery latency</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">900+</div><div class="slbl">Deliveries per match (20-over)</div></div>
+    </div>
+    <h3>Why This Is Hard</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Fan-out problem</h4><p>Each ball: 1 writer (the scorekeeper) must notify 50M readers simultaneously. A naïve push model: 50M WebSocket pushes per delivery. Server can handle ~10K pushes/sec per node → 5000 nodes. Too expensive.</p></div>
+      <div class="card ct-c"><h4>Pull vs Push trade-off</h4><p>Pure polling (every user polls every second): 50M × 1 req/s = 50M RPS. Unacceptable. Pure push (WebSocket to all): 50M persistent connections. Need a hybrid model: push to connected users, pull for reconnecting.</p></div>
+    </div>
+    <h3>Architecture: SSE + Redis PubSub + Kafka</h3>
+    <div class="diag">
+<svg viewBox="0 0 700 160" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+  <marker id="ag" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="696" height="156" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="14" y="40" width="80" height="80" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="54" y="75" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="700">Scorekeeper</text>
+  <text x="54" y="89" text-anchor="middle" fill="#5a6a85" font-size="7.5">POST /commentary</text>
+  <text x="54" y="102" text-anchor="middle" fill="#5a6a85" font-size="7.5">{ball, runs, event}</text>
+
+  <rect x="152" y="30" width="100" height="100" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="202" y="52" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">Commentary</text>
+  <text x="202" y="65" text-anchor="middle" fill="#00e5ff" font-size="9">API</text>
+  <text x="202" y="80" text-anchor="middle" fill="#5a6a85" font-size="7.5">Save to DB</text>
+  <text x="202" y="93" text-anchor="middle" fill="#5a6a85" font-size="7.5">Publish Kafka</text>
+  <text x="202" y="106" text-anchor="middle" fill="#5a6a85" font-size="7.5">event: ball.bowled</text>
+
+  <rect x="310" y="30" width="100" height="100" rx="4" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="360" y="60" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Kafka</text>
+  <text x="360" y="75" text-anchor="middle" fill="#5a6a85" font-size="7.5">topic: ball.bowled</text>
+  <text x="360" y="90" text-anchor="middle" fill="#5a6a85" font-size="7.5">durability +</text>
+  <text x="360" y="103" text-anchor="middle" fill="#5a6a85" font-size="7.5">replay on miss</text>
+
+  <rect x="468" y="30" width="100" height="100" rx="4" fill="#131a2a" stroke="#ec4899" stroke-width="1.5"/>
+  <text x="518" y="52" text-anchor="middle" fill="#ec4899" font-size="9" font-weight="700">Fan-out</text>
+  <text x="518" y="65" text-anchor="middle" fill="#ec4899" font-size="9">Workers</text>
+  <text x="518" y="80" text-anchor="middle" fill="#5a6a85" font-size="7.5">Redis PUBLISH</text>
+  <text x="518" y="93" text-anchor="middle" fill="#5a6a85" font-size="7.5">match:{id} channel</text>
+  <text x="518" y="106" text-anchor="middle" fill="#5a6a85" font-size="7.5">All SSE servers SUB</text>
+
+  <rect x="590" y="45" width="96" height="70" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="638" y="67" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">50M Users</text>
+  <text x="638" y="82" text-anchor="middle" fill="#5a6a85" font-size="7.5">SSE or Long Poll</text>
+  <text x="638" y="96" text-anchor="middle" fill="#5a6a85" font-size="7.5">push to browser</text>
+  <text x="638" y="108" text-anchor="middle" fill="#5a6a85" font-size="7.5">EventSource API</text>
+
+  <line x1="96" y1="80" x2="150" y2="80" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="254" y1="80" x2="308" y2="80" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="412" y1="80" x2="466" y2="80" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="570" y1="80" x2="588" y2="80" stroke="#ec4899" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="350" y="148" text-anchor="middle" fill="#3a4a60" font-size="7.5">Scorekeeper → Kafka → Fan-out Workers → Redis PubSub → SSE servers → 50M browsers</text>
+</svg>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle">Real-time <em>Delivery</em></div>
+    <h3>Server-Sent Events (SSE) — The Right Protocol</h3>
+    <div class="tdp">
+      <div class="tdc pro"><h4>SSE ✓ (Best for commentary)</h4><ul><li>One-directional: server → client (commentary is read-only)</li><li>Browser built-in: EventSource API, auto-reconnect, retry</li><li>Over HTTP/1.1 or HTTP/2 — CDN-friendly</li><li>Much lighter than WebSocket (no bidirectional overhead)</li><li>Graceful reconnect: sends Last-Event-ID → server resends missed events</li></ul></div>
+      <div class="tdc con"><h4>WebSocket (Overkill for commentary)</h4><ul><li>Bidirectional — both directions add overhead for read-only data</li><li>Not CDN-cacheable at the protocol level</li><li>More complex keepalive and reconnect logic</li><li>Better for: chat, collaborative editing, games</li></ul></div>
+    </div>
+    <h3>Handling Reconnects — The Last-Event-ID Pattern</h3>
+    <div class="cwrap"><div class="ctop"><span>SSE with Last-Event-ID — never miss a ball</span><span class="ltag lpy">Python + JS</span></div>
+    <pre><span class="cmt"># Server: SSE endpoint with Last-Event-ID support</span>
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> StreamingResponse
+
+<span class="dec">@app.get</span>(<span class="str">"/commentary/{match_id}/stream"</span>)
+<span class="kw">async def</span> <span class="fn">commentary_stream</span>(match_id: str, last_event_id: str = <span class="fn">Header</span>(<span class="str">""</span>, alias=<span class="str">"Last-Event-Id"</span>)):
+    <span class="kw">async def</span> <span class="fn">event_generator</span>():
+        <span class="cmt"># 1. Send missed events since last_event_id (reconnect handling)</span>
+        <span class="kw">if</span> last_event_id:
+            missed = <span class="kw">await</span> <span class="fn">get_commentary_since</span>(match_id, last_event_id)
+            <span class="kw">for</span> event <span class="kw">in</span> missed:
+                <span class="kw">yield</span> <span class="str">f"id: {event['id']}\ndata: {json.dumps(event)}\n\n"</span>
+
+        <span class="cmt"># 2. Subscribe to real-time events</span>
+        pubsub = redis.<span class="fn">pubsub</span>()
+        <span class="kw">await</span> pubsub.<span class="fn">subscribe</span>(<span class="str">f"match:{match_id}"</span>)
+        <span class="kw">async for</span> message <span class="kw">in</span> pubsub.<span class="fn">listen</span>():
+            <span class="kw">if</span> message[<span class="str">"type"</span>] == <span class="str">"message"</span>:
+                data = message[<span class="str">"data"</span>].<span class="fn">decode</span>()
+                event_id = <span class="fn">extract_event_id</span>(data)
+                <span class="kw">yield</span> <span class="str">f"id: {event_id}\ndata: {data}\n\n"
+
+    <span class="kw">return</span> <span class="cls">StreamingResponse</span>(
+        <span class="fn">event_generator</span>(),
+        media_type=<span class="str">"text/event-stream"</span>,
+        headers={<span class="str">"Cache-Control"</span>: <span class="str">"no-cache"</span>, <span class="str">"X-Accel-Buffering"</span>: <span class="str">"no"</span>}
+    )
+
+<span class="cmt">// Client: EventSource API (built into all browsers)</span>
+<span class="cmt">// const source = new EventSource('/commentary/match_123/stream');
+// source.onmessage = (e) => updateScoreboard(JSON.parse(e.data));
+// source.onerror = () => { /* browser auto-reconnects with Last-Event-Id */ };</span></pre></div>
+
+    <h3>Redis PubSub Fan-out</h3>
+    <div class="call ci"><strong>Architecture:</strong> Each SSE server subscribes to <code>match:{id}</code> Redis channel. When a new ball commentary arrives, the fan-out worker publishes to this channel. All SSE servers receive it and push to their connected clients. This scales horizontally — add more SSE servers without changing the fan-out logic.</div>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">Data <em>Model</em></div>
+    <h3>Commentary Event Schema</h3>
+    <div class="cwrap"><div class="ctop"><span>commentary schema — MySQL + Redis</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="kw">CREATE TABLE</span> match_commentary (
+    id           <span class="cls">BIGINT</span>       <span class="kw">NOT NULL AUTO_INCREMENT</span> <span class="kw">PRIMARY KEY</span>,
+    match_id     <span class="cls">VARCHAR</span>(<span class="num">32</span>)  <span class="kw">NOT NULL</span>,
+    over_num     <span class="cls">SMALLINT</span>     <span class="kw">NOT NULL</span>,   <span class="cmt">-- 0-indexed, 0 to 19 for T20</span>
+    ball_num     <span class="cls">TINYINT</span>      <span class="kw">NOT NULL</span>,   <span class="cmt">-- 1 to 6 (or 7+ for extras)</span>
+    event_type   <span class="cls">ENUM</span>(<span class="str">'dot'</span>,<span class="str">'runs'</span>,<span class="str">'wicket'</span>,<span class="str">'wide'</span>,<span class="str">'no_ball'</span>,<span class="str">'boundary'</span>,<span class="str">'six'</span>) <span class="kw">NOT NULL</span>,
+    runs_scored  <span class="cls">TINYINT</span>      <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    batsman_id   <span class="cls">INT</span>          <span class="kw">NOT NULL</span>,
+    bowler_id    <span class="cls">INT</span>          <span class="kw">NOT NULL</span>,
+    commentary   <span class="cls">TEXT</span>,                      <span class="cmt">-- "A cracking cover drive for 4!"</span>
+    is_highlight <span class="cls">BOOLEAN</span>      <span class="kw">DEFAULT</span> <span class="kw">FALSE</span>,
+    created_at   <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+
+    <span class="kw">INDEX</span> idx_match_time (match_id, created_at <span class="kw">DESC</span>),
+    <span class="kw">INDEX</span> idx_match_over (match_id, over_num, ball_num)
+);
+
+<span class="cmt">-- Redis cache: recent commentary for fast initial load</span>
+<span class="cmt">-- Key: match:{id}:commentary → LRANGE 0 49 for last 50 balls</span>
+<span class="cmt">-- Key: match:{id}:score → HSET {total, wickets, overs, run_rate, ...}</span></pre></div>
+
+    <h3>Scorecard Calculation</h3>
+    <p>Every ball updates the live scorecard. Recomputing from scratch on each ball is expensive. Instead, maintain a cached scorecard in Redis, update atomically with Lua scripts:</p>
+    <div class="cwrap"><div class="ctop"><span>score_updater.py — atomic scorecard update</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">async def</span> <span class="fn">update_scorecard</span>(redis, match_id: str, event: dict):
+    <span class="str">"""Atomically update all scorecard fields in one Redis pipeline."""</span>
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>(transaction=<span class="kw">True</span>) <span class="kw">as</span> pipe:
+        score_key = <span class="str">f"match:{match_id}:score"</span>
+
+        <span class="kw">if</span> event[<span class="str">"event_type"</span>] == <span class="str">"wicket"</span>:
+            pipe.<span class="fn">hincrby</span>(score_key, <span class="str">"wickets"</span>, <span class="num">1</span>)
+        <span class="kw">else</span>:
+            pipe.<span class="fn">hincrby</span>(score_key, <span class="str">"total_runs"</span>, event.<span class="fn">get</span>(<span class="str">"runs_scored"</span>, <span class="num">0</span>))
+
+        pipe.<span class="fn">hset</span>(score_key, <span class="str">"last_ball"</span>, event[<span class="str">"id"</span>])
+        pipe.<span class="fn">expire</span>(score_key, <span class="num">86400</span>)  <span class="cmt"># expire score after 24h</span>
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()</pre></div>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle">Code — <em>Full Commentary Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>commentary_publisher.py — scorekeeper API</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="dec">@app.post</span>(<span class="str">"/commentary/{match_id}/ball"</span>)
+<span class="kw">async def</span> <span class="fn">record_ball</span>(match_id: str, payload: <span class="cls">BallEvent</span>):
+    <span class="str">"""
+    Called by the scorekeeper after each delivery.
+    Writes to DB, updates Redis cache, and publishes to fan-out channel.
+    All steps critical — use pipeline for atomicity.
+    """</span>
+    event_id = <span class="fn">generate_snowflake_id</span>()
+    now      = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+
+    <span class="cmt"># 1. Persist to MySQL</span>
+    <span class="kw">await</span> db.<span class="fn">execute</span>(
+        <span class="str">"INSERT INTO match_commentary(id,match_id,over_num,ball_num,event_type,runs_scored,commentary,created_at) "</span>
+        <span class="str">"VALUES(?,?,?,?,?,?,?,?)"</span>,
+        [event_id, match_id, payload.over, payload.ball,
+         payload.event_type, payload.runs, payload.commentary, now]
+    )
+
+    <span class="cmt"># 2. Update Redis cache (last 50 balls as a List)</span>
+    event_json = payload.<span class="fn">json</span>()
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>() <span class="kw">as</span> pipe:
+        pipe.<span class="fn">lpush</span>(<span class="str">f"match:{match_id}:commentary"</span>, event_json)
+        pipe.<span class="fn">ltrim</span>(<span class="str">f"match:{match_id}:commentary"</span>, <span class="num">0</span>, <span class="num">49</span>)   <span class="cmt"># keep last 50</span>
+        pipe.<span class="fn">expire</span>(<span class="str">f"match:{match_id}:commentary"</span>, <span class="num">86400</span>)
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()
+
+    <span class="cmt"># 3. Update scorecard</span>
+    <span class="kw">await</span> <span class="fn">update_scorecard</span>(redis, match_id, payload.<span class="fn">dict</span>())
+
+    <span class="cmt"># 4. Fan-out to all connected SSE clients via Redis PubSub</span>
+    <span class="kw">await</span> redis.<span class="fn">publish</span>(<span class="str">f"match:{match_id}"</span>, event_json)
+
+    <span class="kw">return</span> {<span class="str">"event_id"</span>: event_id, <span class="str">"status"</span>: <span class="str">"published"</span>}</pre></div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Live Cricket Commentary Simulator</span>
+        <button class="dbtn dbtn-c" onclick="crickBall()" style="margin-left:auto">⚡ Bowl a ball</button>
+        <button class="dbtn dbtn-g" onclick="crickAuto()" style="margin-left:6px">Auto over</button>
+        <button class="dbtn dbtn-r" onclick="crickReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:8px;padding:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;display:flex;gap:20px">
+          <span>Score: <strong id="crick-score" style="color:var(--accent)">0/0</strong></span>
+          <span>Overs: <strong id="crick-overs" style="color:var(--green)">0.0</strong></span>
+          <span>RR: <strong id="crick-rr" style="color:var(--amber)">0.00</strong></span>
+        </div>
+        <div id="crick-feed" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>SSE is better than WebSocket for one-directional live data</strong> — commentary, scores, news feeds, live dashboards. Auto-reconnect with Last-Event-ID means zero missed events even on flaky mobile connections.</li>
+      <li><strong>Redis PubSub decouples the fan-out from the writer</strong> — the scorekeeper API publishes once; all SSE servers (however many) receive it and push to their connected clients. Horizontal scale = add more SSE servers.</li>
+      <li><strong>Last-Event-ID handles reconnects gracefully</strong> — browser stores the ID of the last received event. On reconnect, sends it to the server. Server replays missed events from DB or Redis list.</li>
+      <li><strong>Scorecard is maintained incrementally in Redis</strong> — HINCRBY for counters, not recomputed from scratch each ball. Atomic pipeline ensures no inconsistency between runs, wickets, and overs.</li>
+      <li><strong>At 50M concurrent users: SSE connections require significant infrastructure</strong> — each SSE connection holds an open HTTP connection. 50M connections × ~4KB per connection = 200 GB RAM just for connection state. Requires thousands of SSE servers with connection-aware load balancing.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T3: INSTAGRAM LIVE REACTIONS ══════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t3a">Problem & Scale</div>
+    <div class="stab" data-s="t3b">Architecture</div>
+    <div class="stab" data-s="t3c">Batching & Aggregation</div>
+    <div class="stab" data-s="t3d">Code</div>
+    <div class="stab" data-s="t3e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">Instagram <em>Live Reactions</em></div>
+    <p class="psub">During an Instagram Live stream, viewers tap reaction buttons (❤️ 😂 🔥 👏) and see a burst of floating emoji animations on screen. Millions of reactions per second must be aggregated, sampled, and delivered in near-real-time to all viewers. Not every single reaction needs to be shown — just enough to create the feeling of high energy.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">Millions</div><div class="slbl">Reactions per second during viral live</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">&lt;500ms</div><div class="slbl">Reaction animation latency</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">Sampled</div><div class="slbl">Not every reaction shown — aggregated</div></div>
+      <div class="card ct-pk" style="text-align:center"><div class="snum">5 types</div><div class="slbl">❤️ 😂 🔥 👏 😮</div></div>
+    </div>
+    <h3>Why Not Naive Push?</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>1M reactions/sec → 1M WebSocket messages/sec</h4><p>If 1M users each tap once per second, and the server must push each reaction to all other connected viewers, that's: 1M reactions × 500K viewers = 500 billion messages/sec. Impossible. Need aggressive aggregation.</p></div>
+      <div class="card ct-c"><h4>The solution: Aggregate, Sample, Burst</h4><p>Instead of pushing individual reactions, aggregate them in windows (50–100ms). Push the aggregate: {heart: 4,200, fire: 1,800, laugh: 900} to all viewers. Each viewer's client renders an appropriate density of floating emojis based on the count.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle"><em>Architecture</em></div>
+    <h3>Aggregation Pipeline</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Viewer taps reaction</div><div class="fd">Client sends <code>POST /live/{stream_id}/react {type: "heart"}</code>. Fire-and-forget — client doesn't wait for response. The animation starts immediately on the local client (optimistic UI).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Reaction API batches writes in Redis</div><div class="fd">HINCRBY on a time-bucketed key: <code>HINCRBY react:{stream_id}:{ts_100ms} heart 1</code>. Bucket window = 100ms. EXPIRE = 5s on each bucket (auto-cleanup).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Aggregator reads buckets every 100ms</div><div class="fd">Background worker: HGETALL the current bucket → compute aggregated counts → publish to Redis channel → clear bucket. This is the fan-out event.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Fan-out via Redis PubSub → WebSocket servers</div><div class="fd">WebSocket/SSE servers subscribed to the channel push the aggregate to all connected viewers: <code>{window_ms:100, heart:4200, fire:1800, laugh:900}</code>.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Client renders proportional animation</div><div class="fd">Client calculates emoji spawn rate from counts. 4200 hearts in 100ms = 42 hearts/sec floating up the screen. Capped at ~10 visible simultaneously for visual clarity.</div></div></div>
+    </div>
+    <h3>Why 100ms Aggregation Windows?</h3>
+    <div class="g g2">
+      <div class="card ct-g"><h4>Visual perception</h4><p>Humans can't distinguish individual emoji appearing at &gt;20/sec. Aggregating over 100ms windows loses no perceptible granularity. The energy feeling comes from density, not individual emoji identity.</p></div>
+      <div class="card ct-a"><h4>Infrastructure reduction</h4><p>At 1M reactions/sec: individual push = 1M messages/sec. 100ms aggregation = 10 messages/sec to all subscribers. 100,000× reduction in fan-out message volume while preserving the live feel.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">Batching &amp; <em>Aggregation</em></div>
+    <h3>Redis Time-Bucketed Counter</h3>
+    <div class="cwrap"><div class="ctop"><span>reaction_aggregator.py — 100ms bucket aggregation</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, time, json
+
+<span class="cls">BUCKET_MS</span> = <span class="num">100</span>   <span class="cmt"># 100ms aggregation window</span>
+
+<span class="kw">def</span> <span class="fn">bucket_key</span>(stream_id: str) -> str:
+    <span class="str">"""Current 100ms bucket key."""</span>
+    ts_bucket = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>) // <span class="cls">BUCKET_MS</span>
+    <span class="kw">return</span> <span class="str">f"react:{stream_id}:{ts_bucket}"</span>
+
+<span class="kw">async def</span> <span class="fn">record_reaction</span>(redis, stream_id: str, reaction_type: str):
+    <span class="str">"""Atomic increment in current time bucket. O(1)."""</span>
+    key = <span class="fn">bucket_key</span>(stream_id)
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>() <span class="kw">as</span> pipe:
+        pipe.<span class="fn">hincrby</span>(key, reaction_type, <span class="num">1</span>)
+        pipe.<span class="fn">expire</span>(key, <span class="num">5</span>)   <span class="cmt"># auto-cleanup after 5s</span>
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()
+
+<span class="kw">async def</span> <span class="fn">aggregation_loop</span>(redis, stream_id: str):
+    <span class="str">"""Background worker: reads bucket every 100ms, publishes aggregate."""</span>
+    <span class="kw">while True</span>:
+        <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="cls">BUCKET_MS</span> / <span class="num">1000</span>)
+
+        <span class="cmt"># Read and atomically clear previous bucket</span>
+        prev_ts   = (<span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>) // <span class="cls">BUCKET_MS</span>) - <span class="num">1</span>
+        prev_key  = <span class="str">f"react:{stream_id}:{prev_ts}"</span>
+        counts    = <span class="kw">await</span> redis.<span class="fn">hgetall</span>(prev_key)
+        <span class="kw">await</span> redis.<span class="fn">delete</span>(prev_key)   <span class="cmt"># consume the bucket</span>
+
+        <span class="kw">if</span> counts:
+            aggregate = {
+                k.<span class="fn">decode</span>(): <span class="fn">int</span>(v) <span class="kw">for</span> k, v <span class="kw">in</span> counts.<span class="fn">items</span>()
+            }
+            aggregate[<span class="str">"window_ms"</span>] = BUCKET_MS
+
+            <span class="cmt"># Fan-out to all SSE/WS servers for this stream</span>
+            <span class="kw">await</span> redis.<span class="fn">publish</span>(
+                <span class="str">f"reactions:{stream_id}"</span>,
+                json.<span class="fn">dumps</span>(aggregate)
+            )</pre></div>
+
+    <h3>Client-side Rendering Logic</h3>
+    <div class="cwrap"><div class="ctop"><span>reaction_renderer.js — emoji burst animation</span><span class="ltag lsq">JavaScript</span></div>
+    <pre><span class="kw">const</span> MAX_VISIBLE = <span class="num">8</span>;   <span class="cmt">// max simultaneous floating emojis</span>
+<span class="kw">const</span> EMOJI_MAP = { heart:<span class="str">'❤️'</span>, fire:<span class="str">'🔥'</span>, laugh:<span class="str">'😂'</span>, clap:<span class="str">'👏'</span>, wow:<span class="str">'😮'</span> };
+
+<span class="kw">function</span> <span class="fn">renderReactions</span>(aggregate) {
+    <span class="kw">const</span> total = Object.<span class="fn">values</span>(aggregate)
+        .<span class="fn">filter</span>(v => <span class="kw">typeof</span> v === <span class="str">'number'</span>)
+        .<span class="fn">reduce</span>((a,b) => a+b, <span class="num">0</span>);
+
+    <span class="kw">if</span> (total === <span class="num">0</span>) <span class="kw">return</span>;
+
+    <span class="cmt">// Scale to max visible: if 10000 reactions, still show ≤8 emojis</span>
+    <span class="kw">const</span> scale = Math.<span class="fn">min</span>(<span class="num">1</span>, MAX_VISIBLE / total);
+
+    <span class="kw">for</span> (<span class="kw">const</span> [type, count] <span class="kw">of</span> Object.<span class="fn">entries</span>(aggregate)) {
+        <span class="kw">if</span> (!EMOJI_MAP[type]) <span class="kw">continue</span>;
+        <span class="kw">const</span> numToShow = Math.<span class="fn">max</span>(<span class="num">1</span>, Math.<span class="fn">round</span>(count * scale));
+        <span class="kw">for</span> (<span class="kw">let</span> i=<span class="num">0</span>; i&lt;numToShow; i++) {
+            <span class="fn">setTimeout</span>(() => <span class="fn">floatEmoji</span>(EMOJI_MAP[type]), i * <span class="num">50</span>);
+        }
+    }
+}
+
+<span class="kw">function</span> <span class="fn">floatEmoji</span>(emoji) {
+    <span class="kw">const</span> el = document.<span class="fn">createElement</span>(<span class="str">'span'</span>);
+    el.textContent = emoji;
+    el.style = <span class="str">`position:fixed;bottom:100px;left:${10+Math.random()*80}%;
+        font-size:${24+Math.random()*16}px;animation:float-up 2s ease-out forwards;
+        pointer-events:none;z-index:1000`</span>;
+    document.body.<span class="fn">appendChild</span>(el);
+    <span class="fn">setTimeout</span>(() => el.<span class="fn">remove</span>(), <span class="num">2000</span>);
+}</pre></div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle">Code — <em>Reaction API</em></div>
+    <div class="cwrap"><div class="ctop"><span>reactions_api.py — ingestion endpoint</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+<span class="kw">from</span> typing <span class="kw">import</span> Literal
+
+app = <span class="fn">FastAPI</span>()
+<span class="cls">VALID_TYPES</span> = {<span class="str">"heart"</span>,<span class="str">"fire"</span>,<span class="str">"laugh"</span>,<span class="str">"clap"</span>,<span class="str">"wow"</span>}
+
+<span class="kw">class</span> <span class="cls">ReactionRequest</span>(BaseModel):
+    reaction_type: str
+    batch_count:   int = <span class="num">1</span>   <span class="cmt"># client can batch N reactions if tapping rapidly</span>
+
+<span class="dec">@app.post</span>(<span class="str">"/live/{stream_id}/react"</span>)
+<span class="kw">async def</span> <span class="fn">react</span>(stream_id: str, req: <span class="cls">ReactionRequest</span>, user_id: int):
+    <span class="str">"""Record reaction. Returns immediately (fire-and-forget write)."""</span>
+    <span class="kw">if</span> req.reaction_type <span class="kw">not in</span> VALID_TYPES:
+        <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">False</span>}
+
+    <span class="cmt"># Rate limit per user: max 5 reactions/second</span>
+    rl_key = <span class="str">f"rl:react:{user_id}"</span>
+    count  = <span class="kw">await</span> redis.<span class="fn">incr</span>(rl_key)
+    <span class="kw">if</span> count == <span class="num">1</span>: <span class="kw">await</span> redis.<span class="fn">expire</span>(rl_key, <span class="num">1</span>)  <span class="cmt"># 1-second window</span>
+    <span class="kw">if</span> count > <span class="num">5</span>: <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">False</span>, <span class="str">"reason"</span>: <span class="str">"rate_limited"</span>}
+
+    <span class="kw">await</span> <span class="fn">record_reaction</span>(redis, stream_id, req.reaction_type)
+    <span class="kw">return</span> {<span class="str">"ok"</span>: <span class="kw">True</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/live/{stream_id}/reactions/stream"</span>)
+<span class="kw">async def</span> <span class="fn">reaction_stream</span>(stream_id: str):
+    <span class="str">"""SSE endpoint: stream aggregated reaction counts every 100ms."""</span>
+    <span class="kw">async def</span> <span class="fn">generator</span>():
+        pubsub = redis.<span class="fn">pubsub</span>()
+        <span class="kw">await</span> pubsub.<span class="fn">subscribe</span>(<span class="str">f"reactions:{stream_id}"</span>)
+        <span class="kw">async for</span> msg <span class="kw">in</span> pubsub.<span class="fn">listen</span>():
+            <span class="kw">if</span> msg[<span class="str">"type"</span>] == <span class="str">"message"</span>:
+                <span class="kw">yield</span> <span class="str">f"data: {msg['data'].decode()}\n\n"</span>
+    <span class="kw">return</span> <span class="cls">StreamingResponse</span>(<span class="fn">generator</span>(), media_type=<span class="str">"text/event-stream"</span>)</pre></div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Live Reaction Aggregator (100ms windows)</span>
+      </div>
+      <div class="demo-body">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <button style="font-size:20px;padding:8px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="reactTap('heart')">❤️</button>
+          <button style="font-size:20px;padding:8px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="reactTap('fire')">🔥</button>
+          <button style="font-size:20px;padding:8px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="reactTap('laugh')">😂</button>
+          <button style="font-size:20px;padding:8px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="reactTap('clap')">👏</button>
+          <button class="dbtn dbtn-p" onclick="reactSimBurst()" style="margin-left:auto">Simulate 1000 reactions</button>
+        </div>
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Current Window Counts</h4>
+            <div id="react-counts" style="font-family:'JetBrains Mono',monospace;font-size:12px;display:grid;gap:4px"></div>
+          </div>
+          <div>
+            <h4>Aggregated Push Log</h4>
+            <div id="react-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:120px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>100ms aggregation windows cut fan-out by 100,000×</strong> — from 1M individual reaction pushes/sec to 10 aggregate pushes/sec. Both approaches feel identical to the viewer, but the infrastructure cost is radically different.</li>
+      <li><strong>Redis HINCRBY is atomic and lock-free</strong> — multiple API servers can increment the same bucket simultaneously without coordination. O(1) per reaction, scales to millions/sec on a single Redis node.</li>
+      <li><strong>Rate limiting per user prevents reaction spam</strong> — 5 reactions/second per user is the cap. Beyond that, returns 429. This prevents both accidental (rubber-band finger) and intentional flooding.</li>
+      <li><strong>Client renders proportional density, not individual reactions</strong> — 10,000 hearts in 100ms = same visual output as 100 hearts. The emoji count shown is capped by visual clarity, not by the actual count.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T4: DISTRIBUTED TASK SCHEDULER ══════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t4a">Problem & Requirements</div>
+    <div class="stab" data-s="t4b">Architecture</div>
+    <div class="stab" data-s="t4c">Scheduling Algorithms</div>
+    <div class="stab" data-s="t4d">Fault Tolerance</div>
+    <div class="stab" data-s="t4e">Code & Demo</div>
+    <div class="stab" data-s="t4f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="ptitle">Designing a <em>Distributed Task Scheduler</em></div>
+    <p class="psub">A distributed task scheduler allows clients to register tasks (one-time or recurring) with a scheduled execution time. The system must execute each task exactly once within 10 seconds of its scheduled time, even if scheduler nodes fail.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">&lt;10s</div><div class="slbl">Execution delay SLA</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">Exactly once</div><div class="slbl">Guarantee (not at-least-once)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">Cron + one-time</div><div class="slbl">Two task types supported</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">Millions</div><div class="slbl">Tasks registered at any time</div></div>
+    </div>
+    <h3>Use Cases</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>One-time tasks</h4><ul class="rl"><li>Send order confirmation email in 5 minutes</li><li>Cancel unconfirmed reservation after 15 minutes</li><li>Send birthday greeting on user's birthday at 9am</li><li>Retry failed payment after 24 hours</li></ul></div>
+      <div class="card ct-g"><h4>Recurring (Cron) tasks</h4><ul class="rl"><li>Daily backup at 2am: <code>0 2 * * *</code></li><li>Generate weekly report every Monday: <code>0 9 * * 1</code></li><li>Flush cache every 5 minutes: <code>*/5 * * * *</code></li><li>Check invoice payment daily: <code>0 10 * * *</code></li></ul></div>
+      <div class="card ct-a"><h4>Challenges</h4><ul class="rl"><li><strong>Exactly-once</strong>: task must not run twice (double email, double charge)</li><li><strong>No-miss</strong>: task must not be skipped even if scheduler crashes</li><li><strong>Late execution</strong>: what if scheduler was down at execution time?</li><li><strong>Scale</strong>: millions of tasks with second-level precision</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle"><em>Architecture</em></div>
+    <h3>Two-layer Design</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Client registers task</div><div class="fd"><code>POST /tasks</code> with payload: {type, schedule, handler_url, payload, max_retries}. Scheduler assigns task_id, stores in persistent DB (MySQL), returns task_id to client.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Polling workers scan for due tasks</div><div class="fd">Multiple scheduler workers query DB: <code>SELECT * FROM tasks WHERE next_run_at &lt;= NOW() AND status='PENDING' LIMIT 100</code>. They "claim" tasks by locking them (pessimistic lock or CAS update).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Worker claims task atomically</div><div class="fd">CAS update: <code>UPDATE tasks SET status='RUNNING', worker_id=me WHERE task_id=X AND status='PENDING'</code>. Affected rows = 0 → another worker got it (race lost). Affected rows = 1 → claim succeeded.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Execute the task</div><div class="fd">Call the handler URL (HTTP callback) or execute the registered handler function. Set a heartbeat timestamp to detect stuck tasks. On success: mark DONE. On failure: increment retry count, reschedule.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Reschedule recurring tasks</div><div class="fd">After successful execution of a cron task, compute next_run_at using cron expression, reset status to PENDING. Task recurs automatically.</div></div></div>
+    </div>
+    <div class="call ci"><strong>Why not Redis for task storage?</strong> Redis is ephemeral — if it crashes without persistence, all scheduled tasks are lost. MySQL (or any relational DB with ACID guarantees) ensures tasks survive server restarts. Redis can be used as a secondary index for fast "due tasks" scanning.</div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">Scheduling <em>Algorithms</em></div>
+    <h3>Task DB Schema</h3>
+    <div class="cwrap"><div class="ctop"><span>tasks table — MySQL</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="kw">CREATE TABLE</span> scheduled_tasks (
+    task_id      <span class="cls">BIGINT</span>          <span class="kw">NOT NULL AUTO_INCREMENT PRIMARY KEY</span>,
+    name         <span class="cls">VARCHAR</span>(<span class="num">255</span>)    <span class="kw">NOT NULL</span>,
+    task_type    <span class="cls">ENUM</span>(<span class="str">'one_time'</span>,<span class="str">'recurring'</span>) <span class="kw">NOT NULL</span>,
+    cron_expr    <span class="cls">VARCHAR</span>(<span class="num">100</span>),            <span class="cmt">-- NULL for one-time tasks</span>
+    handler_url  <span class="cls">VARCHAR</span>(<span class="num">512</span>)   <span class="kw">NOT NULL</span>,  <span class="cmt">-- HTTP callback URL</span>
+    payload_json <span class="cls">JSON</span>,                      <span class="cmt">-- arbitrary data passed to handler</span>
+    status       <span class="cls">ENUM</span>(<span class="str">'PENDING'</span>,<span class="str">'RUNNING'</span>,<span class="str">'DONE'</span>,<span class="str">'FAILED'</span>,<span class="str">'DISABLED'</span>)
+                 <span class="kw">DEFAULT</span> <span class="str">'PENDING'</span>,
+    next_run_at  <span class="cls">BIGINT</span>          <span class="kw">NOT NULL</span>,  <span class="cmt">-- epoch ms</span>
+    worker_id    <span class="cls">VARCHAR</span>(<span class="num">64</span>),               <span class="cmt">-- which worker claimed it</span>
+    heartbeat_at <span class="cls">BIGINT</span>,                    <span class="cmt">-- last heartbeat (detect stuck)</span>
+    attempts     <span class="cls">TINYINT</span>         <span class="kw">DEFAULT</span> <span class="num">0</span>,
+    max_attempts <span class="cls">TINYINT</span>         <span class="kw">DEFAULT</span> <span class="num">3</span>,
+    created_at   <span class="cls">BIGINT</span>          <span class="kw">NOT NULL</span>,
+
+    <span class="cmt">-- Critical index: efficiently find due tasks</span>
+    <span class="kw">INDEX</span> idx_due (status, next_run_at)  <span class="cmt">-- covers the polling query</span>
+);
+
+<span class="cmt">-- Find due tasks (polling query, runs every 5-10s per worker)</span>
+<span class="kw">SELECT</span> task_id, handler_url, payload_json
+<span class="kw">FROM</span> scheduled_tasks
+<span class="kw">WHERE</span> status = <span class="str">'PENDING'</span> <span class="kw">AND</span> next_run_at &lt;= <span class="cls">UNIX_TIMESTAMP</span>() * <span class="num">1000</span>
+<span class="kw">ORDER BY</span> next_run_at <span class="kw">ASC</span>
+<span class="kw">LIMIT</span> <span class="num">100</span>;</pre></div>
+    <h3>Cron Expression Parsing</h3>
+    <div class="cwrap"><div class="ctop"><span>cron_parser.py — next run time computation</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> croniter <span class="kw">import</span> croniter
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime, timezone
+
+<span class="kw">def</span> <span class="fn">next_run_at_ms</span>(cron_expr: str) -> int:
+    <span class="str">"""Compute next execution timestamp from cron expression."""</span>
+    <span class="cmt"># croniter: https://pypi.org/project/croniter/</span>
+    base = datetime.<span class="fn">now</span>(timezone.utc)
+    cron = <span class="cls">croniter</span>(cron_expr, base)
+    next_run = cron.<span class="fn">get_next</span>(datetime)
+    <span class="kw">return</span> <span class="fn">int</span>(next_run.<span class="fn">timestamp</span>() * <span class="num">1000</span>)
+
+<span class="cmt"># Examples:</span>
+<span class="cmt"># "0 2 * * *"      → next 2:00 AM UTC</span>
+<span class="cmt"># "*/5 * * * *"    → next 5-minute mark</span>
+<span class="cmt"># "0 9 * * 1"      → next Monday 9:00 AM UTC</span>
+<span class="cmt"># "0 0 1 * *"      → first day of next month at midnight</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">Fault <em>Tolerance</em></div>
+    <h3>Exactly-once Execution — The Hard Part</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Problem: Worker crash after claim but before completion</h4><p>Worker W1 claims task T, begins execution. W1 crashes mid-execution. Task is stuck in RUNNING state forever. No other worker will pick it up. Task is effectively lost (never completes).</p></div>
+      <div class="card ct-g"><h4>Solution: Heartbeat + timeout-based stuck task recovery</h4><p>Running workers write a heartbeat timestamp every 30s: <code>UPDATE tasks SET heartbeat_at=NOW() WHERE task_id=X</code>. A separate watchdog query finds tasks where: <code>status=RUNNING AND heartbeat_at &lt; NOW()-60s</code>. These are stuck → reset to PENDING for retry.</p></div>
+    </div>
+    <h3>Exactly-Once via Idempotent Handlers</h3>
+    <div class="call cw"><strong>Important:</strong> Even with heartbeat recovery, a task might execute TWICE: worker starts, completes, then crashes before marking DONE. Watchdog resets it. It runs again. To prevent double execution: make the handler idempotent. Include task_id in the handler. On second call: check if already executed, skip.</div>
+    <div class="cwrap"><div class="ctop"><span>idempotent_handler.py — safe double-execution</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="dec">@app.post</span>(<span class="str">"/handlers/send-email"</span>)
+<span class="kw">async def</span> <span class="fn">send_email_handler</span>(task_id: int, email: str, subject: str):
+    <span class="str">"""Idempotent email sender: safe to call multiple times."""</span>
+    <span class="cmt"># Check if already sent (using task_id as dedup key)</span>
+    already_sent = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">f"task_done:{task_id}"</span>)
+    <span class="kw">if</span> already_sent:
+        <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"already_completed"</span>}
+
+    <span class="cmt"># Send the email</span>
+    <span class="kw">await</span> <span class="fn">email_service</span>.<span class="fn">send</span>(to=email, subject=subject)
+
+    <span class="cmt"># Mark as done (with 7-day TTL for the dedup key)</span>
+    <span class="kw">await</span> redis.<span class="fn">setex</span>(<span class="str">f"task_done:{task_id}"</span>, <span class="num">604800</span>, <span class="str">"1"</span>)
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"sent"</span>}</pre></div>
+  </div>
+
+  <div class="spanel" id="t4e">
+    <div class="ptitle">Code &amp; Interactive Demo</div>
+    <div class="cwrap"><div class="ctop"><span>task_scheduler_worker.py — polling worker</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, uuid
+
+<span class="kw">class</span> <span class="cls">SchedulerWorker</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, worker_id: str = <span class="kw">None</span>):
+        <span class="kw">self</span>.worker_id = worker_id <span class="kw">or</span> <span class="fn">str</span>(uuid.<span class="fn">uuid4</span>())[:8]
+        <span class="kw">self</span>.running = <span class="kw">False</span>
+
+    <span class="kw">async def</span> <span class="fn">start</span>(<span class="kw">self</span>):
+        <span class="kw">self</span>.running = <span class="kw">True</span>
+        <span class="kw">while self</span>.running:
+            <span class="kw">await self</span>.<span class="fn">_poll_and_execute</span>()
+            <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="num">5</span>)   <span class="cmt"># poll every 5 seconds</span>
+
+    <span class="kw">async def</span> <span class="fn">_poll_and_execute</span>(<span class="kw">self</span>):
+        now_ms = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+
+        <span class="cmt"># 1. Find due tasks</span>
+        tasks = <span class="kw">await</span> db.<span class="fn">fetch</span>(
+            <span class="str">"SELECT * FROM scheduled_tasks WHERE status='PENDING' "</span>
+            <span class="str">"AND next_run_at <= $1 ORDER BY next_run_at LIMIT 10"</span>, now_ms
+        )
+
+        <span class="kw">for</span> task <span class="kw">in</span> tasks:
+            <span class="cmt"># 2. Try to claim (CAS update — prevents double execution)</span>
+            claimed = <span class="kw">await</span> db.<span class="fn">execute</span>(
+                <span class="str">"UPDATE scheduled_tasks SET status='RUNNING', "</span>
+                <span class="str">"worker_id=$1, heartbeat_at=$2 "</span>
+                <span class="str">"WHERE task_id=$3 AND status='PENDING'"</span>,
+                <span class="kw">self</span>.worker_id, now_ms, task[<span class="str">"task_id"</span>]
+            )
+            <span class="kw">if not</span> claimed: <span class="kw">continue</span>  <span class="cmt"># another worker got it</span>
+
+            <span class="cmt"># 3. Execute in background (don't block polling loop)</span>
+            asyncio.<span class="fn">create_task</span>(<span class="kw">self</span>.<span class="fn">_execute</span>(task))
+
+    <span class="kw">async def</span> <span class="fn">_execute</span>(<span class="kw">self</span>, task: dict):
+        <span class="kw">try</span>:
+            <span class="kw">async with</span> httpx.<span class="fn">AsyncClient</span>(timeout=<span class="num">30</span>) <span class="kw">as</span> client:
+                <span class="kw">await</span> client.<span class="fn">post</span>(task[<span class="str">"handler_url"</span>],
+                    json={<span class="str">"task_id"</span>: task[<span class="str">"task_id"</span>], **task[<span class="str">"payload_json"</span>]})
+
+            <span class="cmt"># 4. Mark done (or reschedule if recurring)</span>
+            <span class="kw">if</span> task[<span class="str">"task_type"</span>] == <span class="str">"recurring"</span>:
+                next_run = <span class="fn">next_run_at_ms</span>(task[<span class="str">"cron_expr"</span>])
+                <span class="kw">await</span> db.<span class="fn">execute</span>(
+                    <span class="str">"UPDATE scheduled_tasks SET status='PENDING', next_run_at=$1 WHERE task_id=$2"</span>,
+                    next_run, task[<span class="str">"task_id"</span>])
+            <span class="kw">else</span>:
+                <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"UPDATE scheduled_tasks SET status='DONE' WHERE task_id=$1"</span>, task[<span class="str">"task_id"</span>])
+
+        <span class="kw">except</span> <span class="cls">Exception</span> <span class="kw">as</span> e:
+            attempts = task[<span class="str">"attempts"</span>] + <span class="num">1</span>
+            status   = <span class="str">"FAILED"</span> <span class="kw">if</span> attempts >= task[<span class="str">"max_attempts"</span>] <span class="kw">else</span> <span class="str">"PENDING"</span>
+            next_run = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>) + (<span class="num">60_000</span> * attempts)  <span class="cmt"># exponential backoff</span>
+            <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"UPDATE scheduled_tasks SET status=$1, attempts=$2, next_run_at=$3 WHERE task_id=$4"</span>,
+                            status, attempts, next_run, task[<span class="str">"task_id"</span>])</pre></div>
+
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Task Scheduler Demo</span>
+        <button class="dbtn dbtn-c" onclick="schedAdd()" style="margin-left:auto">Add Task</button>
+        <button class="dbtn dbtn-a" onclick="schedAddCron()" style="margin-left:6px">Add Cron</button>
+        <button class="dbtn dbtn-g" onclick="schedPoll()" style="margin-left:6px">⚡ Poll (run due)</button>
+        <button class="dbtn dbtn-r" onclick="schedFail()" style="margin-left:6px">💥 Fail a task</button>
+      </div>
+      <div class="demo-body">
+        <div id="sched-tasks" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>CAS update is the distributed mutex for task claiming</strong> — <code>UPDATE WHERE status='PENDING'</code> atomically claims a task. If 10 workers try simultaneously: only 1 gets affected_rows=1. The rest get 0 and skip. Zero distributed lock overhead.</li>
+      <li><strong>Heartbeat + watchdog handles worker crashes</strong> — worker writes heartbeat every 30s. Watchdog finds tasks where heartbeat is &gt;60s old → reset to PENDING. Combination guarantees no task is permanently lost even if the worker dies.</li>
+      <li><strong>Exactly-once requires idempotent handlers</strong> — the scheduler can guarantee at-most-once claiming, but the handler may still execute twice (crash after execute, before marking DONE). Make handlers idempotent using task_id as dedup key.</li>
+      <li><strong><code>INDEX (status, next_run_at)</code> is the critical query optimization</strong> — the polling query scans only PENDING tasks sorted by execution time. Without this index: full table scan every 5 seconds. With it: O(log N) per poll.</li>
+      <li><strong>Exponential backoff for retries prevents thundering herds</strong> — failed tasks retry after 1min, 2min, 4min. Prevents hammering a failing external service. Combined with max_attempts cap prevents infinite retries.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T5: FLASH SALE ══════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t5a">Problem & Scale</div>
+    <div class="stab" data-s="t5b">Queue Architecture</div>
+    <div class="stab" data-s="t5c">Inventory & Fairness</div>
+    <div class="stab" data-s="t5d">Code</div>
+    <div class="stab" data-s="t5e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t5a">
+    <div class="ptitle">Designing &amp; Implementing <em>Flash Sale</em></div>
+    <p class="psub">A flash sale (Flipkart Big Billion Day, Xiaomi Mi sales) offers limited quantity products at steep discounts for a short window. The system must handle a massive traffic spike at t=0, prevent overselling, ensure fairness, and protect the rest of the platform from being overwhelmed.</p>
+    <div class="g g4">
+      <div class="card ct-r" style="text-align:center"><div class="snum">100×</div><div class="slbl">Traffic spike at sale start</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">5000</div><div class="slbl">Units available vs 10M+ requests</div></div>
+      <div class="card ct-c" style="text-align:center"><div class="snum">0</div><div class="slbl">Overselling allowed</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">&lt;500ms</div><div class="slbl">Purchase decision latency</div></div>
+    </div>
+    <h3>Why Flash Sales Are Hard</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Thundering herd at t=0</h4><p>5 million users click "Buy" simultaneously at noon. Every request hits the checkout API, database, payment service at the same instant. Most systems collapse under 100× normal load. Need to absorb the spike before it reaches the backend.</p></div>
+      <div class="card ct-a"><h4>Inventory correctness</h4><p>5000 units available. If 10M requests hit the DB simultaneously, naive implementation sells 10M units. Must atomically decrement inventory and refuse requests once stock is exhausted. No race conditions.</p></div>
+    </div>
+    <h3>Core Architecture: Queue-based Admission</h3>
+    <div class="call ci"><strong>Key insight:</strong> Don't let all 10M users hit the checkout flow. Gate them with a virtual queue. Only 5000 users actually need to go through checkout. The rest wait in queue and are told "unavailable" gracefully when inventory runs out. This is exactly how Xiaomi, Flipkart, and Ticketmaster handle flash sales.</div>
+  </div>
+
+  <div class="spanel" id="t5b">
+    <div class="ptitle">Queue-based <em>Admission Architecture</em></div>
+    <h3>Virtual Queue Design</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">All users join a virtual queue at t=0</div><div class="fd">Instead of hitting checkout: <code>POST /flash-sale/join</code>. Redis LPUSH to <code>queue:sale_id</code>. Returns queue position and estimated wait time. Client shows queue page — no backend pressure.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Rate-controlled admission to checkout</div><div class="fd">A dispatcher process pulls N users from queue every second. N = checkout_capacity (e.g., 200/sec based on inventory remaining and checkout completion rate). Issues a time-limited token (Redis key, 10-minute TTL).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Admitted users checkout with token</div><div class="fd">Checkout page loads only for users with valid token. Token checked on entry: if valid and unused → proceed to inventory check and payment. Invalid token → redirect back to queue.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Inventory check: Redis atomic decrement</div><div class="fd"><code>DECR inventory:product:X</code>. If result ≥ 0 → reserved. If result < 0 → INCR back + return "sold out". This is atomic — no lock needed, no race condition possible.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Complete purchase and confirm</div><div class="fd">Payment processed, order created. Inventory decremented in Redis confirmed in MySQL. Queue position holders beyond inventory limit → notify "Sold out, sorry!"</div></div></div>
+    </div>
+    <h3>Protecting the Main Platform</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Circuit Breaker</h4><p>Flash sale services run on isolated infrastructure (separate Redis, separate DB shard, separate app servers). If the flash sale crushes its own infra, circuit breakers prevent it from cascading to the main product catalog, user auth, or payment systems.</p></div>
+      <div class="card ct-g"><h4>CDN for Static Content</h4><p>Product page, countdown timer, queue waiting page — all served from CDN, not from origin servers. 99% of pre-sale traffic is reading the product page. Move that to CDN → remove it from origin entirely.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5c">
+    <div class="ptitle">Inventory &amp; <em>Fairness</em></div>
+    <h3>Redis Atomic Inventory Decrement</h3>
+    <div class="cwrap"><div class="ctop"><span>inventory.py — atomic reserve with Redis Lua</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+redis = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+
+<span class="cmt">-- Lua script: atomic check + decrement (no race condition possible)</span>
+RESERVE_SCRIPT = <span class="str">"""
+local current = redis.call('GET', KEYS[1])
+if current == false or tonumber(current) <= 0 then
+    return 0  -- sold out
+end
+redis.call('DECR', KEYS[1])
+return 1  -- reserved
+"""</span>
+
+<span class="kw">async def</span> <span class="fn">reserve_unit</span>(product_id: str) -> bool:
+    <span class="str">"""Atomically reserve one unit. Returns True if reserved, False if sold out."""</span>
+    key    = <span class="str">f"inventory:flash:{product_id}"</span>
+    result = <span class="kw">await</span> redis.<span class="fn">eval</span>(RESERVE_SCRIPT, <span class="num">1</span>, key)
+    <span class="kw">return</span> <span class="fn">bool</span>(result)
+
+<span class="kw">async def</span> <span class="fn">release_unit</span>(product_id: str):
+    <span class="str">"""Release reserved unit (payment failed, timeout)."""</span>
+    <span class="kw">await</span> redis.<span class="fn">incr</span>(<span class="str">f"inventory:flash:{product_id}"</span>)
+    <span class="cmt"># Also update MySQL inventory for consistency</span></pre></div>
+
+    <h3>Fairness — Preventing Bot Advantage</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Rate limiting per user</h4><p>Max 1 queue-join attempt per user per sale. Max 1 purchase per user per sale. Enforced via Redis SET with sale_id+user_id as key. Prevents one user from grabbing multiple slots.</p></div>
+      <div class="card ct-g"><h4>Bot detection</h4><p>Require CAPTCHA before joining queue. Fingerprint browser (user-agent, canvas hash, TLS fingerprint). Flag suspicious patterns (joins from 1000 accounts on the same IP). Block known bot farms pre-sale.</p></div>
+      <div class="card ct-a"><h4>Purchase reservation timeout</h4><p>Once admitted to checkout, user has 10 minutes to complete purchase. After 10 minutes: reservation released, unit returns to pool, next person in queue is admitted. Prevents holding inventory without purchase intent.</p></div>
+    </div>
+    <h3>Queue Position Estimation</h3>
+    <div class="cwrap"><div class="ctop"><span>Queue position and wait time estimation</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- User's queue position</span>
+LPOS  queue:sale_123  user_id_42   <span class="cmt">→ position 45,203</span>
+
+<span class="cmt">-- Inventory remaining</span>
+GET   inventory:flash:product_1    <span class="cmt">→ 3,421 units left</span>
+
+<span class="cmt">-- Admission rate</span>
+<span class="cmt">-- If 200 users/sec admitted, position 45,203 → wait ≈ 226 seconds → 3.8 minutes</span>
+
+<span class="cmt">-- If position > remaining_inventory: notify immediately "Sold out before your turn"</span>
+<span class="cmt">-- LLEN queue:sale_123 → 8,012,450 in queue vs 3,421 remaining → 99.96% will miss out</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t5d">
+    <div class="ptitle">Code — <em>Flash Sale System</em></div>
+    <div class="cwrap"><div class="ctop"><span>flash_sale.py — queue join + checkout admission</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> time, uuid, asyncio
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, HTTPException
+
+app = <span class="fn">FastAPI</span>()
+
+<span class="dec">@app.post</span>(<span class="str">"/flash-sale/{sale_id}/join"</span>)
+<span class="kw">async def</span> <span class="fn">join_queue</span>(sale_id: str, user_id: int):
+    <span class="str">"""User clicks Buy → joins virtual queue. Fast, O(1)."""</span>
+    <span class="cmt"># 1. Prevent duplicate queue join</span>
+    already_in = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">f"queued:{sale_id}:{user_id}"</span>)
+    <span class="kw">if</span> already_in: <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"already_queued"</span>, <span class="str">"position"</span>: <span class="fn">int</span>(already_in)}
+
+    <span class="cmt"># 2. Check if inventory is already exhausted</span>
+    remaining = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">f"inventory:flash:{sale_id}"</span>)
+    <span class="kw">if</span> remaining <span class="kw">and</span> <span class="fn">int</span>(remaining) <= <span class="num">0</span>:
+        <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"sold_out"</span>}
+
+    <span class="cmt"># 3. Add to queue (RPUSH = append to right = FIFO queue)</span>
+    queue_key = <span class="str">f"queue:{sale_id}"</span>
+    <span class="kw">await</span> redis.<span class="fn">rpush</span>(queue_key, user_id)
+    position  = <span class="kw">await</span> redis.<span class="fn">llen</span>(queue_key)
+
+    <span class="cmt"># 4. Record that this user is queued</span>
+    <span class="kw">await</span> redis.<span class="fn">setex</span>(<span class="str">f"queued:{sale_id}:{user_id}"</span>, <span class="num">3600</span>, position)
+
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"queued"</span>, <span class="str">"position"</span>: position,
+            <span class="str">"estimated_wait_secs"</span>: position // <span class="num">200</span>}
+
+<span class="dec">@app.post</span>(<span class="str">"/flash-sale/{sale_id}/admit"</span>)
+<span class="kw">async def</span> <span class="fn">admit_next_batch</span>(sale_id: str, batch_size: int = <span class="num">200</span>):
+    <span class="str">"""Called by dispatcher every second. Admits batch_size users to checkout."""</span>
+    queue_key = <span class="str">f"queue:{sale_id}"</span>
+    admitted  = []
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(batch_size):
+        user_id = <span class="kw">await</span> redis.<span class="fn">lpop</span>(queue_key)   <span class="cmt"># LPOP = FIFO</span>
+        <span class="kw">if not</span> user_id: <span class="kw">break</span>
+        token = <span class="fn">str</span>(uuid.<span class="fn">uuid4</span>())
+        <span class="kw">await</span> redis.<span class="fn">setex</span>(
+            <span class="str">f"checkout_token:{sale_id}:{user_id.decode()}"</span>,
+            <span class="num">600</span>, token   <span class="cmt"># 10 minute checkout window</span>
+        )
+        admitted.<span class="fn">append</span>((<span class="fn">int</span>(user_id), token))
+    <span class="kw">return</span> {<span class="str">"admitted"</span>: <span class="fn">len</span>(admitted)}
+
+<span class="dec">@app.post</span>(<span class="str">"/flash-sale/{sale_id}/purchase"</span>)
+<span class="kw">async def</span> <span class="fn">purchase</span>(sale_id: str, user_id: int, checkout_token: str):
+    <span class="str">"""Complete purchase. Must have valid checkout token."""</span>
+    token_key = <span class="str">f"checkout_token:{sale_id}:{user_id}"</span>
+    stored    = <span class="kw">await</span> redis.<span class="fn">get</span>(token_key)
+    <span class="kw">if not</span> stored <span class="kw">or</span> stored.<span class="fn">decode</span>() != checkout_token:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="num">403</span>, <span class="str">"Invalid or expired checkout token"</span>)
+
+    <span class="kw">if not await</span> <span class="fn">reserve_unit</span>(sale_id):
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="num">409</span>, <span class="str">"Sold out"</span>)
+
+    <span class="kw">await</span> redis.<span class="fn">delete</span>(token_key)   <span class="cmt"># single-use token</span>
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"reserved"</span>, <span class="str">"proceed_to"</span>: <span class="str">"payment"</span>}</pre></div>
+  </div>
+
+  <div class="spanel" id="t5e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Flash Sale Queue — 50 units, up to 1000 users</span>
+        <button class="dbtn dbtn-c" onclick="flashInit()" style="margin-left:auto">Start Sale</button>
+        <button class="dbtn dbtn-g" onclick="flashRush()" style="margin-left:6px">Rush (500 users)</button>
+        <button class="dbtn dbtn-a" onclick="flashAdmit()" style="margin-left:6px">Admit Batch</button>
+        <button class="dbtn dbtn-r" onclick="flashReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Sale State</h4>
+            <div id="flash-stats" style="font-family:'JetBrains Mono',monospace;font-size:11px;display:grid;gap:4px;margin-bottom:8px"></div>
+            <h4>Queue (first 10 shown)</h4>
+            <div id="flash-queue" style="display:flex;flex-wrap:wrap;gap:3px"></div>
+          </div>
+          <div>
+            <h4>Activity Log</h4>
+            <div id="flash-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Virtual queue is the only scalable solution for flash sales</strong> — don't let 10M users hit the backend. Gate them. Only admit users as fast as inventory can process. The queue absorbs the spike; backend sees steady load.</li>
+      <li><strong>Redis Lua script for inventory decrement is atomic and lock-free</strong> — GET + DECR in one atomic script. Zero race condition. 1M concurrent decrement requests: Redis handles them serially but each operation is microseconds.</li>
+      <li><strong>Time-limited checkout tokens prevent "squatters"</strong> — users who enter checkout but never pay hold inventory that others want. 10-minute token expiry releases the hold and re-admits from queue.</li>
+      <li><strong>Bot prevention requires defense-in-depth</strong> — CAPTCHA, rate limiting, purchase-per-user limits, IP velocity, TLS fingerprinting. No single measure is sufficient. Layer them all.</li>
+      <li><strong>Isolate flash sale infrastructure</strong> — separate Redis instance, separate DB shard, separate app cluster. Flash sale failure must not cascade to the main product catalog, user auth, or other services.</li>
+    </ul>
+    <div class="done">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 7 — IR Systems & Adhoc Designs Complete ✦</div>
+      <p style="font-size:13px;color:var(--muted)">All 5 adhoc systems covered. Final week: <strong>Week 8 — Building Algorithmic Systems</strong> · GitHub File Sync · Geospatial Search at Scale · User Affinity Service</p>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="hbadge hb-c">Week 7 of 8 Complete</span>
+        <span class="hbadge hb-g">5/5 Topics Done</span>
+        <span class="hbadge hb-p">Week 8 → Algorithmic Systems</span>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ── TAB WIRING ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const id=t.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');document.getElementById(id).classList.add('active');
+    t.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(s=>{
+  s.addEventListener('click',()=>{
+    const sid=s.dataset.s;
+    s.closest('.subtabwrap').querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));
+    s.closest('.topic').querySelectorAll('.spanel').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active');document.getElementById(sid).classList.add('active');
+    s.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.ltab').forEach(lt=>{
+  lt.addEventListener('click',()=>{
+    const l=lt.dataset.l;if(!l)return;
+    lt.closest('.ltabs').querySelectorAll('.ltab').forEach(x=>x.classList.remove('on'));
+    lt.classList.add('on');
+    lt.parentElement.querySelectorAll('.lpanel').forEach(p=>p.classList.toggle('on',p.id===l));
+  });
+});
+
+// ── SEARCH DEMO ─────────────────────────────────────────────────────────────
+let srchHistory=[];
+const SAMPLE_SEARCHES=['iPhone 16 Pro','MacBook Air M3','AirPods Pro','iPad mini','Apple Watch Ultra','Vision Pro','iPhone 16','MacBook Pro 16','iMac M3','Mac mini M4'];
+function srchRender(){
+  const el=document.getElementById('srch-history');if(!el)return;
+  el.innerHTML=srchHistory.length?srchHistory.map(q=>`<div class="search-chip" onclick="srchDelete('${q}')">${q} <span style="color:var(--red);font-size:9px">✕</span></div>`).join(''):'<span style="color:var(--muted);font-family:JetBrains Mono,monospace;font-size:11px">No searches yet</span>';
+  const raw=document.getElementById('srch-raw');if(raw)raw.innerHTML=srchHistory.map((q,i)=>`<div>${srchHistory.length-i}: ${q} [score:${Date.now()-i*1000}]</div>`).join('');
+  const sug=document.getElementById('srch-suggestions');
+  const inp=document.getElementById('srch-input');
+  const prefix=(inp?.value||'').trim().toLowerCase();
+  if(sug){const matches=srchHistory.filter(q=>q.toLowerCase().startsWith(prefix)&&prefix);sug.innerHTML=matches.map(q=>`<span class="search-chip" onclick="document.getElementById('srch-input').value='${q}'">${q}</span>`).join('');}
+}
+function srchSubmit(){
+  const inp=document.getElementById('srch-input');if(!inp)return;
+  const q=inp.value.trim();if(!q)return;
+  srchHistory=srchHistory.filter(x=>x.toLowerCase()!==q.toLowerCase());
+  srchHistory.unshift(q);if(srchHistory.length>10)srchHistory=srchHistory.slice(0,10);
+  inp.value='';srchRender();
+}
+function srchDelete(q){srchHistory=srchHistory.filter(x=>x!==q);srchRender();}
+function srchClear(){srchHistory=[];srchRender();}
+document.getElementById('srch-input')?.addEventListener('input',srchRender);
+srchRender();
+
+// ── CRICKET DEMO ─────────────────────────────────────────────────────────────
+let crickRuns=0,crickWickets=0,crickBalls=0,crickAutoTimer=null;
+const EVENTS=[
+  {type:'dot',  w:30,label:'.',    color:'var(--muted)',   cls:'ball-dot',  runs:0,desc:'Dot ball — good bowling!'},
+  {type:'runs', w:20,label:'1',    color:'var(--text)',    cls:'ball-dot',  runs:1,desc:'Pushed to mid-on for a single.'},
+  {type:'runs', w:15,label:'2',    color:'var(--text)',    cls:'ball-dot',  runs:2,desc:'Driven to long-off, they ran two!'},
+  {type:'boundary',w:12,label:'4', color:'var(--green)',   cls:'ball-four', runs:4,desc:'FOUR! Cut shot behind point — superb!'},
+  {type:'six',  w:8, label:'6',    color:'var(--accent)',  cls:'ball-six',  runs:6,desc:'SIX! Slog sweep over deep square!'},
+  {type:'wicket',w:6,label:'W',    color:'var(--red)',     cls:'ball-w',    runs:0,desc:'WICKET! Clean bowled — what a delivery!'},
+  {type:'wide', w:5, label:'Wd',   color:'var(--orange)',  cls:'ball-wide', runs:1,desc:'Wide ball — sloppy from the bowler.'},
+  {type:'no_ball',w:4,label:'NB',  color:'#a78bfa',        cls:'ball-no',   runs:1,desc:'No Ball! Free hit coming up!'},
+];
+function pickEvent(){const r=Math.random()*100;let cum=0;for(const e of EVENTS){cum+=e.w;if(r<cum)return e;}return EVENTS[0];}
+function crickBall(){
+  const ev=pickEvent();
+  crickBalls++;crickRuns+=ev.runs;
+  if(ev.type==='wicket')crickWickets++;
+  const ov=Math.floor((crickBalls-1)/6),bl=(crickBalls-1)%6+1;
+  const feed=document.getElementById('crick-feed');if(!feed)return;
+  feed.insertAdjacentHTML('afterbegin',`<div style="display:flex;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><span class="comment-ball ${ev.cls}">${ev.label}</span><span style="color:var(--muted);font-size:10px;width:40px">${ov}.${bl}</span><span style="color:#8a9bb5;font-size:12px">${ev.desc}</span></div>`);
+  document.getElementById('crick-score').textContent=`${crickRuns}/${crickWickets}`;
+  document.getElementById('crick-overs').textContent=`${ov}.${bl}`;
+  document.getElementById('crick-rr').textContent=(crickRuns/(crickBalls/6)).toFixed(2);
+}
+function crickAuto(){if(crickAutoTimer){clearInterval(crickAutoTimer);crickAutoTimer=null;return;}crickAutoTimer=setInterval(crickBall,600);}
+function crickReset(){crickRuns=0;crickWickets=0;crickBalls=0;document.getElementById('crick-feed').innerHTML='';document.getElementById('crick-score').textContent='0/0';document.getElementById('crick-overs').textContent='0.0';document.getElementById('crick-rr').textContent='0.00';if(crickAutoTimer){clearInterval(crickAutoTimer);crickAutoTimer=null;}}
+
+// ── REACTION DEMO ─────────────────────────────────────────────────────────────
+const reactBucket={heart:0,fire:0,laugh:0,clap:0,wow:0};const EMOJI={'heart':'❤️','fire':'🔥','laugh':'😂','clap':'👏','wow':'😮'};
+function reactTap(type){reactBucket[type]=(reactBucket[type]||0)+1;reactRenderCounts();}
+function reactRenderCounts(){
+  const el=document.getElementById('react-counts');if(!el)return;
+  el.innerHTML=Object.entries(reactBucket).map(([t,c])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)"><span>${EMOJI[t]} ${t}</span><span style="color:var(--accent)">${c}</span></div>`).join('');
+}
+function reactSimBurst(){Object.keys(reactBucket).forEach(k=>{reactBucket[k]+=(Math.floor(Math.random()*200)+50);});reactRenderCounts();}
+// Auto-aggregate every 100ms
+setInterval(()=>{
+  const total=Object.values(reactBucket).reduce((a,b)=>a+b,0);
+  if(!total)return;
+  const log=document.getElementById('react-log');
+  if(log){log.innerHTML+=`<div style="margin-bottom:2px;color:#5a6a85">Push: ❤️${reactBucket.heart} 🔥${reactBucket.fire} 😂${reactBucket.laugh} 👏${reactBucket.clap} → ${total} total</div>`;log.scrollTop=log.scrollHeight;}
+  Object.keys(reactBucket).forEach(k=>reactBucket[k]=0);
+  reactRenderCounts();
+},2000);
+reactRenderCounts();
+
+// ── SCHEDULER DEMO ────────────────────────────────────────────────────────────
+let schedTasks=[];let schedSeq=0;
+const TASK_NAMES=['send-email','daily-backup','cleanup-old-sessions','generate-report','retry-payment','send-sms','update-cache','sync-inventory'];
+function schedAdd(){
+  schedSeq++;
+  const delay=Math.floor(Math.random()*10)+2;
+  const t={id:schedSeq,name:TASK_NAMES[schedSeq%TASK_NAMES.length],status:'pending',runAt:Date.now()+delay*1000,type:'one_time',attempts:0};
+  schedTasks.push(t);schedRender();
+}
+function schedAddCron(){
+  schedSeq++;
+  const t={id:schedSeq,name:'cron-'+TASK_NAMES[schedSeq%TASK_NAMES.length],status:'pending',runAt:Date.now()+5000,type:'recurring',cron:'*/5 * * * *',attempts:0};
+  schedTasks.push(t);schedRender();
+}
+function schedPoll(){
+  const now=Date.now();
+  schedTasks.forEach(t=>{
+    if(t.status==='pending'&&t.runAt<=now){t.status='running';
+      setTimeout(()=>{t.status='done';if(t.type==='recurring'){t.runAt=Date.now()+5000;t.status='pending';}schedRender();},1000+Math.random()*1500);
+    }
+  });
+  schedRender();
+}
+function schedFail(){
+  const running=schedTasks.find(t=>t.status==='pending');
+  if(running){running.status='failed';running.attempts++;if(running.attempts<3){running.status='pending';running.runAt=Date.now()+5000;}schedRender();}
+}
+function schedRender(){
+  const el=document.getElementById('sched-tasks');if(!el)return;
+  el.innerHTML=schedTasks.length?schedTasks.map(t=>`<div class="task-row ${t.status}"><span style="color:var(--muted);font-size:9px">#${t.id}</span><span style="color:var(--accent)">${t.name}</span>${t.type==='recurring'?`<span style="color:var(--muted);font-size:9px">[cron]</span>`:''}<span style="margin-left:auto;color:${t.status==='done'?'var(--green)':t.status==='running'?'var(--amber)':t.status==='failed'?'var(--red)':'var(--muted)'}">${t.status.toUpperCase()}</span>${t.attempts?`<span style="color:var(--red);font-size:9px">retry:${t.attempts}</span>`:''}</div>`).join(''):'<div style="color:var(--muted);font-family:JetBrains Mono,monospace;font-size:11px">No tasks — add one</div>';
+}
+schedRender();
+
+// ── FLASH SALE DEMO ───────────────────────────────────────────────────────────
+let flashInv=0,flashQueue=[],flashAdmitted=0,flashSold=0,flashActive=false;
+function flashLog(m,c='#5a6a85'){const el=document.getElementById('flash-log');if(!el)return;el.innerHTML+=`<div style="color:${c};margin-bottom:2px">${m}</div>`;el.scrollTop=el.scrollHeight;}
+function flashRenderStats(){
+  const el=document.getElementById('flash-stats');if(!el)return;
+  el.innerHTML=[
+    `<div>Inventory: <strong style="color:${flashInv>0?'var(--green)':'var(--red)'}">${flashInv} units</strong></div>`,
+    `<div>Queue length: <strong style="color:var(--accent)">${flashQueue.length}</strong></div>`,
+    `<div>Admitted: <strong style="color:var(--amber)">${flashAdmitted}</strong></div>`,
+    `<div>Purchased: <strong style="color:var(--green)">${flashSold}</strong></div>`,
+  ].join('');
+  const el2=document.getElementById('flash-queue');if(!el2)return;
+  el2.innerHTML=flashQueue.slice(0,10).map((uid,i)=>`<span class="queue-slot waiting">U${uid} #${i+1}</span>`).join('')+(flashQueue.length>10?`<span style="color:var(--muted);font-size:10px;margin-left:4px">+${flashQueue.length-10} more</span>`:'');
+}
+function flashInit(){flashInv=50;flashQueue=[];flashAdmitted=0;flashSold=0;flashActive=true;document.getElementById('flash-log').innerHTML='';flashLog('🚀 Flash sale STARTED — 50 units available','var(--green)');flashRenderStats();}
+function flashRush(){if(!flashActive){flashLog('Start the sale first!','var(--red)');return;}const n=Math.floor(Math.random()*200)+300;for(let i=0;i<n;i++){const uid=10000+flashQueue.length+i+1;flashQueue.push(uid);}flashLog(`⚡ ${n} users joined queue → total: ${flashQueue.length}`,'var(--accent)');flashRenderStats();}
+function flashAdmit(){
+  if(!flashActive||flashInv<=0){flashLog('No inventory remaining — sale ended','var(--red)');return;}
+  const batch=Math.min(20,flashInv,flashQueue.length);
+  if(!batch){flashLog('Queue empty — no one to admit','var(--muted)');return;}
+  for(let i=0;i<batch;i++){flashQueue.shift();flashAdmitted++;flashSold++;flashInv--;}
+  flashLog(`✅ Admitted ${batch} users → ${batch} purchased → ${flashInv} remaining`,'var(--green)');
+  if(flashInv<=0)flashLog('🎉 SOLD OUT! Sale complete.','var(--amber)');
+  flashRenderStats();
+}
+function flashReset(){flashInv=0;flashQueue=[];flashAdmitted=0;flashSold=0;flashActive=false;document.getElementById('flash-log').innerHTML='';flashRenderStats();}
+flashRenderStats();
+</script>
+</body>
+</html>
