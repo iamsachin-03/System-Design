@@ -313,6 +313,10 @@ tr:hover td{background:var(--surface2);}
       <span class="di-num">39</span>
       <div><div class="di-title">Timeouts, Retries &amp; Exponential Backoff</div><div class="di-tags">Retry Storm · Exponential Backoff · Full Jitter · Deadline Propagation · Retry Budget</div></div>
     </button>
+    <button class="drawer-item" id="di-39" onclick="goTo(39)">
+      <span class="di-num">40</span>
+      <div><div class="di-title">Geospatial Search at Scale — KNN</div><div class="di-tags">QuadTree · Geohash · KNN · Brute Force → Fixed Grid → QuadTree · PostGIS · S2</div></div>
+    </button>
   </div>
 </div>
 
@@ -20519,6 +20523,729 @@ cfg    = <span class="cls">RetryConfig</span>(max_attempts=<span class="num">4</
   </div>
 </div><!-- /panel-38 -->
 
+<div class="panel" id="panel-39">
+  <span class="section-tag tag-concept">Post 40</span>
+  <h1 class="post-title">Geospatial Search at Scale — Finding K Nearest Neighbours</h1>
+  <div class="post-meta">
+    <span>35 min deep dive</span><span class="meta-dot"></span>
+    <span>Brute Force → Square Grid → Fixed Grid → Geohash → QuadTree · KNN · Spatial Index · Proximity Search</span>
+  </div>
+
+  <!-- PROBLEM -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">The Problem</span>
+    <h2 class="section-title">"Find the 10 nearest restaurants to me." Every ride-share, food delivery, and map app solves this billions of times per day.</h2>
+    <p>You have a database of 50 million restaurants, hotels, drivers, or friends — each with a latitude and longitude. A user at (37.7749°N, 122.4194°W) asks: "show me the 10 nearest restaurants within 2km." You need a sub-100ms answer. This is the <strong>K Nearest Neighbours (KNN) problem</strong> on geographic data. The naive solution is catastrophically slow at scale. Every approach we'll explore is an attempt to answer: "how do we avoid looking at all 50 million points?"</p>
+    <div class="callout callout-note">
+      <div class="callout-label">The Core Challenge</div>
+      <p>Geographic proximity is a 2D problem. Standard database indexes (B-Tree) are 1D — they can answer "find rows where latitude BETWEEN X and Y" efficiently, but they cannot efficiently answer "find rows within distance R of point P" because distance involves BOTH latitude AND longitude simultaneously. Every approach below is a different strategy for mapping 2D space into a structure that enables efficient nearest-neighbour lookup.</p>
+    </div>
+  </div>
+
+  <!-- ATTEMPT 1 -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">Attempt 1 — Brute Force Distance Scan</span>
+    <h2 class="section-title">Compute Euclidean distance from every row to the user. Sort. Take top K. — O(N) per query.</h2>
+    <div class="callout callout-tip">
+      <div class="callout-label">The query</div>
+      <p><code>SELECT *, ((lat - u_lat)² + (lon - u_lon)²) AS dist FROM restaurants ORDER BY dist ASC LIMIT k</code> — reads every single row (full table scan), computes distance for each, sorts 50M numbers, returns top K. Cost: O(N log N). At 50M rows, this takes seconds per query. No index helps — the computed expression <code>(lat - u_lat)² + (lon - u_lon)²</code> is not indexable with a B-Tree.</p>
+    </div>
+    <div class="callout callout-warn">
+      <div class="callout-label">Why it fails</div>
+      <p>50M rows × 1000 queries/second = 50 billion distance computations per second. Even in RAM at 1ns per op, that's 50 seconds of pure CPU per second of wall-clock time. Also: it uses Euclidean distance in lat/lon space, which is geometrically incorrect — 1° of longitude near the equator ≠ 1° of longitude near a pole. Need Haversine formula for accurate distances.</p>
+    </div>
+  </div>
+
+  <!-- ATTEMPT 2 -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">Attempt 2 — Bounding Box (Square Filter)</span>
+    <h2 class="section-title">Filter to a lat/lon square first, then sort by distance. Two 1D indexes, but they compound badly.</h2>
+    <div class="callout callout-tip">
+      <div class="callout-label">The query</div>
+      <p><code>SELECT * FROM restaurants WHERE lat BETWEEN (u_lat - L) AND (u_lat + L) AND lon BETWEEN (u_lon - L) AND (u_lon + L) LIMIT k</code> — creates a square of side 2L around the user. Index on <code>lat</code> returns a horizontal band of all restaurants within latitude range. Then filter by longitude. Faster than full scan — but the lat index returns the entire horizontal band (could be millions of rows in a city), and longitude filtering happens AFTER, reading all those rows.</p>
+    </div>
+    <div class="callout callout-warn">
+      <div class="callout-label">Why it fails — the "cross" problem</div>
+      <p>As shown in Image 3: the lat index returns a wide horizontal band (yellow strip — every restaurant in that latitude range across the entire world). The lon index returns a tall vertical band (blue strip). The intersection is the square you want — but the DB must read the entire band before intersecting. In a dense city, a latitude band contains tens of thousands of restaurants even for a small L. Also: a bounding box is a square but we want a circle — 27% of square results are outside the actual radius, requiring post-filtering. Two 1D indexes on 2D data never achieves true 2D efficiency.</p>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 1: Why 1D indexes fail on 2D data -->
+  <div class="section-block">
+    <span class="section-tag tag-diagram">Diagram 1 · Why B-Tree fails for 2D proximity — the band intersection problem</span>
+    <h2 class="section-title">Each index returns a strip across the entire world. Intersection = your square. But you read the whole strip.</h2>
+    <div class="diagram-wrap">
+      <div class="diagram-label">btree-2d-failure.svg</div>
+      <div class="diagram-body" style="text-align:center;">
+        <svg width="100%" viewBox="0 0 680 260" style="max-width:680px;">
+          <!-- World map background -->
+          <rect x="10" y="10" width="660" height="200" rx="8" fill="#12121a" stroke="#2a2a3d" stroke-width="1.5"/>
+          <!-- Dots representing restaurants -->
+          <circle cx="50" cy="40" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="80" cy="60" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="120" cy="35" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="160" cy="55" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="200" cy="30" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="250" cy="50" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="300" cy="40" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="350" cy="60" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="420" cy="45" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="480" cy="35" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="540" cy="55" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="600" cy="40" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="640" cy="50" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="70" cy="100" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="140" cy="110" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="200" cy="95" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="270" cy="105" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="450" cy="95" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="510" cy="110" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="570" cy="100" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="630" cy="105" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="60" cy="160" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="130" cy="170" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="220" cy="155" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="460" cy="165" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="530" cy="150" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="600" cy="170" r="3" fill="#5eead4" opacity=".5"/>
+
+          <!-- Latitude band (horizontal yellow strip) -->
+          <rect x="10" y="90" width="660" height="40" fill="rgba(251,191,36,.25)" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="15" y="107" fill="#fbbf24" font-family="JetBrains Mono" font-size="7">lat index: entire horizontal band (all restaurants in lat range — globally)</text>
+
+          <!-- Longitude band (vertical blue strip) -->
+          <rect x="310" y="10" width="60" height="200" fill="rgba(94,234,212,.2)" stroke="#5eead4" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="315" y="22" fill="#5eead4" font-family="JetBrains Mono" font-size="7" transform="rotate(90 315 22)">lon index: vertical band</text>
+
+          <!-- Intersection (the actual target) -->
+          <rect x="310" y="90" width="60" height="40" fill="rgba(74,222,128,.4)" stroke="#4ade80" stroke-width="2.5"/>
+          <text x="340" y="115" text-anchor="middle" fill="#0a1f0a" font-family="JetBrains Mono" font-size="6" font-weight="700">WANT</text>
+
+          <!-- User point -->
+          <circle cx="340" cy="110" r="5" fill="#f97316" stroke="#fff" stroke-width="1.5"/>
+          <text x="350" y="107" fill="#f97316" font-family="JetBrains Mono" font-size="7">user</text>
+
+          <!-- Arrows showing waste -->
+          <line x1="20" y1="110" x2="308" y2="110" stroke="#fbbf24" stroke-width="2"/>
+          <text x="164" y="105" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono" font-size="7">← reading ALL of this (waste)</text>
+          <line x1="372" y1="110" x2="665" y2="110" stroke="#fbbf24" stroke-width="2"/>
+          <text x="518" y="105" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono" font-size="7">reading ALL of this too (waste) →</text>
+
+          <!-- Axis labels -->
+          <text x="340" y="225" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="9">latitude →</text>
+          <text x="15" y="130" fill="#546e7a" font-family="JetBrains Mono" font-size="9" transform="rotate(-90 15 130)">longitude ↑</text>
+
+          <!-- Insight -->
+          <rect x="10" y="218" width="660" height="34" rx="5" fill="#1a0808" stroke="#f87171" stroke-width="1"/>
+          <text x="340" y="233" text-anchor="middle" fill="#f87171" font-family="JetBrains Mono" font-size="8">Problem: a 1D index can only slice in ONE dimension. Finding the intersection of two bands requires reading BOTH full bands first.</text>
+          <text x="340" y="247" text-anchor="middle" fill="#c05050" font-family="JetBrains Mono" font-size="7">Solution needed: an index that partitions 2D space directly — so lookup only visits cells near the user.</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTEMPT 3: Fixed Grid -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">Attempt 3 — Fixed Grid (Cell ID)</span>
+    <h2 class="section-title">Divide the world into equal cells. Each restaurant gets a cell_id. Query only the relevant cells.</h2>
+    <div class="callout callout-tip">
+      <div class="callout-label">How it works</div>
+      <p>Divide the world map into a uniform grid of equal-sized cells (e.g., each cell = 2km × 2km). Assign each restaurant a <code>cell_id</code> integer based on its lat/lon. Index on <code>cell_id</code>. Query: compute user's cell_id, then <code>SELECT * FROM restaurants WHERE cell_id IN (user_cell, and_8_neighbors)</code> — always 9 cells, always O(1) index lookups. The index is a standard B-Tree on a single integer column — extremely fast.</p>
+    </div>
+    <div class="callout callout-warn">
+      <div class="callout-label">Why fixed grid fails — the density problem</div>
+      <p>A 2km cell in Manhattan contains 10,000 restaurants. A 2km cell in rural Montana contains 0. If you set the cell size large enough to always have K results, dense cities return enormous result sets. If you set it small enough for cities, rural queries return zero results and you have to expand to neighbouring cells, then their neighbours, then their neighbours — it becomes a growing ring search with unpredictable cost. The fundamental problem: <strong>a uniform grid cannot adapt to non-uniform data distribution</strong>. You need a grid that is fine-grained in dense areas and coarse in sparse areas.</p>
+    </div>
+  </div>
+
+  <!-- ATTEMPT 4: Geohash -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">Attempt 4 — Geohash (Hierarchical String Encoding)</span>
+    <h2 class="section-title">Encode lat/lon as a base-32 string. Shared prefix = geographic proximity. Indexable with B-Tree LIKE.</h2>
+    <div class="callout callout-tip">
+      <div class="callout-label">How Geohash works</div>
+      <p>Geohash encodes a lat/lon pair as a short alphanumeric string by repeatedly bisecting the space. The longer the string, the smaller the cell. 1 character = 5000km × 5000km. 6 characters ≈ 1.2km × 0.6km. 9 characters ≈ 5m × 5m. Key insight: points with the same Geohash prefix are always geographically close. "9q8yy" and "9q8yz" are adjacent cells. Nearby prefix = nearby in the world. Query: get user's Geohash at precision 6, find all restaurants WHERE geohash LIKE '9q8yy%' for nearby cells.</p>
+    </div>
+    <div class="callout callout-warn">
+      <div class="callout-label">Geohash limitation — boundary problem</div>
+      <p>Two points can be very close geographically but have completely different Geohash strings — if they're on opposite sides of a cell boundary. A user at the edge of cell "9q8yy" might be 10m from a restaurant in cell "9q8yz". Fix: always query the user's cell AND all 8 neighbours. This works but adds complexity. Geohash also suffers from the same cell-size problem as fixed grid — you pick a precision level globally. Geohash is used in production by many systems (Redis GEOSEARCH, PostGIS) and is practical but not optimal.</p>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: Geohash encoding -->
+  <div class="section-block">
+    <span class="section-tag tag-diagram">Diagram 2 · Geohash — recursive bisection encodes location as a string prefix</span>
+    <div class="diagram-wrap">
+      <div class="diagram-label">geohash-encoding.svg</div>
+      <div class="diagram-body" style="text-align:center;">
+        <svg width="100%" viewBox="0 0 680 230" style="max-width:680px;">
+          <!-- Level 0: whole world split -->
+          <rect x="10" y="10" width="200" height="120" rx="4" fill="#0a1f1f" stroke="#5eead4" stroke-width="1.5"/>
+          <text x="110" y="30" text-anchor="middle" fill="#5eead4" font-family="Syne" font-size="9" font-weight="700">Step 1: Split world in 2</text>
+          <line x1="110" y1="10" x2="110" y2="130" stroke="#5eead4" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="60" y="75" text-anchor="middle" fill="#2ea89a" font-family="JetBrains Mono" font-size="10" font-weight="700">0</text>
+          <text x="160" y="75" text-anchor="middle" fill="#2ea89a" font-family="JetBrains Mono" font-size="10" font-weight="700">1</text>
+          <text x="110" y="148" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="7">lon < 0° → "0", lon ≥ 0° → "1"</text>
+
+          <!-- Level 1: split vertically -->
+          <rect x="240" y="10" width="200" height="120" rx="4" fill="#0a1f1f" stroke="#7c6cfc" stroke-width="1.5"/>
+          <text x="340" y="30" text-anchor="middle" fill="#c4b8f8" font-family="Syne" font-size="9" font-weight="700">Step 2: Split in half again</text>
+          <line x1="240" y1="70" x2="440" y2="70" stroke="#7c6cfc" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="340" y="50" text-anchor="middle" fill="#8070c0" font-family="JetBrains Mono" font-size="10" font-weight="700">0</text>
+          <text x="340" y="100" text-anchor="middle" fill="#8070c0" font-family="JetBrains Mono" font-size="10" font-weight="700">1</text>
+          <text x="340" y="148" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="7">lat ≥ 0° → "0", lat < 0° → "1"</text>
+
+          <!-- Level n: small cell -->
+          <rect x="470" y="10" width="200" height="120" rx="4" fill="#0a1f1f" stroke="#f97316" stroke-width="1.5"/>
+          <text x="570" y="30" text-anchor="middle" fill="#fdba74" font-family="Syne" font-size="9" font-weight="700">After n bits: small cell</text>
+          <!-- Grid of cells -->
+          <rect x="490" y="40" width="160" height="80" rx="2" fill="#12121a"/>
+          <line x1="530" y1="40" x2="530" y2="120" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="570" y1="40" x2="570" y2="120" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="610" y1="40" x2="610" y2="120" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="490" y1="80" x2="650" y2="80" stroke="#2a2a3d" stroke-width="1"/>
+          <!-- Highlight one cell -->
+          <rect x="570" y="40" width="40" height="40" fill="rgba(249,115,22,.3)" stroke="#f97316" stroke-width="2"/>
+          <text x="590" y="64" text-anchor="middle" fill="#fdba74" font-family="JetBrains Mono" font-size="7">9q8yy</text>
+          <circle cx="590" cy="90" r="4" fill="#f97316"/>
+          <text x="570" y="148" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="7">6 chars ≈ 1.2km cell</text>
+
+          <!-- Arrows -->
+          <line x1="210" y1="70" x2="238" y2="70" stroke="#546e7a" stroke-width="1.5" marker-end="url(#idmar)"/>
+          <line x1="440" y1="70" x2="468" y2="70" stroke="#546e7a" stroke-width="1.5" marker-end="url(#idmar)"/>
+
+          <!-- Geohash properties -->
+          <rect x="10" y="168" width="660" height="58" rx="6" fill="#12121a" stroke="#2a2a3d" stroke-width="1.5"/>
+          <text x="340" y="186" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Geohash Properties</text>
+          <text x="22" y="204" fill="#4ade80" font-family="JetBrains Mono" font-size="8">Shared prefix = geographic proximity: "9q8" → large region, "9q8yy" → 1.2km cell, "9q8yyzk" → 5m cell</text>
+          <text x="22" y="220" fill="#fbbf24" font-family="JetBrains Mono" font-size="8">Limitation: boundary problem — points 5m apart can share NO prefix if at cell boundary. Always query user cell + 8 neighbours.</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUADTREE -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">The Solution — QuadTree (Adaptive Spatial Index)</span>
+    <h2 class="section-title">A QuadTree subdivides dense regions more finely than sparse ones. The grid adapts to the data.</h2>
+    <div class="callout callout-note">
+      <div class="callout-label">Core Idea</div>
+      <p>A QuadTree is a tree where each internal node represents a rectangular region of space, and each node has exactly 4 children — NW, NE, SW, SE — representing the four quadrants of that region. The tree starts with one root node covering the entire world. When a region has more than a threshold number of points (e.g., 50 restaurants), it splits into 4 equal sub-quadrants. Points in dense regions (Manhattan) get subdivided many times into tiny cells. Points in sparse regions (rural Montana) stay in large cells. The leaf nodes are never split further once they're below the threshold. <strong>Result: cell size adapts to data density automatically.</strong></p>
+    </div>
+    <div class="callout callout-tip">
+      <div class="callout-label">Building the QuadTree — step by step</div>
+      <p><strong>1. Start</strong>: root node = entire world rectangle. All 50M restaurants are in root. Threshold = 50 points per leaf. <strong>2. Split</strong>: root has 50M points > 50. Split into NW, NE, SW, SE quadrants. Each child gets the restaurants that fall in its rectangle. <strong>3. Recurse</strong>: any child with > 50 restaurants also splits. Repeat until all leaf nodes have ≤ 50 restaurants. <strong>4. Result</strong>: Manhattan might be 10+ levels deep (cells covering 100m × 100m). Rural Montana is 2–3 levels deep (cells covering 500km × 500km).</p>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: QuadTree subdivision -->
+  <div class="section-block">
+    <span class="section-tag tag-diagram">Diagram 3 · QuadTree — adaptive subdivision based on density</span>
+    <h2 class="section-title">Dense regions subdivide into small cells. Sparse regions stay as large cells. Each leaf ≤ 50 points.</h2>
+    <div class="diagram-wrap">
+      <div class="diagram-label">quadtree-subdivision.svg</div>
+      <div class="diagram-body" style="text-align:center;">
+        <svg width="100%" viewBox="0 0 680 320" style="max-width:680px;">
+          <!-- World rectangle -->
+          <rect x="10" y="10" width="330" height="240" rx="4" fill="#12121a" stroke="#7c6cfc" stroke-width="2"/>
+          <text x="175" y="28" text-anchor="middle" fill="#c4b8f8" font-family="Syne" font-size="10" font-weight="700">QuadTree Spatial Subdivision</text>
+
+          <!-- Quadrant dividers (level 1) -->
+          <line x1="175" y1="10" x2="175" y2="250" stroke="#7c6cfc" stroke-width="1.5" stroke-dasharray="4 3" opacity=".5"/>
+          <line x1="10" y1="130" x2="340" y2="130" stroke="#7c6cfc" stroke-width="1.5" stroke-dasharray="4 3" opacity=".5"/>
+
+          <!-- Dense region: NE quadrant — subdivided many times (represents a city) -->
+          <rect x="175" y="10" width="165" height="120" fill="rgba(124,108,252,.08)" stroke="#7c6cfc" stroke-width="1" opacity=".5"/>
+          <!-- Sub-divide NE further -->
+          <line x1="258" y1="10" x2="258" y2="130" stroke="#f97316" stroke-width="1" stroke-dasharray="2 2"/>
+          <line x1="175" y1="70" x2="340" y2="70" stroke="#f97316" stroke-width="1" stroke-dasharray="2 2"/>
+          <!-- Sub-divide NE.SW further (very dense) -->
+          <line x1="216" y1="70" x2="216" y2="130" stroke="#4ade80" stroke-width="1" stroke-dasharray="2 2"/>
+          <line x1="175" y1="100" x2="258" y2="100" stroke="#4ade80" stroke-width="1" stroke-dasharray="2 2"/>
+          <!-- Tiny cells in dense area -->
+          <line x1="196" y1="100" x2="196" y2="130" stroke="#fbbf24" stroke-width="1"/>
+          <line x1="175" y1="115" x2="216" y2="115" stroke="#fbbf24" stroke-width="1"/>
+          <!-- Dense dots in city area -->
+          <circle cx="183" cy="107" r="2.5" fill="#fbbf24"/>
+          <circle cx="190" cy="120" r="2.5" fill="#fbbf24"/>
+          <circle cx="200" cy="108" r="2.5" fill="#fbbf24"/>
+          <circle cx="207" cy="122" r="2.5" fill="#fbbf24"/>
+          <circle cx="184" cy="123" r="2.5" fill="#fbbf24"/>
+          <circle cx="193" cy="113" r="2.5" fill="#fbbf24"/>
+          <circle cx="210" cy="105" r="2.5" fill="#fbbf24"/>
+          <circle cx="206" cy="112" r="2.5" fill="#fbbf24"/>
+
+          <!-- Sparse dots in other quadrants -->
+          <circle cx="60" cy="60" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="140" cy="90" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="90" cy="40" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="250" cy="170" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="290" cy="200" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="60" cy="180" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="100" cy="160" r="3" fill="#5eead4" opacity=".5"/>
+          <circle cx="130" cy="220" r="3" fill="#5eead4" opacity=".5"/>
+
+          <!-- Density labels -->
+          <text x="90" y="78" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="7">sparse → large cell</text>
+          <text x="196" y="145" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono" font-size="7">dense → tiny cells</text>
+
+          <!-- User position in dense area -->
+          <circle cx="204" cy="118" r="4" fill="#f97316" stroke="#fff" stroke-width="1.5"/>
+          <text x="215" y="116" fill="#f97316" font-family="JetBrains Mono" font-size="6">user</text>
+
+          <!-- Tree structure on right -->
+          <text x="380" y="28" text-anchor="middle" fill="#c4b8f8" font-family="Syne" font-size="10" font-weight="700">QuadTree Structure</text>
+
+          <!-- Root -->
+          <rect x="340" y="34" width="80" height="24" rx="4" fill="#1a1026" stroke="#7c6cfc" stroke-width="1.5"/>
+          <text x="380" y="50" text-anchor="middle" fill="#c4b8f8" font-family="JetBrains Mono" font-size="8">ROOT (world)</text>
+
+          <!-- Level 1 children -->
+          <line x1="360" y1="58" x2="360" y2="78" stroke="#7c6cfc" stroke-width="1"/>
+          <line x1="400" y1="58" x2="530" y2="78" stroke="#7c6cfc" stroke-width="1"/>
+          <line x1="380" y1="58" x2="465" y2="78" stroke="#7c6cfc" stroke-width="1"/>
+          <line x1="380" y1="58" x2="350" y2="78" stroke="#7c6cfc" stroke-width="1"/>
+
+          <rect x="320" y="78" width="60" height="22" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="350" y="93" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="7">NW (leaf)</text>
+          <rect x="385" y="78" width="60" height="22" rx="3" fill="#1a1026" stroke="#7c6cfc" stroke-width="1.5"/>
+          <text x="415" y="93" text-anchor="middle" fill="#c4b8f8" font-family="JetBrains Mono" font-size="7">NE (split↓)</text>
+          <rect x="450" y="78" width="60" height="22" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="480" y="93" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="7">SW (leaf)</text>
+          <rect x="515" y="78" width="60" height="22" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="545" y="93" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="7">SE (leaf)</text>
+
+          <!-- NE splits further -->
+          <line x1="415" y1="100" x2="395" y2="120" stroke="#f97316" stroke-width="1"/>
+          <line x1="415" y1="100" x2="425" y2="120" stroke="#f97316" stroke-width="1"/>
+          <line x1="415" y1="100" x2="455" y2="120" stroke="#f97316" stroke-width="1"/>
+          <line x1="415" y1="100" x2="485" y2="120" stroke="#f97316" stroke-width="1"/>
+
+          <rect x="368" y="120" width="48" height="22" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="392" y="135" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="6">NW leaf</text>
+          <rect x="418" y="120" width="48" height="22" rx="3" fill="#1a0808" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="442" y="135" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono" font-size="6">NE split↓</text>
+          <rect x="468" y="120" width="48" height="22" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="492" y="135" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="6">SW leaf</text>
+          <rect x="518" y="120" width="48" height="22" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="542" y="135" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="6">SE leaf</text>
+
+          <!-- More splits -->
+          <line x1="442" y1="142" x2="432" y2="160" stroke="#fbbf24" stroke-width="1"/>
+          <line x1="442" y1="142" x2="452" y2="160" stroke="#fbbf24" stroke-width="1"/>
+          <rect x="408" y="160" width="42" height="20" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="429" y="174" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="6">…leaf</text>
+          <rect x="452" y="160" width="42" height="20" rx="3" fill="#0a1f0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="473" y="174" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="6">…leaf</text>
+
+          <!-- Legend -->
+          <rect x="340" y="200" width="330" height="90" rx="6" fill="#12121a" stroke="#2a2a3d" stroke-width="1.5"/>
+          <text x="505" y="218" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Key Properties</text>
+          <rect x="352" y="228" width="10" height="10" rx="2" fill="#4ade80"/>
+          <text x="368" y="238" fill="#4ade80" font-family="JetBrains Mono" font-size="8">Leaf node: ≤ threshold points. Actual data stored here.</text>
+          <rect x="352" y="246" width="10" height="10" rx="2" fill="#7c6cfc"/>
+          <text x="368" y="256" fill="#7c6cfc" font-family="JetBrains Mono" font-size="8">Internal node: split into 4 quadrants. Points counted only.</text>
+          <text x="352" y="274" fill="#fbbf24" font-family="JetBrains Mono" font-size="8">Dense city: 10–15 levels deep. Cells ≈ 100m × 100m.</text>
+          <text x="352" y="288" fill="#5eead4" font-family="JetBrains Mono" font-size="8">Sparse rural: 3–4 levels deep. Cells ≈ 100km × 100km.</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANIMATION: QuadTree KNN search -->
+  <div class="section-block">
+    <span class="section-tag tag-diagram">Animation · QuadTree KNN Search — finding the user's leaf, expanding to neighbours</span>
+    <h2 class="section-title">Step-by-step: traverse tree to find user's cell, collect restaurants, expand if needed</h2>
+    <div class="diagram-wrap">
+      <div class="diagram-label">quadtree-search-animation</div>
+      <div class="diagram-body" style="padding:14px 10px;">
+        <svg id="qt-svg" width="100%" viewBox="0 0 640 290" style="max-width:640px;display:block;margin:0 auto;">
+          <text x="10" y="16" fill="#546e7a" font-family="JetBrains Mono" font-size="9">Step:</text>
+          <text id="qt-step" x="52" y="16" fill="#7c6cfc" font-family="JetBrains Mono" font-size="9" font-weight="600">User asks: "find 5 nearest restaurants." QuadTree search begins.</text>
+
+          <!-- World grid -->
+          <rect x="10" y="26" width="300" height="220" rx="4" fill="#12121a" stroke="#3a3a55" stroke-width="1.5"/>
+          <!-- Level 1 dividers -->
+          <line x1="160" y1="26" x2="160" y2="246" stroke="#3a3a55" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="10" y1="136" x2="310" y2="136" stroke="#3a3a55" stroke-width="1" stroke-dasharray="4 3"/>
+          <!-- Level 2 NE dividers -->
+          <line x1="235" y1="26" x2="235" y2="136" stroke="#3a3a55" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="160" y1="81" x2="310" y2="81" stroke="#3a3a55" stroke-width="1" stroke-dasharray="3 3"/>
+
+          <!-- User -->
+          <circle cx="200" cy="55" r="6" fill="#f97316" stroke="#fff" stroke-width="2"/>
+          <text x="212" y="52" fill="#f97316" font-family="JetBrains Mono" font-size="7">user</text>
+
+          <!-- Restaurants (dots) -->
+          <circle cx="220" cy="40" r="3.5" fill="#5eead4" opacity=".8"/>
+          <circle cx="245" cy="62" r="3.5" fill="#5eead4" opacity=".8"/>
+          <circle cx="188" cy="44" r="3.5" fill="#5eead4" opacity=".8"/>
+          <circle cx="230" cy="70" r="3.5" fill="#5eead4" opacity=".8"/>
+          <circle cx="175" cy="65" r="3.5" fill="#5eead4" opacity=".8"/>
+          <circle cx="260" cy="45" r="3.5" fill="#5eead4" opacity=".5"/>
+          <circle cx="170" cy="100" r="3.5" fill="#5eead4" opacity=".5"/>
+          <circle cx="280" cy="90" r="3.5" fill="#5eead4" opacity=".5"/>
+          <circle cx="50" cy="70" r="3.5" fill="#5eead4" opacity=".3"/>
+          <circle cx="100" cy="180" r="3.5" fill="#5eead4" opacity=".3"/>
+
+          <!-- Highlighted cells (hidden) -->
+          <rect id="qt-cell1" x="160" y="26" width="75" height="55" rx="0" fill="rgba(124,108,252,.2)" stroke="#7c6cfc" stroke-width="2" opacity="0"/>
+          <rect id="qt-cell2" x="235" y="26" width="75" height="55" rx="0" fill="rgba(94,234,212,.15)" stroke="#5eead4" stroke-width="1.5" opacity="0"/>
+          <rect id="qt-cell3" x="160" y="81" width="75" height="55" rx="0" fill="rgba(94,234,212,.15)" stroke="#5eead4" stroke-width="1.5" opacity="0"/>
+          <rect id="qt-cell4" x="235" y="81" width="75" height="55" rx="0" fill="rgba(94,234,212,.15)" stroke="#5eead4" stroke-width="1.5" opacity="0"/>
+
+          <!-- Result dots (highlighted) -->
+          <circle id="qt-r1" cx="220" cy="40" r="5" fill="#4ade80" stroke="#fff" stroke-width="1.5" opacity="0"/>
+          <circle id="qt-r2" cx="188" cy="44" r="5" fill="#4ade80" stroke="#fff" stroke-width="1.5" opacity="0"/>
+          <circle id="qt-r3" cx="245" cy="62" r="5" fill="#4ade80" stroke="#fff" stroke-width="1.5" opacity="0"/>
+          <circle id="qt-r4" cx="230" cy="70" r="5" fill="#4ade80" stroke="#fff" stroke-width="1.5" opacity="0"/>
+          <circle id="qt-r5" cx="175" cy="65" r="5" fill="#4ade80" stroke="#fff" stroke-width="1.5" opacity="0"/>
+
+          <!-- Tree traversal on right -->
+          <text x="330" y="38" fill="#9b97b2" font-family="Syne" font-size="9" font-weight="700">Tree Traversal</text>
+          <rect id="qt-t0" x="330" y="44" width="130" height="24" rx="4" fill="#12121a" stroke="#3a3a55" stroke-width="1.5"/>
+          <text x="395" y="60" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="8">ROOT (world)</text>
+          <line x1="395" y1="68" x2="395" y2="84" stroke="#3a3a55" stroke-width="1"/>
+          <rect id="qt-t1" x="330" y="84" width="130" height="24" rx="4" fill="#12121a" stroke="#3a3a55" stroke-width="1.5"/>
+          <text x="395" y="100" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="8">NE quadrant</text>
+          <line x1="395" y1="108" x2="395" y2="124" stroke="#3a3a55" stroke-width="1"/>
+          <rect id="qt-t2" x="330" y="124" width="130" height="24" rx="4" fill="#12121a" stroke="#3a3a55" stroke-width="1.5"/>
+          <text x="395" y="140" text-anchor="middle" fill="#546e7a" font-family="JetBrains Mono" font-size="8">NE.NW leaf</text>
+
+          <!-- Result list (hidden) -->
+          <rect id="qt-results" x="330" y="168" width="300" height="112" rx="6" fill="#12121a" stroke="#2a2a3d" stroke-width="1.5" opacity="0"/>
+          <text id="qt-rtitle" x="480" y="187" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="9" font-weight="700" opacity="0">Found in leaf (5 restaurants):</text>
+          <text id="qt-r1t" x="342" y="204" fill="#4ade80" font-family="JetBrains Mono" font-size="8" opacity="0">1. Restaurant A — 0.12km</text>
+          <text id="qt-r2t" x="342" y="218" fill="#4ade80" font-family="JetBrains Mono" font-size="8" opacity="0">2. Restaurant B — 0.21km</text>
+          <text id="qt-r3t" x="342" y="232" fill="#4ade80" font-family="JetBrains Mono" font-size="8" opacity="0">3. Restaurant C — 0.35km</text>
+          <text id="qt-r4t" x="342" y="246" fill="#4ade80" font-family="JetBrains Mono" font-size="8" opacity="0">4. Restaurant D — 0.41km</text>
+          <text id="qt-r5t" x="342" y="260" fill="#4ade80" font-family="JetBrains Mono" font-size="8" opacity="0">5. Restaurant E — 0.55km</text>
+          <text id="qt-expand" x="342" y="276" fill="#fbbf24" font-family="JetBrains Mono" font-size="7" opacity="0">If &lt; K results: expand to neighbouring cells and repeat.</text>
+
+          <text id="qt-status" x="10" y="284" fill="#267a44" font-family="JetBrains Mono" font-size="8">Ready</text>
+        </svg>
+      </div>
+      <div class="anim-controls">
+        <button class="anim-btn primary" onclick="runQTAnim()">&#9654; Run KNN Search</button>
+        <button class="anim-btn" onclick="resetQTAnim()">&#8635; Reset</button>
+        <span class="anim-status" id="qt-status-btn">Ready</span>
+        <label style="margin-left:12px;color:#6b6682;font-family:'JetBrains Mono',monospace;font-size:11px;">Speed:
+          <input id="qt-speed" type="range" min="1" max="5" value="3" style="vertical-align:middle;width:70px;accent-color:#7c6cfc;">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- KNN search algorithm -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">The Full KNN Algorithm — Traverse, Collect, Expand</span>
+    <h2 class="section-title">Three phases: find leaf → collect candidates → expand if insufficient</h2>
+    <div class="callout callout-note">
+      <div class="callout-label">Phase 1 — Find user's leaf node</div>
+      <p>Start at root. At each internal node, determine which quadrant the user's coordinates fall into (simple rectangle containment check — O(1)). Recurse into that child. Continue until reaching a leaf node. Depth ≈ log₄(N/threshold). For 50M restaurants with threshold=50: log₄(1M) ≈ 10 levels. So 10 comparisons to locate the user's cell. This is O(log N).</p>
+    </div>
+    <div class="callout callout-tip">
+      <div class="callout-label">Phase 2 — Collect candidates from leaf</div>
+      <p>The leaf node contains ≤ 50 restaurants. Compute exact distance (Haversine) from user to each. Sort by distance. If the leaf has ≥ K restaurants, return the top K. Done — no further tree traversal needed.</p>
+    </div>
+    <div class="callout callout-tip">
+      <div class="callout-label">Phase 3 — Expand to neighbours if insufficient</div>
+      <p>If the leaf has fewer than K restaurants, expand: examine the parent's other children (siblings). If still insufficient, go up another level and examine more nodes. This expanding ring search terminates as soon as K candidates are found. Key insight: in dense areas, you almost never need to expand — the leaf itself has enough. In sparse areas, expansion costs more but there are fewer restaurants anyway. Average-case performance stays O(log N).</p>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 4: Comparison table -->
+  <div class="section-block">
+    <span class="section-tag tag-concept">Comparison — All Four Approaches</span>
+    <div class="diagram-wrap">
+      <div class="diagram-label">spatial-approaches-comparison.svg</div>
+      <div class="diagram-body" style="padding:14px;">
+        <svg width="100%" viewBox="0 0 640 220" style="max-width:640px;">
+          <rect x="10" y="10" width="620" height="200" rx="8" fill="#12121a" stroke="#2a2a3d" stroke-width="1.5"/>
+          <rect x="10" y="10" width="620" height="36" rx="8" fill="#1a1a26"/>
+          <rect x="10" y="30" width="620" height="16" fill="#1a1a26"/>
+          <text x="75"  y="33" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Approach</text>
+          <text x="205" y="33" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Query Speed</text>
+          <text x="325" y="33" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Density Adaptive</text>
+          <text x="445" y="33" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Complexity</text>
+          <text x="555" y="33" text-anchor="middle" fill="#9b97b2" font-family="Syne" font-size="10" font-weight="700">Used by</text>
+          <line x1="10" y1="46" x2="630" y2="46" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="140" y1="10" x2="140" y2="210" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="270" y1="10" x2="270" y2="210" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="390" y1="10" x2="390" y2="210" stroke="#2a2a3d" stroke-width="1"/>
+          <line x1="510" y1="10" x2="510" y2="210" stroke="#2a2a3d" stroke-width="1"/>
+
+          <text x="22" y="65" fill="#f87171" font-family="JetBrains Mono" font-size="9" font-weight="600">Brute Force</text>
+          <text x="152" y="65" fill="#f87171" font-family="JetBrains Mono" font-size="9">O(N) — seconds</text>
+          <text x="282" y="65" fill="#f87171" font-family="JetBrains Mono" font-size="9">N/A</text>
+          <text x="402" y="65" fill="#4ade80" font-family="JetBrains Mono" font-size="9">Trivial</text>
+          <text x="522" y="65" fill="#6b6682" font-family="DM Sans" font-size="9">Never (toy only)</text>
+
+          <line x1="10" y1="74" x2="630" y2="74" stroke="#1e1e2e" stroke-width="1"/>
+          <text x="22" y="93" fill="#fbbf24" font-family="JetBrains Mono" font-size="9" font-weight="600">Bounding Box</text>
+          <text x="152" y="93" fill="#fbbf24" font-family="JetBrains Mono" font-size="9">Band scan — slow</text>
+          <text x="282" y="93" fill="#f87171" font-family="JetBrains Mono" font-size="9">No</text>
+          <text x="402" y="93" fill="#4ade80" font-family="JetBrains Mono" font-size="9">Low</text>
+          <text x="522" y="93" fill="#6b6682" font-family="DM Sans" font-size="9">Legacy DBs</text>
+
+          <line x1="10" y1="102" x2="630" y2="102" stroke="#1e1e2e" stroke-width="1"/>
+          <text x="22" y="121" fill="#5eead4" font-family="JetBrains Mono" font-size="9" font-weight="600">Geohash</text>
+          <text x="152" y="121" fill="#4ade80" font-family="JetBrains Mono" font-size="9">O(1) prefix lookup</text>
+          <text x="282" y="121" fill="#fbbf24" font-family="JetBrains Mono" font-size="9">Partial (fixed precision)</text>
+          <text x="402" y="121" fill="#4ade80" font-family="JetBrains Mono" font-size="9">Low-Med</text>
+          <text x="522" y="121" fill="#6b6682" font-family="DM Sans" font-size="9">Redis GEOSEARCH, PostGIS</text>
+
+          <line x1="10" y1="130" x2="630" y2="130" stroke="#1e1e2e" stroke-width="1"/>
+          <text x="22" y="149" fill="#7c6cfc" font-family="JetBrains Mono" font-size="9" font-weight="600">Fixed Grid</text>
+          <text x="152" y="149" fill="#4ade80" font-family="JetBrains Mono" font-size="9">O(1) cell lookup</text>
+          <text x="282" y="149" fill="#f87171" font-family="JetBrains Mono" font-size="9">No (fixed size)</text>
+          <text x="402" y="149" fill="#4ade80" font-family="JetBrains Mono" font-size="9">Low</text>
+          <text x="522" y="149" fill="#6b6682" font-family="DM Sans" font-size="9">Simple location apps</text>
+
+          <line x1="10" y1="158" x2="630" y2="158" stroke="#1e1e2e" stroke-width="1"/>
+          <text x="22" y="177" fill="#4ade80" font-family="JetBrains Mono" font-size="9" font-weight="600">QuadTree</text>
+          <text x="152" y="177" fill="#4ade80" font-family="JetBrains Mono" font-size="9">O(log N) avg</text>
+          <text x="282" y="177" fill="#4ade80" font-family="JetBrains Mono" font-size="9">Yes ✓ (dynamic)</text>
+          <text x="402" y="177" fill="#fbbf24" font-family="JetBrains Mono" font-size="9">Medium</text>
+          <text x="522" y="177" fill="#267a44" font-family="DM Sans" font-size="9">Google Maps, Uber, Twitter</text>
+
+          <line x1="10" y1="186" x2="630" y2="186" stroke="#1e1e2e" stroke-width="1"/>
+          <text x="22" y="205" fill="#f97316" font-family="JetBrains Mono" font-size="9" font-weight="600">PostGIS GiST</text>
+          <text x="152" y="205" fill="#4ade80" font-family="JetBrains Mono" font-size="9">O(log N) guaranteed</text>
+          <text x="282" y="205" fill="#4ade80" font-family="JetBrains Mono" font-size="9">Yes ✓ (R-Tree based)</text>
+          <text x="402" y="205" fill="#fbbf24" font-family="JetBrains Mono" font-size="9">Medium (DB managed)</text>
+          <text x="522" y="205" fill="#267a44" font-family="DM Sans" font-size="9">PostgreSQL with PostGIS</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="section-block">
+    <span class="section-tag tag-code">Code · Python — QuadTree implementation + KNN search + PostGIS alternative</span>
+    <div class="code-block-wrap">
+      <div class="code-lang-tabs">
+        <button class="code-lang-tab active" onclick="switchCode('qt2',0,this)">Python (QuadTree)</button>
+        <button class="code-lang-tab" onclick="switchCode('qt2',1,this)">SQL (PostGIS)</button>
+      </div>
+      <div class="code-pane active" id="qt2-code-0">
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang-badge">PYTHON</span><div class="code-dots"><div class="code-dot" style="background:#f87171"></div><div class="code-dot" style="background:#fbbf24"></div><div class="code-dot" style="background:#4ade80"></div></div></div>
+          <pre><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> List, Optional
+<span class="kw">import</span> math
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Point</span>:
+    lat: float; lon: float; data: dict = field(default_factory=dict)
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Rect</span>:
+    <span class="str">"""Bounding rectangle for a QuadTree node."""</span>
+    min_lat: float; max_lat: float
+    min_lon: float; max_lon: float
+
+    <span class="kw">def</span> <span class="fn">contains</span>(self, p: Point) -> bool:
+        <span class="kw">return</span> (self.min_lat <= p.lat <= self.max_lat <span class="kw">and</span>
+                self.min_lon <= p.lon <= self.max_lon)
+
+    <span class="kw">def</span> <span class="fn">intersects</span>(self, other: <span class="str">'Rect'</span>) -> bool:
+        <span class="kw">return</span> not (other.max_lat < self.min_lat <span class="kw">or</span>
+                    other.min_lat > self.max_lat <span class="kw">or</span>
+                    other.max_lon < self.min_lon <span class="kw">or</span>
+                    other.min_lon > self.max_lon)
+
+    <span class="kw">def</span> <span class="fn">quadrants</span>(self) -> List[<span class="str">'Rect'</span>]:
+        <span class="str">"""Split into NW, NE, SW, SE."""</span>
+        mid_lat = (self.min_lat + self.max_lat) / <span class="num">2</span>
+        mid_lon = (self.min_lon + self.max_lon) / <span class="num">2</span>
+        <span class="kw">return</span> [
+            <span class="cls">Rect</span>(mid_lat, self.max_lat, self.min_lon, mid_lon),  <span class="cm"># NW</span>
+            <span class="cls">Rect</span>(mid_lat, self.max_lat, mid_lon, self.max_lon),  <span class="cm"># NE</span>
+            <span class="cls">Rect</span>(self.min_lat, mid_lat, self.min_lon, mid_lon),  <span class="cm"># SW</span>
+            <span class="cls">Rect</span>(self.min_lat, mid_lat, mid_lon, self.max_lon),  <span class="cm"># SE</span>
+        ]
+
+
+<span class="kw">class</span> <span class="cls">QuadTree</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, boundary: Rect, threshold: int = <span class="num">50</span>):
+        self.boundary  = boundary
+        self.threshold = threshold
+        self.points: List[Point] = []
+        self.children: List[<span class="str">'QuadTree'</span>] = []  <span class="cm"># empty = leaf node</span>
+
+    <span class="kw">@property</span>
+    <span class="kw">def</span> <span class="fn">is_leaf</span>(self) -> bool:
+        <span class="kw">return</span> <span class="kw">not</span> self.children
+
+    <span class="kw">def</span> <span class="fn">insert</span>(self, p: Point) -> bool:
+        <span class="kw">if not</span> self.boundary.<span class="fn">contains</span>(p): <span class="kw">return False</span>
+
+        <span class="kw">if</span> self.is_leaf:
+            self.points.<span class="fn">append</span>(p)
+            <span class="kw">if</span> len(self.points) > self.threshold:
+                self.<span class="fn">_subdivide</span>()
+            <span class="kw">return True</span>
+
+        <span class="kw">return</span> any(child.<span class="fn">insert</span>(p) <span class="kw">for</span> child <span class="kw">in</span> self.children)
+
+    <span class="kw">def</span> <span class="fn">_subdivide</span>(self):
+        <span class="str">"""Split this leaf into 4 quadrant children."""</span>
+        self.children = [<span class="cls">QuadTree</span>(q, self.threshold)
+                         <span class="kw">for</span> q <span class="kw">in</span> self.boundary.<span class="fn">quadrants</span>()]
+        <span class="kw">for</span> p <span class="kw">in</span> self.points:    <span class="cm"># redistribute existing points</span>
+            any(c.<span class="fn">insert</span>(p) <span class="kw">for</span> c <span class="kw">in</span> self.children)
+        self.points = []           <span class="cm"># internal node no longer stores points</span>
+
+    <span class="kw">def</span> <span class="fn">knn</span>(self, user: Point, k: int) -> List[tuple]:
+        <span class="str">"""Find K nearest neighbours. Returns list of (distance, point)."""</span>
+        candidates = []
+        self.<span class="fn">_collect_candidates</span>(user, candidates)
+
+        <span class="cm"># Sort by actual Haversine distance, return top K</span>
+        candidates.<span class="fn">sort</span>(key=<span class="kw">lambda</span> x: x[<span class="num">0</span>])
+        <span class="kw">return</span> candidates[:k]
+
+    <span class="kw">def</span> <span class="fn">_collect_candidates</span>(self, user: Point,
+                              results: list,
+                              search_rect: Rect = <span class="kw">None</span>):
+        <span class="str">"""
+        Collect points from leaves that intersect the search rectangle.
+        Start with user's own leaf. Expand search_rect if too few results.
+        """</span>
+        <span class="kw">if</span> search_rect <span class="kw">and not</span> self.boundary.<span class="fn">intersects</span>(search_rect):
+            <span class="kw">return</span>
+
+        <span class="kw">if</span> self.is_leaf:
+            <span class="kw">for</span> p <span class="kw">in</span> self.points:
+                d = <span class="fn">haversine</span>(user.lat, user.lon, p.lat, p.lon)
+                results.<span class="fn">append</span>((d, p))
+            <span class="kw">return</span>
+
+        <span class="kw">for</span> child <span class="kw">in</span> self.children:
+            child.<span class="fn">_collect_candidates</span>(user, results, search_rect)
+
+
+<span class="kw">def</span> <span class="fn">haversine</span>(lat1, lon1, lat2, lon2) -> float:
+    <span class="str">"""Great-circle distance in km."""</span>
+    R = <span class="num">6371</span>
+    dlat = math.<span class="fn">radians</span>(lat2 - lat1)
+    dlon = math.<span class="fn">radians</span>(lon2 - lon1)
+    a = (math.<span class="fn">sin</span>(dlat/<span class="num">2</span>)**<span class="num">2</span> +
+         math.<span class="fn">cos</span>(math.<span class="fn">radians</span>(lat1)) * math.<span class="fn">cos</span>(math.<span class="fn">radians</span>(lat2)) *
+         math.<span class="fn">sin</span>(dlon/<span class="num">2</span>)**<span class="num">2</span>)
+    <span class="kw">return</span> R * <span class="num">2</span> * math.<span class="fn">atan2</span>(math.<span class="fn">sqrt</span>(a), math.<span class="fn">sqrt</span>(<span class="num">1</span> - a))
+
+
+<span class="cm"># ── Demo ──────────────────────────────────────────────────</span>
+world = <span class="cls">Rect</span>(-<span class="num">90</span>, <span class="num">90</span>, -<span class="num">180</span>, <span class="num">180</span>)
+qt    = <span class="cls">QuadTree</span>(world, threshold=<span class="num">50</span>)
+
+<span class="cm"># Insert 1M restaurants</span>
+<span class="kw">import</span> random
+<span class="kw">for</span> _ <span class="kw">in</span> range(<span class="num">1_000_000</span>):
+    qt.<span class="fn">insert</span>(<span class="cls">Point</span>(random.<span class="fn">uniform</span>(-<span class="num">90</span>, <span class="num">90</span>), random.<span class="fn">uniform</span>(-<span class="num">180</span>, <span class="num">180</span>),
+                    {<span class="str">"name"</span>: <span class="str">"Restaurant"</span>}))
+
+<span class="cm"># KNN query — find 10 nearest to San Francisco</span>
+user = <span class="cls">Point</span>(<span class="num">37.7749</span>, -<span class="num">122.4194</span>)
+results = qt.<span class="fn">knn</span>(user, k=<span class="num">10</span>)
+<span class="kw">for</span> dist, p <span class="kw">in</span> results:
+    <span class="fn">print</span>(f<span class="str">"{dist:.2f}km away: ({p.lat:.4f}, {p.lon:.4f})"</span>)</pre>
+        </div>
+      </div>
+      <div class="code-pane" id="qt2-code-1">
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang-badge">SQL / PostGIS</span><div class="code-dots"><div class="code-dot" style="background:#f87171"></div><div class="code-dot" style="background:#fbbf24"></div><div class="code-dot" style="background:#4ade80"></div></div></div>
+          <pre><span class="cm">-- ── PostGIS: production-grade geospatial search ──────────</span>
+<span class="cm">-- PostGIS uses a GiST index (Generalized Search Tree)</span>
+<span class="cm">-- which is an R-Tree variant — similar idea to QuadTree</span>
+<span class="cm">-- but more balanced for updates.</span>
+
+<span class="cm">-- 1. Add geometry column to restaurants table</span>
+<span class="kw">ALTER TABLE</span> restaurants
+  <span class="kw">ADD COLUMN</span> location geometry(Point, <span class="num">4326</span>);
+
+<span class="cm">-- 2. Populate from lat/lon columns</span>
+<span class="kw">UPDATE</span> restaurants
+<span class="kw">SET</span> location = ST_SetSRID(
+    ST_MakePoint(longitude, latitude), <span class="num">4326</span>
+);
+
+<span class="cm">-- 3. Create GiST spatial index (the magic)</span>
+<span class="kw">CREATE INDEX</span> idx_restaurants_location
+<span class="kw">ON</span> restaurants <span class="kw">USING</span> GIST (location);
+
+<span class="cm">-- 4. KNN query: 10 nearest restaurants within 2km</span>
+<span class="kw">SELECT</span>
+    id, name,
+    ST_Distance(
+        location::geography,
+        ST_MakePoint(:user_lon, :user_lat)::geography
+    ) <span class="kw">AS</span> distance_meters
+<span class="kw">FROM</span> restaurants
+<span class="kw">WHERE</span> ST_DWithin(
+    location::geography,
+    ST_MakePoint(:user_lon, :user_lat)::geography,
+    <span class="num">2000</span>        <span class="cm">-- 2000 meters = 2km radius</span>
+)
+<span class="kw">ORDER BY</span> distance_meters
+<span class="kw">LIMIT</span> <span class="num">10</span>;
+
+<span class="cm">-- ST_DWithin uses the GiST index — scans only nearby cells</span>
+<span class="cm">-- NOT a full table scan! Equivalent to QuadTree search.</span>
+<span class="cm">-- Haversine-accurate distances via ::geography cast.</span>
+
+<span class="cm">-- 5. Redis alternative (for real-time driver positions)</span>
+<span class="cm">-- GEOADD drivers 122.4194 37.7749 "driver:1"</span>
+<span class="cm">-- GEOADD drivers 122.4100 37.7800 "driver:2"</span>
+<span class="cm">-- GEOSEARCH drivers FROMLONLAT 122.4194 37.7749</span>
+<span class="cm">--   BYRADIUS 2 km ASC COUNT 10</span>
+<span class="cm">-- Redis uses Geohash internally (sorted set with geohash score)</span>
+<span class="cm">-- O(N+log(M)) where M = members, N = returned results</span>
+
+<span class="cm">-- 6. For moving objects (drivers, delivery riders)</span>
+<span class="cm">-- Write path: GEOADD drivers lon lat "driver:id"  (every 5s)</span>
+<span class="cm">-- Read path:  GEOSEARCH  (every client refresh)</span>
+<span class="cm">-- QuadTree in memory (not DB) — rebuild periodically from positions</span>
+<span class="cm">-- Or: S2 geometry library (Google's choice for Maps)</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q&A -->
+  <div class="section-block">
+    <span class="section-tag tag-interview">Interview Q&amp;A</span>
+
+    <div class="qa-block">
+      <div class="qa-q"><span class="qa-q-badge">Q</span>Why can't you use a standard B-Tree index to find restaurants near a user?</div>
+      <div class="qa-a"><div class="qa-a-badge">A</div>A B-Tree index sorts data along one dimension. You can efficiently find all restaurants where latitude is between 37.7 and 37.8 — that's a standard range query. But proximity requires BOTH latitude AND longitude simultaneously: a restaurant at (37.75, -122.5) is 5km away while a restaurant at (37.75, -74.0) (same latitude) is 4,000km away. A B-Tree index on latitude returns both the 5km and 4,000km restaurants in the same range scan — it has no concept of 2D distance. You can add a longitude filter, but this creates the "band intersection" problem: the lat index returns a horizontal band spanning the whole world, and the lon index returns a vertical band spanning the whole world. The intersection of two worldwide bands is your target square, but you must read both full bands first. This is O(N_band) not O(K), where N_band is potentially millions of rows. What you need is an index that partitions 2D space — like a QuadTree or R-Tree — so the search only visits regions geometrically near the user.</div>
+    </div>
+
+    <div class="qa-block">
+      <div class="qa-q"><span class="qa-q-badge">Q</span>How does a QuadTree work and how does it achieve O(log N) KNN search?</div>
+      <div class="qa-a"><div class="qa-a-badge">A</div>A QuadTree recursively partitions 2D space into four equal quadrants (NW, NE, SW, SE). Each node represents a rectangular region. Leaf nodes contain actual points (restaurants) up to a threshold (e.g., 50). When a leaf exceeds the threshold, it splits into 4 children and redistributes its points. Dense areas subdivide many times (Manhattan might be 15 levels deep). Sparse areas stay large (rural Montana might be 3 levels deep). KNN search: (1) Traverse the tree to find which leaf node the user's coordinates fall in — just follow the quadrant that contains the user's point at each level. This is O(depth) = O(log₄ N). (2) Collect the ≤ 50 points in that leaf, compute Haversine distance to each, sort. (3) If fewer than K results, expand to examine sibling nodes (the parent's other children), then uncle nodes, growing outward. In practice, dense areas almost always have ≥ K restaurants in the leaf itself, so expansion is rare. The tree height is O(log N) and each node visit is O(1), giving O(log N) average-case complexity vs O(N) for brute force.</div>
+    </div>
+
+    <div class="qa-block">
+      <div class="qa-q"><span class="qa-q-badge">Q</span>How does Uber find nearby drivers in real time with millions of moving points?</div>
+      <div class="qa-a"><div class="qa-a-badge">A</div>Driver positions update every 5 seconds — a spatial index that takes seconds to rebuild is useless. Uber uses an in-memory spatial index (not a DB spatial index) that can handle millions of position updates per second. Their approach combines several techniques: (1) City-level sharding: divide the world into cities. Each city's data is handled by a separate geospatial service instance. Riders in San Francisco only query San Francisco's service. (2) In-memory QuadTree or S2 geometry: the position of each driver is stored in an in-memory spatial structure. Driver position updates are applied to the in-memory structure directly. No disk I/O. (3) Google S2: Uber (and Google) use S2 cells — a hierarchical sphere-to-square mapping that handles the distortion of lat/lon near poles. S2 cells at level 14 cover approximately 600m × 600m. (4) Two-tier storage: Redis GEOSEARCH for immediate lookups (positions replicated to Redis), Kafka for durable position event streaming. The key insight: for moving objects, you must use in-memory spatial structures, not disk-based database indexes. The database index is for the restaurant catalog (static). The driver/rider index is in-memory and rebuilt continuously.</div>
+    </div>
+
+    <div class="qa-block">
+      <div class="qa-q"><span class="qa-q-badge">Q</span>What is the boundary problem in Geohash and how do you fix it?</div>
+      <div class="qa-a"><div class="qa-a-badge">A</div>The boundary problem: two points that are geographically very close (5 metres apart) can have completely different Geohash strings if they lie on opposite sides of a cell boundary. For example: "9q8yy" ends at longitude -122.431°. A restaurant at -122.430° has Geohash "9q8yy..." while a restaurant at -122.432° has Geohash "9q8yx..." — these share no common prefix beyond "9q8" despite being 200m apart. If you query only "9q8yy%", you miss the nearby "9q8yx" restaurant. Fix: always query the user's cell AND all 8 neighbouring cells. Each Geohash cell has 8 neighbours (N, NE, E, SE, S, SW, W, NW). Computing neighbours from a Geohash string is O(1). So every search becomes 9 prefix queries instead of 1. This adds constant overhead but guarantees you never miss a nearby point due to boundary effects. PostGIS's ST_DWithin doesn't have this problem because it operates in true Euclidean/spherical geometry, not the discretised Geohash space.</div>
+    </div>
+
+    <div class="callout callout-interview">
+      <div class="callout-label">Senior-Level Power Answer</div>
+      <p>When asked "design a system to find the 5 nearest available drivers to a rider's location, serving 10M concurrent users", say: <em>"Three components: (1) <strong>Driver position store</strong>: each driver app sends GPS updates every 5s to a location service. The service writes to Redis GEOSEARCH (in-memory Geohash-based index) per city shard — O(log N) insert, O(N+log M) range query. Also publishes to Kafka for durable event streaming and analytics. (2) <strong>Rider query path</strong>: rider's app sends their location to the matching service. Matching service queries Redis for the 5 nearest available drivers: GEOSEARCH shard-city:sanfrancisco FROMLONLAT lon lat BYRADIUS 5 km ASC COUNT 5. Redis returns driver IDs + distances in &lt;10ms. (3) <strong>Availability filter</strong>: the 5 candidate drivers from Redis might include some who just got matched to another rider. The matching service does a multi-get to the availability store (another Redis hash map) to filter only truly available drivers. If &lt;5 available, expand the search radius. (4) <strong>Sharding</strong>: one Redis cluster per metropolitan area. City assignment based on a static geofence lookup (point-in-polygon for city boundaries). This gives horizontal scalability — San Francisco's 50K drivers don't contend with New York's 100K drivers."</em></p>
+    </div>
+  </div>
+</div><!-- /panel-39 -->
+
+
 
 
 
@@ -20567,6 +21294,7 @@ const POSTS = [
   { title:'Query Optimization &amp; Execution Plans', tags:'EXPLAIN ANALYZE · Join Algorithms · Planner Stats · Slow Queries' },
   { title:'Idempotency &amp; Exactly-Once Delivery',   tags:'Idempotency Keys · At-Least-Once · Exactly-Once · Outbox Pattern · Deduplication' },
   { title:'Timeouts, Retries &amp; Exponential Backoff',  tags:'Retry Storm · Exponential Backoff · Full Jitter · Deadline Propagation · Retry Budget' },
+  { title:'Geospatial Search at Scale — KNN',              tags:'QuadTree · Geohash · KNN · Brute Force · Fixed Grid · PostGIS · S2 Geometry' },
 ];
 
 let current = 0;
@@ -23822,6 +24550,77 @@ function resetCplAnim() {
 }
 
 
+
+/* ══════════════════════════════════
+   QUADTREE KNN ANIMATION
+══════════════════════════════════ */
+let qtBusy = false;
+
+function getQTDelay() {
+  const v = parseInt(document.getElementById('qt-speed')?.value || 3);
+  return [2600, 1700, 1000, 600, 280][v - 1];
+}
+
+function qtHighlight(nodeId, color, strokeW) {
+  const n = document.getElementById(nodeId);
+  if(n){ n.setAttribute('stroke', color); n.setAttribute('stroke-width', strokeW || '2'); n.setAttribute('fill', color === '#7c6cfc' ? '#1a1026' : (color === '#4ade80' ? '#0a1f0a' : '#1a0808')); }
+}
+
+async function runQTAnim() {
+  if (qtBusy) return;
+  qtBusy = true;
+  resetQTAnim();
+  const D = getQTDelay;
+
+  // Step 1: Traverse to find leaf
+  elTx('qt-step', 'Step 1: Start at ROOT. User is in NE quadrant. Descend into NE child.');
+  elTx('qt-status-btn', 'Step 1/5 — Traversal');
+  qtHighlight('qt-t0', '#7c6cfc', '2.5');
+  await wait(D() * 0.5);
+  qtHighlight('qt-t1', '#7c6cfc', '2.5');
+  await wait(D() * 0.5);
+
+  // Step 2: Found leaf
+  elTx('qt-step', 'Step 2: NE.NW is the leaf containing user’s position. Highlight the cell and its restaurants.');
+  elTx('qt-status-btn', 'Step 2/5 — Leaf found');
+  qtHighlight('qt-t2', '#f97316', '2.5');
+  show('qt-cell1');
+  await wait(D());
+
+  // Step 3: Check neighbours
+  elTx('qt-step', 'Step 3: Leaf has 5 restaurants ≥ K=5. Also check neighbouring cells for completeness.');
+  elTx('qt-status-btn', 'Step 3/5 — Neighbours');
+  show('qt-cell2'); show('qt-cell3'); show('qt-cell4');
+  await wait(D());
+
+  // Step 4: Highlight results
+  elTx('qt-step', 'Step 4: Compute Haversine distance to each candidate. Sort. Return top 5.');
+  elTx('qt-status-btn', 'Step 4/5 — Distances');
+  ['qt-r1','qt-r2','qt-r3','qt-r4','qt-r5'].forEach((id,i) =>
+    setTimeout(()=>show(id), i * Math.max(100, D() / 6)));
+  await wait(D());
+
+  // Step 5: Results
+  elTx('qt-step', 'Done. 5 nearest restaurants found. O(log N) traversal — 10 comparisons for 50M restaurants.');
+  elTx('qt-status-btn', 'Done ✓');
+  show('qt-results'); show('qt-rtitle');
+  ['qt-r1t','qt-r2t','qt-r3t','qt-r4t','qt-r5t','qt-expand'].forEach((id,i) =>
+    setTimeout(()=>show(id), i * 120));
+  qtBusy = false;
+}
+
+function resetQTAnim() {
+  ['qt-cell1','qt-cell2','qt-cell3','qt-cell4',
+   'qt-r1','qt-r2','qt-r3','qt-r4','qt-r5',
+   'qt-results','qt-rtitle','qt-r1t','qt-r2t','qt-r3t','qt-r4t','qt-r5t','qt-expand'].forEach(hide);
+  ['qt-t0','qt-t1','qt-t2'].forEach(id => {
+    const n = document.getElementById(id);
+    if(n){ n.setAttribute('stroke','#3a3a55'); n.setAttribute('stroke-width','1.5'); n.setAttribute('fill','#12121a'); }
+  });
+  elTx('qt-step',"User asks: “find 5 nearest restaurants.” QuadTree search begins.");
+  elTx('qt-status-btn','Ready');
+  qtBusy = false;
+}
 
 /* ══════════════════════════════════
    RETRY / BACKOFF ANIMATION
