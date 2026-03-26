@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 6 — High Throughput Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--green:#22c55e;--amber:#f59e0b;
+  --red:#ef4444;--purple:#7c3aed;--pink:#ec4899;--teal:#14b8a6;
+  --orange:#f97316;--text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+.hb-o{color:var(--orange);border-color:var(--orange);background:rgba(249,115,22,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+strong{color:var(--text)}
+
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-t{border-top:2px solid var(--teal)}
+.ct-o{border-top:2px solid var(--orange)}.ct-pk{border-top:2px solid var(--pink)}
+
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;border:1px solid;transition:all .15s}
+.dbtn-c{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--accent)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+.dbtn-a{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+.dbtn-p{background:rgba(124,58,237,.08);border-color:#a78bfa;color:#a78bfa}
+
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;margin-top:14px}
+
+/* pipeline vis */
+.pipe-stage{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;margin:4px 0;font-family:'JetBrains Mono',monospace;font-size:11px;transition:all .4s}
+.pipe-stage.active{border-color:var(--green);background:rgba(34,197,94,.07)}
+.pipe-stage.processing{border-color:var(--amber);background:rgba(245,158,11,.07);animation:pulse .8s ease infinite alternate}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+
+/* order state machine */
+.state-node{display:inline-flex;align-items:center;justify-content:center;padding:6px 14px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:default;transition:all .3s;border:1px solid}
+.state-active{background:rgba(34,197,94,.12);border-color:var(--green);color:var(--green)}
+.state-inactive{background:var(--surf2);border-color:var(--border);color:var(--muted)}
+.state-error{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red)}
+
+/* stream viewer */
+.stream-chunk{background:var(--surf2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;margin:2px;font-family:'JetBrains Mono',monospace;font-size:10px;display:inline-block;transition:all .3s}
+.stream-chunk.buffered{border-color:var(--amber);color:var(--amber)}
+.stream-chunk.played{border-color:var(--green);color:var(--green);opacity:.5}
+.stream-chunk.ad{border-color:var(--pink);background:rgba(236,72,153,.08);color:var(--pink)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 6 · Building High Throughput Systems — All 5 Topics</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">S3 Design</span>
+    <span class="hbadge hb-g">Orders (Amazon)</span>
+    <span class="hbadge hb-p">LSM Trees</span>
+    <span class="hbadge hb-a">Ads Streaming</span>
+    <span class="hbadge hb-o">Live HA</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>Designing S3</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>Multi-tiered Orders (Amazon)</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>LSM Trees Ground Up</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>Ads in Live Streaming</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Privacy &amp; HA in Live Streaming</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════ T1: DESIGNING S3 ══════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t1a">Problem & Scale</div>
+    <div class="stab" data-s="t1b">Core Architecture</div>
+    <div class="stab" data-s="t1c">Durability & Replication</div>
+    <div class="stab" data-s="t1d">Consistency & Versioning</div>
+    <div class="stab" data-s="t1e">Code</div>
+    <div class="stab" data-s="t1f">Tradeoffs & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">Designing <em>S3</em> — Object Storage at Exabyte Scale</div>
+    <p class="psub">S3 (Simple Storage Service) stores objects (files) identified by bucket + key, at any scale, with 11 9s of durability. Design the storage backend: how data is stored, replicated, retrieved, and guaranteed never to be lost.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">11 9s</div><div class="slbl">Durability (99.999999999%)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">∞</div><div class="slbl">Storage capacity (virtually unlimited)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">5 TB</div><div class="slbl">Max single object size</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">99.99%</div><div class="slbl">Availability SLA</div></div>
+    </div>
+    <h3>Requirements</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Functional</h4><ul class="rl"><li>PUT object (upload), GET object (download), DELETE object</li><li>Multipart upload for large files (&gt;100 MB)</li><li>Versioning — keep multiple versions of same key</li><li>Lifecycle policies — auto-delete or tier old objects</li><li>Pre-signed URLs for temporary, direct access</li><li>Object metadata (content-type, custom headers)</li></ul></div>
+      <div class="card ct-g"><h4>Non-Functional</h4><ul class="rl"><li><strong>Durability: 99.999999999%</strong> — 11 nines</li><li><strong>Availability: 99.99%</strong> — 52 minutes downtime/year</li><li>Strong read-after-write consistency</li><li>PUT latency: &lt;200ms p99 for small objects</li><li>Throughput: millions of requests/sec</li></ul></div>
+      <div class="card ct-a"><h4>Scale</h4><ul class="rl"><li>AWS S3 stores 300+ trillion objects</li><li>100B+ requests/day across all customers</li><li>Millions of concurrent connections</li><li>5 PB+ stored per second globally</li><li>Region isolation for compliance (GDPR, data residency)</li></ul></div>
+    </div>
+    <h3>What Makes 11 Nines of Durability So Hard?</h3>
+    <div class="call ci"><strong>11 nines math:</strong> 99.999999999% durability for 10 billion objects = you expect to lose at most 1 object in 100,000 years. A single hard drive fails ~1–4% per year. To get 11 nines, data must survive: disk failure, server failure, rack failure, datacenter failure, and even region failure — simultaneously. This requires at minimum 3× replication across 3 geographically separate availability zones.</div>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle">Core <em>Architecture</em></div>
+    <h3>Key Components</h3>
+    <div class="diag">
+<svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs>
+    <marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="ag" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker>
+    <marker id="aa" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#f59e0b" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="716" height="196" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Client -->
+  <rect x="14" y="60" width="80" height="80" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="54" y="86" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Client</text>
+  <text x="54" y="100" text-anchor="middle" fill="#5a6a85" font-size="8">PUT/GET</text>
+  <text x="54" y="114" text-anchor="middle" fill="#5a6a85" font-size="8">/bucket/key</text>
+  <!-- API Frontend -->
+  <rect x="152" y="40" width="110" height="120" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="207" y="58" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">API Frontend</text>
+  <text x="207" y="73" text-anchor="middle" fill="#5a6a85" font-size="8">Auth (IAM/ACL)</text>
+  <text x="207" y="86" text-anchor="middle" fill="#5a6a85" font-size="8">Rate limiting</text>
+  <text x="207" y="99" text-anchor="middle" fill="#5a6a85" font-size="8">Request routing</text>
+  <text x="207" y="112" text-anchor="middle" fill="#5a6a85" font-size="8">Multipart mgmt</text>
+  <text x="207" y="148" text-anchor="middle" fill="#5a6a85" font-size="7">Stateless × N</text>
+  <!-- Metadata Service -->
+  <rect x="322" y="30" width="120" height="80" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="382" y="52" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Metadata</text>
+  <text x="382" y="67" text-anchor="middle" fill="#a78bfa" font-size="9">Service</text>
+  <text x="382" y="82" text-anchor="middle" fill="#5a6a85" font-size="8">bucket/key → chunk_ids</text>
+  <text x="382" y="95" text-anchor="middle" fill="#5a6a85" font-size="8">object size, checksum</text>
+  <text x="382" y="108" text-anchor="middle" fill="#5a6a85" font-size="7">stored in distributed DB</text>
+  <!-- Storage Nodes -->
+  <rect x="322" y="130" width="120" height="60" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="382" y="152" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Storage Nodes</text>
+  <text x="382" y="167" text-anchor="middle" fill="#5a6a85" font-size="8">chunk_id → disk offset</text>
+  <text x="382" y="180" text-anchor="middle" fill="#5a6a85" font-size="7">erasure coded or 3× replicated</text>
+  <!-- Replication -->
+  <rect x="502" y="20" width="200" height="170" rx="5" fill="#090d15" stroke="#1e2d45" stroke-dasharray="4,3"/>
+  <text x="602" y="38" text-anchor="middle" fill="#3a4a60" font-size="8" letter-spacing="1">3 AVAILABILITY ZONES</text>
+  <rect x="510" y="46" width="55" height="36" rx="3" fill="#131a2a" stroke="#22c55e" stroke-width="1"/>
+  <text x="537" y="60" text-anchor="middle" fill="#86efac" font-size="8" font-weight="700">AZ-1</text>
+  <text x="537" y="72" text-anchor="middle" fill="#5a6a85" font-size="7">Primary</text>
+  <rect x="575" y="46" width="55" height="36" rx="3" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="602" y="60" text-anchor="middle" fill="#8a9bb5" font-size="8">AZ-2</text>
+  <text x="602" y="72" text-anchor="middle" fill="#5a6a85" font-size="7">Replica</text>
+  <rect x="640" y="46" width="55" height="36" rx="3" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="667" y="60" text-anchor="middle" fill="#8a9bb5" font-size="8">AZ-3</text>
+  <text x="667" y="72" text-anchor="middle" fill="#5a6a85" font-size="7">Replica</text>
+  <text x="602" y="106" text-anchor="middle" fill="#5a6a85" font-size="8">Erasure coding within AZ</text>
+  <text x="602" y="120" text-anchor="middle" fill="#5a6a85" font-size="7">(6+3 Reed-Solomon)</text>
+  <text x="602" y="140" text-anchor="middle" fill="#5a6a85" font-size="8">Cross-AZ sync replication</text>
+  <text x="602" y="153" text-anchor="middle" fill="#5a6a85" font-size="7">ACK after 2/3 AZs write</text>
+  <text x="602" y="173" text-anchor="middle" fill="#3a4a60" font-size="7">Geo-redundant: optional cross-region</text>
+  <!-- Arrows -->
+  <line x1="96" y1="100" x2="150" y2="100" stroke="#22c55e" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="262" y1="80" x2="320" y2="72" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="262" y1="120" x2="320" y2="148" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#aa)"/>
+  <line x1="444" y1="72" x2="500" y2="66" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <line x1="444" y1="160" x2="500" y2="120" stroke="#f59e0b" stroke-width="1" marker-end="url(#ag)" opacity=".6" stroke-dasharray="3,2"/>
+  <text x="474" y="130" fill="#f59e0b" font-size="7.5" text-anchor="middle">write to AZs</text>
+</svg>
+    </div>
+
+    <h3>Object Storage vs Block Storage vs File Storage</h3>
+    <table>
+      <tr><th>Type</th><th>Access Pattern</th><th>Examples</th><th>Use Case</th></tr>
+      <tr><td>Object (S3)</td><td>Key-value: bucket/key → blob</td><td>S3, GCS, Azure Blob</td><td>Images, videos, backups, logs, ML datasets</td></tr>
+      <tr><td>Block (EBS)</td><td>Fixed-size blocks by offset</td><td>EBS, SAN, NVMe</td><td>OS disk, database storage, raw volumes</td></tr>
+      <tr><td>File (EFS)</td><td>Hierarchical directory + filename</td><td>EFS, NFS, SMB</td><td>Shared filesystems, HPC, home directories</td></tr>
+    </table>
+
+    <h3>Chunked Storage for Large Objects</h3>
+    <p>A 5 TB file cannot be stored on a single disk. S3 splits large objects into <strong>chunks</strong> (e.g., 64 MB each). Each chunk is stored independently across storage nodes. The metadata service tracks chunk_ids → storage node locations. On read: fetch chunks in parallel, reassemble on client.</p>
+    <div class="g g2">
+      <div class="card ct-c"><h4>PUT Object Flow</h4><ul class="rl"><li>Client → API: PUT /bucket/key</li><li>API → Metadata: allocate chunk_ids for this object</li><li>API splits object → N chunks</li><li>Each chunk written to 3 storage nodes (different AZs)</li><li>API waits for 2/3 AZ confirms → ACK to client</li><li>Metadata updated: key → chunk_id list</li></ul></div>
+      <div class="card ct-g"><h4>GET Object Flow</h4><ul class="rl"><li>Client → API: GET /bucket/key</li><li>API → Metadata: get chunk_ids for this key</li><li>API → Storage Nodes: fetch chunks (parallel)</li><li>Verify checksums (detect bit rot)</li><li>Reassemble and stream to client</li><li>Heal corrupt chunk from replica if detected</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle">Durability &amp; <em>Replication</em></div>
+    <h3>How S3 Achieves 11 Nines of Durability</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Erasure Coding within each AZ</div><div class="fd">Instead of storing 3 full copies (300% storage overhead), S3 uses Reed-Solomon erasure coding. A 6+3 scheme: split data into 6 shards + 3 parity shards. Any 6 of 9 shards can reconstruct the original. Overhead: only 50% (vs 200% for 3× replication).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Cross-AZ synchronous replication</div><div class="fd">Each object is written to 3 availability zones before acknowledging success. AZs are physically separate datacenters in the same region, each with independent power and networking. If one AZ floods or burns down, 2 others have the data.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Background data integrity checks</div><div class="fd">S3 continuously reads stored data, verifies checksums, and automatically heals any corruption detected by re-reading from another replica and rewriting. This catches silent disk corruption ("bit rot") that would otherwise go undetected.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Cross-region replication (optional)</div><div class="fd">S3 Cross-Region Replication (CRR) asynchronously copies objects to another region. Protects against region-level disasters. Adds cost and write latency. Used for disaster recovery and compliance.</div></div></div>
+    </div>
+    <h3>Erasure Coding Deep Dive</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Reed-Solomon (6+3)</h4><p>Divide 12 GB object into 6 × 2 GB data shards. Generate 3 × 2 GB parity shards using polynomial arithmetic. Store each of 9 shards on a different disk/node. Any 6 of 9 reconstruct original. Tolerates loss of any 3 shards.</p><p style="font-size:12px;color:var(--muted)">Storage overhead: 9/6 = 1.5× (vs 3× for full replication)</p></div>
+      <div class="card ct-g"><h4>Why Not Just 3× Replication?</h4><p>3× replication is simpler but wastes 200% storage overhead. At petabyte scale, the cost difference is enormous. S3's actual durability comes from the combination of erasure coding + cross-AZ replication + continuous integrity verification, not from brute-force copying.</p></div>
+    </div>
+    <table>
+      <tr><th>Strategy</th><th>Storage Overhead</th><th>Fault Tolerance</th><th>Read Amplification</th><th>Write Latency</th></tr>
+      <tr><td>3× Replication</td><td>200%</td><td>2 failures</td><td>1×</td><td>Low (parallel)</td></tr>
+      <tr><td>Erasure (6+3)</td><td>50%</td><td>3 failures</td><td>6× (rebuild)</td><td>Higher (encode)</td></tr>
+      <tr><td>Erasure (14+2)</td><td>14%</td><td>2 failures</td><td>14× (rebuild)</td><td>Higher</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle">Consistency &amp; <em>Versioning</em></div>
+    <h3>S3's Consistency Model</h3>
+    <div class="g g2">
+      <div class="card ct-g"><h4>Strong Read-after-Write Consistency (2020+)</h4><p>Since Dec 2020, S3 offers strong consistency for all operations. PUT → immediate GET returns the new object. LIST → reflects all completed PUTs. Previously, S3 had eventual consistency for overwrites and LIST operations — this caused real production bugs.</p></div>
+      <div class="card ct-c"><h4>How Strong Consistency is Implemented</h4><p>S3's metadata service (a distributed KV store) is the single source of truth. Any GET goes through the same metadata service that processed the PUT. No stale reads from replicas. The metadata service uses Paxos/Raft for consistency across its nodes.</p></div>
+    </div>
+    <h3>Versioning</h3>
+    <div class="cwrap"><div class="ctop"><span>S3-style versioning — metadata schema</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="cmt">-- Objects table (when versioning is enabled)</span>
+<span class="kw">CREATE TABLE</span> s3_objects (
+    bucket_name  <span class="cls">VARCHAR</span>(<span class="num">63</span>)  <span class="kw">NOT NULL</span>,
+    key_name     <span class="cls">VARCHAR</span>(<span class="num">1024</span>) <span class="kw">NOT NULL</span>,
+    version_id   <span class="cls">VARCHAR</span>(<span class="num">32</span>)  <span class="kw">NOT NULL</span>,   <span class="cmt">-- Snowflake or UUID</span>
+    is_latest    <span class="cls">BOOLEAN</span>      <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,
+    is_delete_marker <span class="cls">BOOLEAN</span>  <span class="kw">DEFAULT</span> <span class="kw">FALSE</span>,
+    size_bytes   <span class="cls">BIGINT</span>,
+    etag         <span class="cls">CHAR</span>(<span class="num">32</span>),              <span class="cmt">-- MD5 of content</span>
+    chunk_ids    <span class="cls">JSON</span>,                  <span class="cmt">-- [chunk_id1, chunk_id2, ...]</span>
+    created_at   <span class="cls">BIGINT</span>       <span class="kw">NOT NULL</span>,
+
+    <span class="kw">PRIMARY KEY</span> (bucket_name, key_name, version_id),
+    <span class="kw">INDEX</span> idx_latest (bucket_name, key_name, is_latest)
+);
+
+<span class="cmt">-- GET without version_id → returns is_latest=TRUE version</span>
+<span class="cmt">-- DELETE → inserts a "delete marker" as new version</span>
+<span class="cmt">-- GET with deleted object → hits delete marker → 404</span>
+<span class="cmt">-- Restore → DELETE the delete marker → previous version surfaces</span></pre></div>
+    <h3>Multipart Upload</h3>
+    <p>For large objects (&gt;100 MB), multipart upload allows parallel chunk uploads. Each part is uploaded independently and tracked. Only when all parts are uploaded does the final object become visible. Resumable on failure.</p>
+    <div class="cwrap"><div class="ctop"><span>multipart_upload.py — parallel chunk upload</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, boto3
+s3 = boto3.<span class="fn">client</span>(<span class="str">"s3"</span>)
+
+<span class="kw">async def</span> <span class="fn">multipart_upload</span>(bucket: str, key: str, filepath: str,
+                            chunk_size: int = <span class="num">64</span> * <span class="num">1024</span> * <span class="num">1024</span>):  <span class="cmt"># 64 MB chunks</span>
+    <span class="str">"""Upload large file in parallel chunks."""</span>
+    <span class="cmt"># 1. Initiate multipart upload → get upload_id</span>
+    resp      = s3.<span class="fn">create_multipart_upload</span>(Bucket=bucket, Key=key)
+    upload_id = resp[<span class="str">"UploadId"</span>]
+    parts     = []
+
+    <span class="kw">try</span>:
+        <span class="cmt"># 2. Upload each chunk in parallel</span>
+        <span class="kw">with</span> <span class="fn">open</span>(filepath, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+            chunk_num = <span class="num">1</span>
+            <span class="kw">while True</span>:
+                chunk = f.<span class="fn">read</span>(chunk_size)
+                <span class="kw">if not</span> chunk: <span class="kw">break</span>
+                r = s3.<span class="fn">upload_part</span>(
+                    Bucket=bucket, Key=key, PartNumber=chunk_num,
+                    UploadId=upload_id, Body=chunk
+                )
+                parts.<span class="fn">append</span>({<span class="str">"PartNumber"</span>: chunk_num, <span class="str">"ETag"</span>: r[<span class="str">"ETag"</span>]})
+                chunk_num += <span class="num">1</span>
+
+        <span class="cmt"># 3. Complete → object becomes visible atomically</span>
+        s3.<span class="fn">complete_multipart_upload</span>(
+            Bucket=bucket, Key=key, UploadId=upload_id,
+            MultipartUpload={<span class="str">"Parts"</span>: parts}
+        )
+    <span class="kw">except Exception</span>:
+        s3.<span class="fn">abort_multipart_upload</span>(Bucket=bucket, Key=key, UploadId=upload_id)
+        <span class="kw">raise</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Code — <em>S3-like Object Store Implementation</em></div>
+    <div class="cwrap"><div class="ctop"><span>object_store.py — minimal S3-compatible object store</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> os, hashlib, json, time
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, UploadFile, HTTPException
+<span class="kw">from</span> fastapi.responses <span class="kw">import</span> StreamingResponse
+
+app      = <span class="fn">FastAPI</span>()
+DATA_DIR = <span class="str">"/data/objects"</span>
+META_DIR = <span class="str">"/data/metadata"</span>
+
+<span class="kw">def</span> <span class="fn">_chunk_key</span>(bucket: str, key: str) -> str:
+    <span class="str">"""Deterministic storage path — flat namespace avoids directory limits."""</span>
+    h = hashlib.<span class="fn">sha256</span>(<span class="str">f"{bucket}/{key}"</span>.<span class="fn">encode</span>()).<span class="fn">hexdigest</span>()
+    <span class="kw">return</span> <span class="str">f"{h[:2]}/{h[2:4]}/{h}"</span>   <span class="cmt"># 2-level prefix avoids inode hotspot</span>
+
+<span class="dec">@app.put</span>(<span class="str">"/{bucket}/{key:path}"</span>)
+<span class="kw">async def</span> <span class="fn">put_object</span>(bucket: str, key: str, file: <span class="cls">UploadFile</span>):
+    <span class="str">"""Upload object. Returns ETag (MD5 of content)."""</span>
+    content  = <span class="kw">await</span> file.<span class="fn">read</span>()
+    etag     = hashlib.<span class="fn">md5</span>(content).<span class="fn">hexdigest</span>()
+    ck       = <span class="fn">_chunk_key</span>(bucket, key)
+    path     = <span class="str">f"{DATA_DIR}/{ck}"</span>
+
+    os.<span class="fn">makedirs</span>(os.path.<span class="fn">dirname</span>(path), exist_ok=<span class="kw">True</span>)
+    <span class="kw">with</span> <span class="fn">open</span>(path, <span class="str">"wb"</span>) <span class="kw">as</span> f: f.<span class="fn">write</span>(content)
+
+    <span class="cmt"># Store metadata (key → chunk path + etag + size)</span>
+    meta_path = <span class="str">f"{META_DIR}/{bucket}/{key}.json"</span>
+    os.<span class="fn">makedirs</span>(os.path.<span class="fn">dirname</span>(meta_path), exist_ok=<span class="kw">True</span>)
+    <span class="kw">with</span> <span class="fn">open</span>(meta_path, <span class="str">"w"</span>) <span class="kw">as</span> f:
+        json.<span class="fn">dump</span>({<span class="str">"chunk_key"</span>:ck, <span class="str">"etag"</span>:etag,
+                   <span class="str">"size"</span>:<span class="fn">len</span>(content), <span class="str">"created_at"</span>:<span class="fn">int</span>(time.<span class="fn">time</span>())}, f)
+
+    <span class="kw">return</span> {<span class="str">"ETag"</span>: etag, <span class="str">"size"</span>: <span class="fn">len</span>(content)}
+
+<span class="dec">@app.get</span>(<span class="str">"/{bucket}/{key:path}"</span>)
+<span class="kw">async def</span> <span class="fn">get_object</span>(bucket: str, key: str):
+    <span class="str">"""Download object. Verify ETag on serve."""</span>
+    meta_path = <span class="str">f"{META_DIR}/{bucket}/{key}.json"</span>
+    <span class="kw">if not</span> os.path.<span class="fn">exists</span>(meta_path):
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="num">404</span>, <span class="str">"NoSuchKey"</span>)
+
+    <span class="kw">with</span> <span class="fn">open</span>(meta_path) <span class="kw">as</span> f: meta = json.<span class="fn">load</span>(f)
+    data_path = <span class="str">f"{DATA_DIR}/{meta['chunk_key']}"</span>
+
+    <span class="kw">def</span> <span class="fn">stream_file</span>():
+        <span class="kw">with</span> <span class="fn">open</span>(data_path, <span class="str">"rb"</span>) <span class="kw">as</span> f:
+            <span class="kw">while</span> chunk := f.<span class="fn">read</span>(<span class="num">65536</span>): <span class="kw">yield</span> chunk
+
+    <span class="kw">return</span> <span class="cls">StreamingResponse</span>(
+        <span class="fn">stream_file</span>(),
+        headers={<span class="str">"ETag"</span>: meta[<span class="str">"etag"</span>], <span class="str">"Content-Length"</span>: <span class="fn">str</span>(meta[<span class="str">"size"</span>])}
+    )</pre></div>
+  </div>
+
+  <div class="spanel" id="t1f">
+    <div class="ptitle">Trade<em>offs &amp; Outcome</em></div>
+    <table>
+      <tr><th>Decision</th><th>Choice</th><th>Why</th></tr>
+      <tr><td>Storage within AZ</td><td>Erasure coding (6+3)</td><td>50% overhead vs 200% for 3× replication; same fault tolerance</td></tr>
+      <tr><td>Cross-AZ</td><td>3-way replication</td><td>Geographic fault isolation; AZ failure = still 2 copies</td></tr>
+      <tr><td>Object ID namespace</td><td>Flat (bucket/key) not hierarchical</td><td>Unlimited scale; no directory inode limits</td></tr>
+      <tr><td>Metadata store</td><td>Distributed KV (Paxos/Raft)</td><td>Strong consistency for read-after-write guarantees</td></tr>
+      <tr><td>Large file handling</td><td>Chunked (64 MB parts)</td><td>Parallelism; resumability; single disk can't hold 5 TB</td></tr>
+      <tr><td>Data integrity</td><td>MD5/SHA256 ETag + background verification</td><td>Detect and heal bit rot before permanent data loss</td></tr>
+    </table>
+    <ul class="ol" style="margin-top:12px">
+      <li><strong>Erasure coding is the key to 11 nines durability at reasonable cost</strong> — 50% overhead vs 200% for 3× replication. The math: losing 3 out of 9 shards = P(failure) = (disk_failure_rate)³ = astronomically low.</li>
+      <li><strong>Flat namespace (not hierarchical) is what allows unlimited scale</strong> — S3 "folders" are just key prefixes. No directory inode limits. A single bucket can hold trillions of objects.</li>
+      <li><strong>Strong consistency requires the metadata service to be the single source of truth</strong> — no reads can go to replicas without going through the same consistent metadata layer that processed the write.</li>
+      <li><strong>Chunked storage enables parallelism and resumability</strong> — upload 5 TB file in 81,920 × 64 MB chunks in parallel. If connection drops, only the in-progress chunk must retry, not the whole file.</li>
+      <li><strong>Background integrity verification is what prevents data loss in practice</strong> — disks develop silent corruption over years. Continuous checksum verification catches this before it spreads to all replicas.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T2: MULTI-TIERED ORDERS (AMAZON) ══════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t2a">Problem & State Machine</div>
+    <div class="stab" data-s="t2b">Multi-tier Architecture</div>
+    <div class="stab" data-s="t2c">Concurrency & Inventory</div>
+    <div class="stab" data-s="t2d">Code</div>
+    <div class="stab" data-s="t2e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">Designing Multi-tiered <em>Orders for Amazon</em></div>
+    <p class="psub">Amazon processes hundreds of millions of orders. An order isn't a single DB row — it's a complex state machine spanning multiple services: inventory, payment, fulfillment, shipping, returns. Each transition must be atomic, durable, and eventually consistent across services.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">300M+</div><div class="slbl">Active customers</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">10K</div><div class="slbl">Orders per second (peak)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">~15</div><div class="slbl">Services per order lifecycle</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">&lt;200ms</div><div class="slbl">Checkout latency target</div></div>
+    </div>
+    <h3>Order State Machine</h3>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Order State Machine — click state to advance</span>
+      </div>
+      <div class="demo-body">
+        <div id="order-states" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px"></div>
+        <div id="order-desc" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);padding:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;min-height:36px"></div>
+      </div>
+    </div>
+    <h3>Why Orders Are Hard</h3>
+    <div class="g g3">
+      <div class="card ct-r"><h4>Distributed transactions</h4><p>Order creation requires: reserve inventory + charge payment + create fulfillment record — all atomically. Across separate microservices. 2PC is slow and fragile. SAGA pattern is the solution.</p></div>
+      <div class="card ct-a"><h4>Concurrency</h4><p>1000 users ordering the last iPhone simultaneously. Inventory must be consistent — no overselling. But also no deadlocks that crash the checkout flow for everyone else.</p></div>
+      <div class="card ct-p"><h4>Idempotency</h4><p>Network failures mean requests may be retried. Charging a card twice is catastrophic. Every order operation must be idempotent — same input → same result, regardless of how many times it's called.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle">Multi-tier <em>Architecture</em></div>
+    <h3>The SAGA Pattern for Distributed Order Processing</h3>
+    <p>Instead of 2-phase commit (synchronous, fragile), use choreography-based SAGA: each service does its local transaction and publishes an event. If any step fails, compensating transactions roll back previous steps.</p>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Order Service: CREATE order record (PENDING)</div><div class="fd">Persist order to DB. Publish <code>order.created</code> event to Kafka. Return order_id to client immediately — no waiting for payment or inventory.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Inventory Service: Reserve stock</div><div class="fd">Consumes <code>order.created</code>. Decrements inventory (SELECT FOR UPDATE). Success → publish <code>inventory.reserved</code>. Failure (out of stock) → publish <code>inventory.reserve_failed</code> → triggers order cancellation.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Payment Service: Charge card</div><div class="fd">Consumes <code>inventory.reserved</code>. Charges payment method. Success → publish <code>payment.charged</code>. Failure → publish <code>payment.failed</code> → compensating: release inventory reservation.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Fulfillment Service: Create shipment</div><div class="fd">Consumes <code>payment.charged</code>. Creates fulfillment record, assigns to warehouse. Publishes <code>fulfillment.scheduled</code>.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Notification Service: Confirm to customer</div><div class="fd">Sends order confirmation email/SMS. Order is now in CONFIRMED state. Each subsequent state change (shipped, delivered) repeats this notification pattern.</div></div></div>
+    </div>
+    <h3>Compensating Transactions (Rollback)</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Payment fails after inventory reserved</h4><p>Compensating transaction: publish <code>inventory.release</code> event → Inventory Service releases the reservation. Order moves to CANCELLED state. Customer notified.</p></div>
+      <div class="card ct-a"><h4>Fulfillment fails after payment charged</h4><p>Compensating transaction: refund payment → release inventory. These compensating transactions must also be idempotent — network failures may cause them to be retried.</p></div>
+    </div>
+    <div class="call ci"><strong>SAGA vs 2PC:</strong> 2-Phase Commit holds distributed locks for the duration of the entire transaction — seconds with network roundtrips. SAGA has no distributed locks; each service commits immediately and compensates on failure. 10–100× better throughput for order processing.</div>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">Concurrency &amp; <em>Inventory Management</em></div>
+    <h3>The Last-Item Race Condition</h3>
+    <p>1000 users simultaneously try to buy the last iPhone. All read inventory = 1. All try to decrement. Without proper concurrency control: all succeed and you've sold 1000 iPhones you don't have.</p>
+    <h3>Solution 1: Optimistic Locking (high concurrency, low conflict)</h3>
+    <div class="cwrap"><div class="ctop"><span>inventory_optimistic.py — version-based CAS</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">async def</span> <span class="fn">reserve_inventory_optimistic</span>(db, product_id: int, qty: int,
+                                          max_retries: int = <span class="num">3</span>) -> bool:
+    <span class="str">"""Try to reserve qty units. Retry on conflict (optimistic lock)."""</span>
+    <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(max_retries):
+        <span class="cmt"># 1. Read current state with version</span>
+        row = <span class="kw">await</span> db.<span class="fn">fetchrow</span>(
+            <span class="str">"SELECT available_qty, version FROM inventory WHERE product_id=$1"</span>,
+            product_id
+        )
+        <span class="kw">if</span> row[<span class="str">"available_qty"</span>] < qty:
+            <span class="kw">return False</span>   <span class="cmt"># not enough stock</span>
+
+        <span class="cmt"># 2. Try to update with version check (CAS)</span>
+        updated = <span class="kw">await</span> db.<span class="fn">execute</span>(
+            <span class="str">"UPDATE inventory SET available_qty=available_qty-$1, version=version+1 "</span>
+            <span class="str">"WHERE product_id=$2 AND version=$3 AND available_qty>=$1"</span>,
+            qty, product_id, row[<span class="str">"version"</span>]
+        )
+        <span class="kw">if</span> updated:
+            <span class="kw">return True</span>   <span class="cmt"># successfully reserved</span>
+        <span class="cmt"># Version mismatch = concurrent update; retry</span>
+    <span class="kw">return False</span>   <span class="cmt"># gave up after retries</span></pre></div>
+
+    <h3>Solution 2: Pessimistic Locking (high contention scenarios)</h3>
+    <div class="cwrap"><div class="ctop"><span>inventory_pessimistic.py — SELECT FOR UPDATE</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">async def</span> <span class="fn">reserve_inventory_pessimistic</span>(db, product_id: int, qty: int) -> bool:
+    <span class="str">"""Lock row during reservation — guaranteed consistency, lower throughput."""</span>
+    <span class="kw">async with</span> db.<span class="fn">transaction</span>():
+        row = <span class="kw">await</span> db.<span class="fn">fetchrow</span>(
+            <span class="str">"SELECT available_qty FROM inventory WHERE product_id=$1 FOR UPDATE"</span>,
+            product_id
+        )
+        <span class="kw">if</span> row[<span class="str">"available_qty"</span>] < qty:
+            <span class="kw">return False</span>
+        <span class="kw">await</span> db.<span class="fn">execute</span>(
+            <span class="str">"UPDATE inventory SET available_qty=available_qty-$1 WHERE product_id=$2"</span>,
+            qty, product_id
+        )
+        <span class="kw">return True</span></pre></div>
+
+    <h3>Solution 3: Redis Atomic DECRBY (fastest)</h3>
+    <div class="cwrap"><div class="ctop"><span>Redis DECRBY for inventory — lock-free, O(1)</span><span class="ltag lsq">Redis + Python</span></div>
+    <pre><span class="kw">async def</span> <span class="fn">reserve_inventory_redis</span>(redis, product_id: int, qty: int) -> bool:
+    <span class="str">"""
+    Redis DECRBY is atomic — no locking needed.
+    If result < 0: too many reservations, undo and return False.
+    Use Lua script for atomicity of check + decrement.
+    """</span>
+    script = <span class="str">"""
+    local current = redis.call('GET', KEYS[1])
+    if not current or tonumber(current) < tonumber(ARGV[1]) then
+        return 0
+    end
+    redis.call('DECRBY', KEYS[1], ARGV[1])
+    return 1
+    """</span>
+    result = <span class="kw">await</span> redis.<span class="fn">eval</span>(script, <span class="num">1</span>, <span class="str">f"inventory:{product_id}"</span>, qty)
+    <span class="kw">return</span> <span class="fn">bool</span>(result)
+    <span class="cmt"># Flush to DB asynchronously — Redis is the fast inventory counter</span>
+    <span class="cmt"># DB is the persistent record</span></pre></div>
+
+    <h3>Idempotency Keys</h3>
+    <div class="call cg"><strong>Pattern:</strong> Client sends <code>Idempotency-Key: uuid-v4</code> header. Server stores <code>{idempotency_key → response}</code> in Redis for 24h. If same key arrives again (retry): return stored response without re-executing. This prevents duplicate charges, duplicate orders, duplicate emails.</div>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle">Code — <em>Full Order Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>order_service.py — SAGA orchestration</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> uuid, time
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, Header, HTTPException
+
+app = <span class="fn">FastAPI</span>()
+
+<span class="dec">@app.post</span>(<span class="str">"/orders"</span>)
+<span class="kw">async def</span> <span class="fn">create_order</span>(
+    cart: <span class="cls">Cart</span>,
+    user_id: int,
+    idempotency_key: str = <span class="fn">Header</span>(<span class="kw">None</span>)
+):
+    <span class="str">"""
+    Create order and kick off SAGA.
+    Returns immediately — processing is async.
+    """</span>
+    <span class="cmt"># 1. Check idempotency</span>
+    <span class="kw">if</span> idempotency_key:
+        cached = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">f"idem:{idempotency_key}"</span>)
+        <span class="kw">if</span> cached:
+            <span class="kw">return</span> json.<span class="fn">loads</span>(cached)   <span class="cmt"># idempotent: return previous result</span>
+
+    <span class="cmt"># 2. Create order record (PENDING)</span>
+    order_id = <span class="fn">str</span>(uuid.<span class="fn">uuid4</span>())
+    now      = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    <span class="kw">await</span> db.<span class="fn">execute</span>(
+        <span class="str">"INSERT INTO orders(id,user_id,status,cart_json,created_at) "</span>
+        <span class="str">"VALUES($1,$2,'PENDING',$3,$4)"</span>,
+        order_id, user_id, cart.<span class="fn">json</span>(), now
+    )
+
+    <span class="cmt"># 3. Publish to Kafka → triggers SAGA chain</span>
+    <span class="kw">await</span> kafka.<span class="fn">publish</span>(<span class="str">"order.created"</span>, {
+        <span class="str">"order_id"</span>: order_id,
+        <span class="str">"user_id"</span>:  user_id,
+        <span class="str">"items"</span>:    cart.items,
+        <span class="str">"idempotency_key"</span>: idempotency_key
+    })
+
+    response = {<span class="str">"order_id"</span>: order_id, <span class="str">"status"</span>: <span class="str">"PENDING"</span>}
+
+    <span class="cmt"># 4. Cache idempotent result</span>
+    <span class="kw">if</span> idempotency_key:
+        <span class="kw">await</span> redis.<span class="fn">setex</span>(<span class="str">f"idem:{idempotency_key}"</span>, <span class="num">86400</span>, json.<span class="fn">dumps</span>(response))
+
+    <span class="kw">return</span> response
+
+<span class="cmt"># Kafka consumer for state transitions</span>
+<span class="dec">@kafka_listener</span>(<span class="str">"payment.failed"</span>)
+<span class="kw">async def</span> <span class="fn">handle_payment_failed</span>(event: dict):
+    <span class="str">"""Compensating transaction: cancel order + release inventory."""</span>
+    order_id = event[<span class="str">"order_id"</span>]
+    <span class="kw">await</span> db.<span class="fn">execute</span>(<span class="str">"UPDATE orders SET status='CANCELLED' WHERE id=$1"</span>, order_id)
+    <span class="kw">await</span> kafka.<span class="fn">publish</span>(<span class="str">"inventory.release"</span>, {<span class="str">"order_id"</span>: order_id})
+    <span class="kw">await</span> kafka.<span class="fn">publish</span>(<span class="str">"notification.send"</span>, {
+        <span class="str">"order_id"</span>: order_id, <span class="str">"type"</span>: <span class="str">"payment_failed"</span>
+    })</pre></div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Order SAGA Simulator</span>
+        <button class="dbtn dbtn-c" onclick="sagaCreate()" style="margin-left:auto">Place Order</button>
+        <button class="dbtn dbtn-r" onclick="sagaFail()" style="margin-left:6px">Simulate Payment Failure</button>
+        <button class="dbtn dbtn-a" onclick="sagaReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div id="saga-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:8px;height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:11px"></div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>SAGA replaces 2PC for distributed order processing</strong> — no global locks, no blocking across services. Each service commits locally and compensates on failure. 10–100× better throughput than 2PC.</li>
+      <li><strong>Idempotency keys prevent double-charging</strong> — client generates UUID, server caches result for 24h. Retried requests return the cached response without re-executing. Critical for payment operations.</li>
+      <li><strong>Redis Lua script for atomic inventory decrement</strong> — check-and-decrement in one atomic operation. O(1), lock-free, handles thousands of concurrent reservations without contention.</li>
+      <li><strong>Optimistic locking for medium contention</strong> — version column + UPDATE WHERE version=N. If concurrent update happened: version mismatch → retry with fresh read. Better throughput than pessimistic locks for most scenarios.</li>
+      <li><strong>Compensating transactions must also be idempotent</strong> — a payment refund may be retried if the network drops after charging but before confirmation. The refund handler must be safe to call multiple times.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T3: LSM TREES GROUND UP ══════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t3a">Building From Scratch</div>
+    <div class="stab" data-s="t3b">Performance Analysis</div>
+    <div class="stab" data-s="t3c">RocksDB Tuning</div>
+    <div class="stab" data-s="t3d">Bloom Filters in LSM</div>
+    <div class="stab" data-s="t3e">When to Use</div>
+    <div class="stab" data-s="t3f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">LSM Trees <em>Ground Up</em></div>
+    <p class="psub">Week 5 introduced LSM trees as a storage engine. Week 6 goes deeper: building one from scratch, measuring performance characteristics, and understanding how RocksDB — the world's most widely deployed LSM engine — tunes the fundamental trade-offs.</p>
+    <h3>The Core Design Decision: Sequential vs Random I/O</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>B-Tree: Random I/O dominant</h4><p>Every INSERT may trigger a page split → read page → modify → write page. Random write at an arbitrary disk offset. Modern NVMe: random write ~500K IOPS at 4KB. Sequential write: ~3M IOPS. B-tree uses random: 6× slower.</p></div>
+      <div class="card ct-g"><h4>LSM: Sequential I/O by design</h4><p>All writes go to MemTable (in-memory). When full, flush to disk in one sequential write. Disk sees only large sequential writes — no random seeks. Can sustain 500K–5M rows/sec on modern hardware.</p></div>
+    </div>
+    <h3>Building the Minimal Viable LSM</h3>
+    <div class="cwrap"><div class="ctop"><span>minimal_lsm.py — complete minimal implementation</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> os, json, bisect, time, threading
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+
+<span class="cls">TOMBSTONE</span> = <span class="str">"__DELETED__"</span>
+
+<span class="kw">class</span> <span class="cls">SkipListMemTable</span>:
+    <span class="str">"""
+    Simplified MemTable using sorted dict (conceptually a Skip List).
+    Real implementations use Skip List for O(log N) concurrent reads.
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, max_size: int = <span class="num">1000</span>):
+        <span class="kw">self</span>._data    = {}        <span class="cmt"># in production: sorted structure</span>
+        <span class="kw">self</span>.max_size = max_size
+        <span class="kw">self</span>.size     = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">put</span>(<span class="kw">self</span>, key: str, value: str) -> bool:
+        <span class="kw">self</span>._data[key] = (value, time.<span class="fn">time_ns</span>())  <span class="cmt"># (value, timestamp)</span>
+        <span class="kw">self</span>.size += <span class="num">1</span>
+        <span class="kw">return self</span>.size >= <span class="kw">self</span>.max_size   <span class="cmt"># True = needs flush</span>
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        entry = <span class="kw">self</span>._data.<span class="fn">get</span>(key)
+        <span class="kw">return</span> entry[<span class="num">0</span>] <span class="kw">if</span> entry <span class="kw">else None</span>
+
+    <span class="kw">def</span> <span class="fn">to_sorted_pairs</span>(<span class="kw">self</span>):
+        <span class="str">"""Return entries sorted by key (for SSTable write)."""</span>
+        <span class="kw">return sorted</span>(<span class="kw">self</span>._data.<span class="fn">items</span>())
+
+<span class="kw">class</span> <span class="cls">SSTableFile</span>:
+    <span class="str">"""Immutable sorted file on disk with Bloom filter."""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, path: str, entries: list):
+        <span class="kw">self</span>.path     = path
+        <span class="kw">self</span>.min_key  = entries[<span class="num">0</span>][<span class="num">0</span>]   <span class="kw">if</span> entries <span class="kw">else None</span>
+        <span class="kw">self</span>.max_key  = entries[-<span class="num">1</span>][<span class="num">0</span>]  <span class="kw">if</span> entries <span class="kw">else None</span>
+        <span class="kw">self</span>._bloom   = <span class="fn">set</span>(k <span class="kw">for</span> k, _ <span class="kw">in</span> entries)  <span class="cmt"># simplified bloom</span>
+        <span class="cmt"># Write sorted entries to disk</span>
+        <span class="kw">with</span> <span class="fn">open</span>(path, <span class="str">"w"</span>) <span class="kw">as</span> f:
+            <span class="kw">for</span> key, (val, ts) <span class="kw">in</span> entries:
+                f.<span class="fn">write</span>(<span class="str">f"{key}\t{val}\t{ts}\n"</span>)  <span class="cmt"># sequential write!</span>
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str) -> str | <span class="kw">None</span>:
+        <span class="kw">if</span> key <span class="kw">not in self</span>._bloom: <span class="kw">return None</span>  <span class="cmt"># Bloom filter skip</span>
+        <span class="kw">if</span> key < <span class="kw">self</span>.min_key <span class="kw">or</span> key > <span class="kw">self</span>.max_key: <span class="kw">return None</span>
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="kw">self</span>.path) <span class="kw">as</span> f:
+            <span class="kw">for</span> line <span class="kw">in</span> f:
+                k, v, _ = line.<span class="fn">strip</span>().<span class="fn">split</span>(<span class="str">"\t"</span>)
+                <span class="kw">if</span> k == key: <span class="kw">return</span> v
+                <span class="kw">if</span> k  > key: <span class="kw">return None</span>
+        <span class="kw">return None</span>
+
+<span class="kw">class</span> <span class="cls">LSMEngine</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, data_dir: str = <span class="str">"/tmp/lsm_engine"</span>):
+        <span class="kw">self</span>.dir      = <span class="cls">Path</span>(data_dir); <span class="kw">self</span>.dir.<span class="fn">mkdir</span>(parents=<span class="kw">True</span>, exist_ok=<span class="kw">True</span>)
+        <span class="kw">self</span>.memtable = <span class="cls">SkipListMemTable</span>()
+        <span class="kw">self</span>.sstables = []   <span class="cmt"># newest first</span>
+        <span class="kw">self</span>._lock    = threading.<span class="cls">Lock</span>()
+        <span class="kw">self</span>._seq     = <span class="num">0</span>
+        <span class="kw">self</span>.<span class="fn">_open_wal</span>()
+
+    <span class="kw">def</span> <span class="fn">put</span>(<span class="kw">self</span>, key: str, value: str):
+        <span class="kw">with self</span>._lock:
+            <span class="kw">self</span>._wal.<span class="fn">write</span>(<span class="str">f"PUT\t{key}\t{value}\n"</span>); <span class="kw">self</span>._wal.<span class="fn">flush</span>()
+            <span class="kw">if self</span>.memtable.<span class="fn">put</span>(key, value):
+                <span class="kw">self</span>.<span class="fn">_flush</span>()
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str) -> str | <span class="kw">None</span>:
+        val = <span class="kw">self</span>.memtable.<span class="fn">get</span>(key)
+        <span class="kw">if</span> val <span class="kw">is not None</span>:
+            <span class="kw">return None if</span> val == TOMBSTONE <span class="kw">else</span> val
+        <span class="kw">for</span> sst <span class="kw">in self</span>.sstables:
+            val = sst.<span class="fn">get</span>(key)
+            <span class="kw">if</span> val <span class="kw">is not None</span>:
+                <span class="kw">return None if</span> val == TOMBSTONE <span class="kw">else</span> val
+        <span class="kw">return None</span>
+
+    <span class="kw">def</span> <span class="fn">_flush</span>(<span class="kw">self</span>):
+        entries  = <span class="kw">self</span>.memtable.<span class="fn">to_sorted_pairs</span>()
+        <span class="kw">self</span>._seq += <span class="num">1</span>
+        sst_path = <span class="fn">str</span>(<span class="kw">self</span>.dir / <span class="str">f"sst_{self._seq:06d}.sst"</span>)
+        <span class="kw">self</span>.sstables.<span class="fn">insert</span>(<span class="num">0</span>, <span class="cls">SSTableFile</span>(sst_path, entries))
+        <span class="kw">self</span>.memtable = <span class="cls">SkipListMemTable</span>()   <span class="cmt"># fresh MemTable</span>
+        <span class="kw">if</span> <span class="fn">len</span>(<span class="kw">self</span>.sstables) > <span class="num">5</span>:            <span class="cmt"># compact threshold</span>
+            <span class="kw">self</span>.<span class="fn">_compact</span>()</pre></div>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle">Performance <em>Analysis</em></div>
+    <h3>Amplification Factors — The Core Trade-offs</h3>
+    <div class="g g3">
+      <div class="card ct-c">
+        <h4>Write Amplification (WA)</h4>
+        <p>Data written to disk ÷ data user wrote. A single key-value pair gets written to: WAL (1×), MemTable flush (1×), L0→L1 compaction (10×), L1→L2 (10×), … = <strong>30–50×</strong> for leveled compaction.</p>
+        <div class="call cw" style="font-size:11.5px;padding:7px">High WA accelerates SSD wear. At 10× WA, a 1 TB SSD rated for 1 PB total writes becomes effectively 100 TB capacity.</div>
+      </div>
+      <div class="card ct-g">
+        <h4>Read Amplification (RA)</h4>
+        <p>Reads required to satisfy one user read. Worst case (missing key): check MemTable + all SSTable Bloom filters + all SSTable data. With Bloom filters: typically <strong>1–2× disk reads</strong> for existing keys, 0 disk reads for Bloom-filtered misses.</p>
+      </div>
+      <div class="card ct-a">
+        <h4>Space Amplification (SA)</h4>
+        <p>Disk space used ÷ unique data. During compaction: old + new versions coexist. Worst case: 2× during active compaction. Size-tiered: can reach <strong>2–10× SA</strong>. Leveled: lower SA but higher WA.</p>
+      </div>
+    </div>
+    <h3>The RUM Conjecture</h3>
+    <div class="call ci"><strong>RUM Conjecture:</strong> You cannot simultaneously optimize for Read overhead (RA), Update overhead (WA), and Memory overhead (SA). Every storage engine makes a specific trade-off among the three. LSM optimizes for WA at the cost of RA and SA. B-tree optimizes for RA at the cost of WA.</div>
+    <table>
+      <tr><th>Engine</th><th>Write Amplification</th><th>Read Amplification</th><th>Space Amplification</th><th>Best Workload</th></tr>
+      <tr><td>B-Tree (InnoDB)</td><td>~2–5×</td><td>~1–2×</td><td>~1.3×</td><td>Read-heavy, random access</td></tr>
+      <tr><td>LSM Leveled (RocksDB)</td><td>~30–50×</td><td>~3–8×</td><td>~1.1×</td><td>Write-heavy, SSDs</td></tr>
+      <tr><td>LSM Size-Tiered (Cassandra)</td><td>~10–20×</td><td>~5–15×</td><td>~2–10×</td><td>Write-heavy, HDDs</td></tr>
+      <tr><td>Log-structured (Kafka)</td><td>~1×</td><td>Sequential only</td><td>~1×</td><td>Append-only streaming</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">RocksDB <em>Tuning</em></div>
+    <p class="psub">RocksDB is the most widely deployed LSM engine. Used in Kafka, TiKV, CockroachDB, MyRocks (MySQL), and Meta's social graph. Tuning it correctly requires understanding the amplification trade-offs.</p>
+    <h3>Key Configuration Parameters</h3>
+    <table>
+      <tr><th>Parameter</th><th>Default</th><th>Effect</th><th>Tune for writes</th><th>Tune for reads</th></tr>
+      <tr><td>write_buffer_size</td><td>64 MB</td><td>MemTable size before flush</td><td>Larger (256 MB+) → less L0 files</td><td>Smaller → less data to search</td></tr>
+      <tr><td>max_write_buffer_number</td><td>2</td><td>Max MemTables in memory</td><td>Higher → more buffer, less stalling</td><td>Lower → less memory</td></tr>
+      <tr><td>level0_file_num_compaction_trigger</td><td>4</td><td>L0 files to trigger compaction</td><td>Higher → more writes before compaction IO</td><td>Lower → fewer files to search</td></tr>
+      <tr><td>max_bytes_for_level_base</td><td>256 MB</td><td>L1 total size</td><td>Larger → less compaction frequency</td><td>Smaller → more compaction, better reads</td></tr>
+      <tr><td>bloom_filter_bits_per_key</td><td>10 bits</td><td>Bloom filter FP rate</td><td>Lower → less memory</td><td>Higher (20 bits) → fewer disk reads</td></tr>
+      <tr><td>compression</td><td>Snappy</td><td>Block compression</td><td>LZ4 (fast), Snappy (balanced)</td><td>Zstd (best ratio, slower decode)</td></tr>
+    </table>
+    <h3>Block Cache</h3>
+    <div class="call ci"><strong>Block cache</strong> is RocksDB's in-memory LRU cache for frequently accessed SSTable data blocks. Setting it to 50% of available RAM dramatically improves read performance — hot keys are served from memory instead of disk. Configure with: <code>options.block_cache = NewLRUCache(4 * 1024 * 1024 * 1024LL)</code> (4 GB).</div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle">Bloom Filters in <em>LSM Trees</em></div>
+    <p class="psub">Bloom filters are the single most important optimization in an LSM engine. Without them, every read for a missing key must scan all SSTables — O(N) disk reads. With them: one hash computation per SSTable, almost never touching disk for misses.</p>
+    <h3>Bloom Filter Per SSTable</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Why One Per SSTable?</h4><p>Each SSTable is immutable and has a fixed key set. Its Bloom filter is built at creation time and never needs updating. Loaded into memory when the SSTable is opened. A typical SSTable with 1M keys has a Bloom filter of ~1.2 MB (10 bits per key).</p></div>
+      <div class="card ct-g"><h4>Read Path with Bloom</h4><p>For a GET(key): For each SSTable (newest first):<br>1. Check Bloom filter → is "NO" → skip entire SSTable (no disk I/O)<br>2. If "MAYBE" → check SSTable's key range (metadata)<br>3. If in range → binary search index → fetch data block<br><br>Result: 99%+ of misses touch zero SSTables on disk.</p></div>
+    </div>
+    <h3>False Positive Analysis</h3>
+    <table>
+      <tr><th>Bits per key</th><th>False positive rate</th><th>Extra disk reads per 1000 GETs</th></tr>
+      <tr><td>5 bits</td><td>~9.8%</td><td>98 unnecessary reads</td></tr>
+      <tr><td>10 bits (default)</td><td>~1.0%</td><td>10 unnecessary reads</td></tr>
+      <tr><td>15 bits</td><td>~0.3%</td><td>3 unnecessary reads</td></tr>
+      <tr><td>20 bits</td><td>~0.1%</td><td>1 unnecessary read</td></tr>
+    </table>
+    <div class="call cw"><strong>Memory trade-off:</strong> For 1B keys, increasing from 10 to 20 bits per key = 1.25 GB extra RAM for the Bloom filter. This eliminates ~9 unnecessary disk reads per 1000 GETs. At 100K GETs/sec, that's 900 fewer disk reads/sec → worth it if memory is available.</div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">When to Use <em>LSM Trees</em></div>
+    <table>
+      <tr><th>Use LSM When</th><th>Use B-Tree When</th></tr>
+      <tr><td>Write throughput is the primary concern</td><td>Read throughput and low read latency is primary</td></tr>
+      <tr><td>Write:read ratio &gt; 1:10</td><td>Write:read ratio &lt; 1:100</td></tr>
+      <tr><td>Time-series data (append-only or near-append)</td><td>OLTP (banking, inventory) with frequent point lookups</td></tr>
+      <tr><td>Event logging, metrics, activity feeds</td><td>SQL databases, complex joins, transactions</td></tr>
+      <tr><td>Large datasets that can't fit in RAM</td><td>Datasets that fit in buffer pool (most of day's hot data)</td></tr>
+      <tr><td>SSD storage (sequential writes dominate)</td><td>HDD where random vs sequential I/O gap is smaller</td></tr>
+    </table>
+    <h3>Systems Using LSM Trees</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>RocksDB (Meta/Facebook)</h4><p>Powers Kafka's log storage, TiKV (TiDB's storage engine), CockroachDB, MyRocks (MySQL with LSM), Yugabyte. The industry-standard LSM implementation.</p></div>
+      <div class="card ct-g"><h4>Cassandra / HBase</h4><p>Write-optimized NoSQL. Cassandra: social graph, IoT, time-series at Meta/Netflix. HBase: Hadoop-based big data analytics. Both use LSM with cross-node replication.</p></div>
+      <div class="card ct-p"><h4>Kafka</h4><p>Kafka's log is essentially a simple LSM: append-only segments (SSTables), compaction via log compaction, sequential I/O. Not a general KV store but uses the same fundamental design principles.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>LSM converts random writes to sequential writes</strong> — the single insight that makes it 10× faster than B-trees for write-heavy workloads. Every write is a MemTable insert + sequential disk flush. No random seeks.</li>
+      <li><strong>The RUM Conjecture frames all storage engine trade-offs</strong> — Read / Update / Memory. No engine optimizes all three. LSM chooses write (update) at the cost of read and space. B-tree chooses read at the cost of write.</li>
+      <li><strong>Bloom filters eliminate almost all unnecessary disk reads</strong> — for missing keys (99%+ of cache misses), Bloom filter answers in microseconds without touching disk. This is the biggest read optimization in LSM.</li>
+      <li><strong>Write amplification is the LSM tax on SSDs</strong> — 30–50× WA for leveled compaction. At 10 TB/day writes, that's 300–500 TB/day of actual disk writes. SSD endurance must be budgeted for.</li>
+      <li><strong>RocksDB is the reference implementation</strong> — used by Kafka, TiKV, CockroachDB, Meta's social graph. Understanding RocksDB tuning parameters (write_buffer_size, bloom_bits, compaction triggers) is production-critical knowledge.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T4: ADS IN LIVE STREAMING ══════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t4a">Problem & Architecture</div>
+    <div class="stab" data-s="t4b">Ad Insertion</div>
+    <div class="stab" data-s="t4c">Targeting & Auction</div>
+    <div class="stab" data-s="t4d">Code</div>
+    <div class="stab" data-s="t4e">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="ptitle">Ads in <em>Live Streaming</em></div>
+    <p class="psub">Live streaming ads are far harder than VOD ads. The stream is real-time — there's no ability to pre-process. Ad breaks must be detected in milliseconds, an appropriate ad selected and served, and the viewer must experience seamless playback with no buffering.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">&lt;500ms</div><div class="slbl">Ad decision latency budget</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">Millions</div><div class="slbl">Concurrent viewers</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">&lt;3s</div><div class="slbl">Max buffering tolerated by viewers</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">CPM</div><div class="slbl">Cost per thousand impressions — ad pricing model</div></div>
+    </div>
+    <h3>Why Live Ads Are Hard</h3>
+    <div class="g g3">
+      <div class="card ct-r"><h4>Real-time constraint</h4><p>In VOD: pre-process the video offline, insert ads at transcoding time. In Live: no pre-processing possible. Must detect the ad opportunity, run an auction, fetch the ad creative, and inject into the stream — all while the stream is ongoing.</p></div>
+      <div class="card ct-a"><h4>Scale</h4><p>Super Bowl: 100M+ concurrent viewers. Every viewer needs a (potentially different) ad — targeted advertising. 100M simultaneous ad decisions in &lt;500ms = 200M QPS on ad servers. Requires massive caching and pre-warming.</p></div>
+      <div class="card ct-c"><h4>Viewer experience</h4><p>A buffering pause during an ad break = viewer churns. The ad system must serve the ad faster than the viewer's buffer depletes. At typical 10s buffer: system has 10s to complete ad insert. But target is &lt;3s to feel seamless.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle">Ad <em>Insertion Architecture</em></div>
+    <h3>SCTE-35 — The Ad Opportunity Signal</h3>
+    <p>SCTE-35 is the broadcast industry standard for signaling ad insertion opportunities in a live video stream. The encoder/broadcaster inserts a SCTE-35 marker into the MPEG-TS stream at ad break points. The ad system watches for these markers.</p>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">SCTE-35 marker detected in stream</div><div class="fd">CDN or packager detects the SCTE-35 splice_insert or time_signal command. Includes: duration (e.g., 30 seconds), avail_num (break number), unique_program_id. Published to message bus immediately.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Ad Decision Service (ADS) called</div><div class="fd">Within 100ms of SCTE-35 detection, ADS receives the signal. Runs targeting logic: user demographics, content context, geo, device. Calls ad exchange for real-time bidding or uses pre-reserved ads.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Ad creative pre-fetched and transcoded</div><div class="fd">The winning ad creative must be available in the correct format (HLS, DASH), bitrate ladder, and segment timing. Pre-transcoding ad inventory is critical — on-demand transcoding adds 5–30 seconds of latency.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Server-Side Ad Insertion (SSAI)</div><div class="fd">The CDN/packager seamlessly splices the ad segments into the live stream manifest (HLS playlist). The viewer's player sees a continuous stream — no separate ad request, no CORS issues, no ad blocker avoidance.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Impression tracking & billing</div><div class="fd">The packager marks ad segments with tracking URLs. When player downloads the segment, the tracking server records the impression. Used for billing and frequency capping. Must be resilient to player crashes mid-ad.</div></div></div>
+    </div>
+    <h3>SSAI vs Client-Side Ad Insertion (CSAI)</h3>
+    <div class="tdp">
+      <div class="tdc pro"><h4>SSAI (Server-Side)</h4><ul><li>Ad blocker proof — same CDN domain as content</li><li>Seamless playback — single bitrate adaptive stream</li><li>No client-side SDK needed</li><li>Works on all devices (smart TVs, set-top boxes)</li><li>Easier to target CTV/OTT audiences</li><li>❌ Complex server infrastructure</li></ul></div>
+      <div class="tdc con"><h4>CSAI (Client-Side)</h4><ul><li>Simple: client loads ad from ad server separately</li><li>Flexible: A/B test ad experiences easily</li><li>❌ Ad blockers can block it</li><li>❌ Buffering between content and ad (URL switch)</li><li>❌ Doesn't work well on CTV/smart TV SDK limitations</li><li>Standard for desktop web, mobile apps</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">Targeting &amp; <em>Real-time Bidding</em></div>
+    <h3>Ad Targeting in Live Streaming</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Targeting Signals</h4><ul class="rl"><li><strong>User signals</strong>: age, gender, interests, watch history, subscription tier</li><li><strong>Content signals</strong>: sport type, team, league, tournament, moment (goal scored)</li><li><strong>Device signals</strong>: CTV, mobile, desktop; OS; DMA (designated market area)</li><li><strong>Temporal signals</strong>: time of day, day of week, proximity to event end</li></ul></div>
+      <div class="card ct-g"><h4>Targeting Architecture</h4><ul class="rl"><li>User profile stored in Redis (fast lookup by user_id)</li><li>Content metadata from the stream metadata service</li><li>Ad decision takes all signals → finds matching campaigns</li><li>Multiple matching ads → run an auction (highest bid wins)</li></ul></div>
+    </div>
+    <h3>Real-time Bidding (RTB) in &lt;100ms</h3>
+    <div class="cwrap"><div class="ctop"><span>ad_decision.py — real-time ad selection</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, time
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">AdOpportunity</span>:
+    stream_id:   str
+    user_id:     str
+    break_dur:   int     <span class="cmt"># seconds</span>
+    content_ctx: dict   <span class="cmt"># sport, teams, moment</span>
+    device:      str
+
+<span class="kw">async def</span> <span class="fn">make_ad_decision</span>(opp: <span class="cls">AdOpportunity</span>) -> list[dict]:
+    <span class="str">"""
+    Select ads for a break. Must complete in < 200ms.
+    Returns ordered list of ad creatives to play.
+    """</span>
+    deadline = time.<span class="fn">time</span>() + <span class="num">0.2</span>   <span class="cmt"># 200ms hard deadline</span>
+
+    <span class="cmt"># 1. Fetch user profile (Redis, ~1ms)</span>
+    user_profile = <span class="kw">await</span> asyncio.<span class="fn">wait_for</span>(
+        <span class="fn">get_user_profile</span>(opp.user_id), timeout=<span class="num">0.05</span>
+    )
+
+    <span class="cmt"># 2. Match eligible campaigns (pre-indexed in Redis)</span>
+    eligible = <span class="kw">await</span> <span class="fn">match_campaigns</span>(
+        user_profile, opp.content_ctx, opp.device,
+        max_duration=opp.break_dur
+    )
+
+    <span class="cmt"># 3. Run auction (Vickrey: 2nd price)</span>
+    winning_ads = <span class="fn">run_vickrey_auction</span>(eligible, break_dur=opp.break_dur)
+
+    <span class="cmt"># 4. Verify creative is pre-transcoded and available</span>
+    available = [ad <span class="kw">for</span> ad <span class="kw">in</span> winning_ads
+                 <span class="kw">if await</span> <span class="fn">check_creative_ready</span>(ad[<span class="str">"creative_id"</span>], opp.device)]
+
+    <span class="cmt"># 5. Record impression (async, non-blocking)</span>
+    asyncio.<span class="fn">create_task</span>(<span class="fn">record_ad_decision</span>(opp, available))
+
+    <span class="kw">return</span> available
+
+<span class="kw">def</span> <span class="fn">run_vickrey_auction</span>(candidates: list[dict], break_dur: int) -> list[dict]:
+    <span class="str">"""
+    2nd-price auction: winner pays 2nd highest bid.
+    Fill break with highest-value non-conflicting ads.
+    """</span>
+    candidates.<span class="fn">sort</span>(key=<span class="kw">lambda</span> x: x[<span class="str">"bid_cpm"</span>], reverse=<span class="kw">True</span>)
+    selected, remaining_time = [], break_dur
+    <span class="kw">for</span> ad <span class="kw">in</span> candidates:
+        <span class="kw">if</span> ad[<span class="str">"duration"</span>] <= remaining_time:
+            selected.<span class="fn">append</span>(ad)
+            remaining_time -= ad[<span class="str">"duration"</span>]
+        <span class="kw">if</span> remaining_time <= <span class="num">0</span>: <span class="kw">break</span>
+    <span class="kw">return</span> selected</pre></div>
+
+    <h3>Frequency Capping</h3>
+    <div class="call ci"><strong>Problem:</strong> Without frequency capping, the same viewer sees the same ad 50 times in one session → ad fatigue → brand damage. Solution: Redis per-user impression counters with hourly/daily expiry: <code>HINCRBY user:{id}:ad_freq {ad_id} 1</code>. Check before selecting: if <code>HGET user:{id}:ad_freq {ad_id}</code> &gt; cap → exclude from auction.</div>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">Code — <em>SSAI Manifest Manipulation</em></div>
+    <div class="cwrap"><div class="ctop"><span>ssai_packager.py — HLS manifest ad injection</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> re
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI, Request
+
+app = <span class="fn">FastAPI</span>()
+
+<span class="dec">@app.get</span>(<span class="str">"/manifest/{stream_id}/playlist.m3u8"</span>)
+<span class="kw">async def</span> <span class="fn">personalized_manifest</span>(stream_id: str, request: <span class="cls">Request</span>):
+    <span class="str">"""
+    Fetch live HLS manifest, inject ad segments at SCTE-35 break points.
+    Each viewer gets a personalized manifest with their targeted ads.
+    """</span>
+    user_id = <span class="fn">extract_user_id</span>(request)
+
+    <span class="cmt"># 1. Fetch upstream HLS manifest from CDN</span>
+    original_manifest = <span class="kw">await</span> <span class="fn">fetch_manifest</span>(<span class="str">f"https://cdn/{stream_id}/playlist.m3u8"</span>)
+
+    <span class="cmt"># 2. Parse segments and detect SCTE-35 markers</span>
+    segments = <span class="fn">parse_hls_manifest</span>(original_manifest)
+    modified = []
+
+    <span class="kw">for</span> seg <span class="kw">in</span> segments:
+        <span class="kw">if</span> seg.<span class="fn">get</span>(<span class="str">"scte35_break"</span>):
+            <span class="cmt"># 3. Get personalized ads for this viewer</span>
+            opp = <span class="cls">AdOpportunity</span>(stream_id, user_id, seg[<span class="str">"break_duration"</span>], {}, <span class="str">"ctv"</span>)
+            ads = <span class="kw">await</span> <span class="fn">make_ad_decision</span>(opp)
+
+            <span class="cmt"># 4. Inject ad segments at break point</span>
+            <span class="kw">for</span> ad <span class="kw">in</span> ads:
+                <span class="kw">for</span> ad_seg <span class="kw">in</span> <span class="fn">get_ad_segments</span>(ad[<span class="str">"creative_id"</span>]):
+                    <span class="cmt"># Add tracking URL to each ad segment</span>
+                    ad_seg[<span class="str">"tracking_url"</span>] = (
+                        <span class="str">f"https://track.ads.com/imp/{ad['id']}/{user_id}"</span>
+                    )
+                    modified.<span class="fn">append</span>(ad_seg)
+        <span class="kw">else</span>:
+            modified.<span class="fn">append</span>(seg)
+
+    <span class="cmt"># 5. Reconstruct HLS manifest with injected ad segments</span>
+    <span class="kw">return</span> <span class="fn">build_hls_manifest</span>(modified)</pre></div>
+  </div>
+
+  <div class="spanel" id="t4e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>SCTE-35 is the industry standard for ad opportunity signaling</strong> — the broadcaster inserts markers into the live MPEG-TS stream. Every ad system in live streaming relies on detecting these markers.</li>
+      <li><strong>SSAI (Server-Side Ad Insertion) is the future</strong> — ad blocker proof, seamless playback, works on all devices including CTV/smart TVs. More complex than CSAI but the industry is moving this direction.</li>
+      <li><strong>Ad creative pre-transcoding is non-negotiable</strong> — on-demand transcoding adds 5–30 seconds. The viewer's buffer depletes in 10 seconds. Pre-transcode all ad inventory in all formats and bitrates before the live event starts.</li>
+      <li><strong>The 200ms decision budget requires aggressive caching</strong> — user profiles in Redis, campaign indexes pre-loaded in memory. RTB auction must complete before the viewer's player needs the ad segments.</li>
+      <li><strong>Frequency capping prevents brand damage</strong> — Redis HINCRBY per-user per-ad impression counter with TTL. Check before every auction. At Super Bowl scale: 100M viewers × 10 ad breaks × 3 ads = 3B impression records — Redis handles this at O(1) per op.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T5: PRIVACY & HA IN LIVE STREAMING ══════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t5a">Live Streaming Architecture</div>
+    <div class="stab" data-s="t5b">Privacy in Streaming</div>
+    <div class="stab" data-s="t5c">High Availability</div>
+    <div class="stab" data-s="t5d">Stream Failover</div>
+    <div class="stab" data-s="t5e">Code & Demo</div>
+    <div class="stab" data-s="t5f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t5a">
+    <div class="ptitle">Privacy &amp; High Availability in <em>Live Streaming</em></div>
+    <p class="psub">Live streaming at scale (Twitch, YouTube Live, Prime Video Live Sports) must handle: regional privacy laws (GDPR, CCPA, geo-blocking), hardware failures mid-stream, and millions of concurrent viewers. Any downtime during a live event is irreversible — the moment is gone.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">4K/60fps</div><div class="slbl">Max stream bitrate (50–80 Mbps)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">&lt;3s</div><div class="slbl">Target end-to-end latency</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">99.99%</div><div class="slbl">Required uptime SLA</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">Multi-CDN</div><div class="slbl">HA architecture pattern</div></div>
+    </div>
+    <h3>Live Streaming Pipeline</h3>
+    <div class="diag">
+<svg viewBox="0 0 720 160" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs>
+    <marker id="as" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="asg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="716" height="156" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <rect x="14" y="30" width="80" height="100" rx="5" fill="#131a2a" stroke="#ec4899" stroke-width="1.5"/>
+  <text x="54" y="52" text-anchor="middle" fill="#ec4899" font-size="10" font-weight="700">Source</text>
+  <text x="54" y="67" text-anchor="middle" fill="#5a6a85" font-size="8">Camera</text>
+  <text x="54" y="80" text-anchor="middle" fill="#5a6a85" font-size="8">Encoder</text>
+  <text x="54" y="93" text-anchor="middle" fill="#5a6a85" font-size="8">RTMP push</text>
+  <text x="54" y="108" text-anchor="middle" fill="#5a6a85" font-size="8">single stream</text>
+
+  <rect x="152" y="30" width="110" height="100" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="207" y="52" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Ingest</text>
+  <text x="207" y="64" text-anchor="middle" fill="#5a6a85" font-size="8">Receive RTMP</text>
+  <text x="207" y="77" text-anchor="middle" fill="#5a6a85" font-size="8">Geo-redundant</text>
+  <text x="207" y="90" text-anchor="middle" fill="#5a6a85" font-size="8">ingest points</text>
+  <text x="207" y="103" text-anchor="middle" fill="#5a6a85" font-size="8">Push to 2 regions</text>
+  <text x="207" y="116" text-anchor="middle" fill="#5a6a85" font-size="7">(primary + backup)</text>
+
+  <rect x="322" y="30" width="110" height="100" rx="5" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="377" y="52" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Transcode</text>
+  <text x="377" y="64" text-anchor="middle" fill="#5a6a85" font-size="8">Bitrate ladder</text>
+  <text x="377" y="77" text-anchor="middle" fill="#5a6a85" font-size="8">4K/1080/720/480</text>
+  <text x="377" y="90" text-anchor="middle" fill="#5a6a85" font-size="8">H.265/H.264</text>
+  <text x="377" y="103" text-anchor="middle" fill="#5a6a85" font-size="8">HLS/DASH segs</text>
+  <text x="377" y="116" text-anchor="middle" fill="#5a6a85" font-size="7">GPU-accelerated</text>
+
+  <rect x="492" y="30" width="110" height="100" rx="5" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="547" y="52" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">CDN Distribution</text>
+  <text x="547" y="67" text-anchor="middle" fill="#5a6a85" font-size="8">Multi-CDN</text>
+  <text x="547" y="80" text-anchor="middle" fill="#5a6a85" font-size="8">Akamai + CF</text>
+  <text x="547" y="93" text-anchor="middle" fill="#5a6a85" font-size="8">+ AWS CF</text>
+  <text x="547" y="108" text-anchor="middle" fill="#5a6a85" font-size="8">DNS steering</text>
+  <text x="547" y="118" text-anchor="middle" fill="#5a6a85" font-size="7">edge caching 2s</text>
+
+  <rect x="620" y="45" width="88" height="70" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="664" y="67" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Viewers</text>
+  <text x="664" y="82" text-anchor="middle" fill="#5a6a85" font-size="8">HLS/DASH</text>
+  <text x="664" y="95" text-anchor="middle" fill="#5a6a85" font-size="8">ABR playback</text>
+  <text x="664" y="108" text-anchor="middle" fill="#5a6a85" font-size="7">adaptive bitrate</text>
+
+  <line x1="96" y1="80" x2="150" y2="80" stroke="#ec4899" stroke-width="1.5" marker-end="url(#as)"/>
+  <line x1="264" y1="80" x2="320" y2="80" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#as)"/>
+  <line x1="434" y1="80" x2="490" y2="80" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#as)"/>
+  <line x1="604" y1="80" x2="618" y2="80" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#as)"/>
+  <text x="364" y="148" text-anchor="middle" fill="#3a4a60" font-size="7.5">Privacy: geo-blocking, DRM, tokenized CDN URLs, GDPR consent gating</text>
+</svg>
+    </div>
+    <h3>Adaptive Bitrate (ABR) Streaming</h3>
+    <p>The player monitors network bandwidth every 3–10 seconds and selects the highest quality the current connection can sustain. The server provides multiple quality levels (bitrate ladder). This prevents buffering — the core UX requirement for live streams.</p>
+    <table>
+      <tr><th>Quality Level</th><th>Resolution</th><th>Bitrate</th><th>Segment Size (2s)</th></tr>
+      <tr><td>4K UHD</td><td>3840×2160</td><td>15–50 Mbps</td><td>3.75–12.5 MB</td></tr>
+      <tr><td>1080p HD</td><td>1920×1080</td><td>4–8 Mbps</td><td>1–2 MB</td></tr>
+      <tr><td>720p</td><td>1280×720</td><td>2.5–4 Mbps</td><td>625 KB–1 MB</td></tr>
+      <tr><td>480p</td><td>854×480</td><td>1–2 Mbps</td><td>250–500 KB</td></tr>
+      <tr><td>360p (mobile)</td><td>640×360</td><td>0.5–1 Mbps</td><td>125–250 KB</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t5b">
+    <div class="ptitle"><em>Privacy</em> in Live Streaming</div>
+    <h3>Geo-Blocking — Rights Management</h3>
+    <p>Sports broadcasting rights are sold by territory. The Super Bowl may be licensed to NBCUniversal in the US, Sky in the UK, and Canal+ in France. Users outside licensed territory must be blocked.</p>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Client IP → MaxMind GeoIP database</div><div class="fd">MaxMind provides ~98% accurate IP→country mapping. Looked up at CDN edge node. O(1) in-memory hash table lookup. &lt;1ms.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Check rights database</div><div class="fd">Is content licensed for this country? Rights DB is small (N countries × M content), fits in Redis. <code>SISMEMBER rights:{content_id} {country_code}</code> → O(1).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Block or serve alternate content</div><div class="fd">If blocked: 403 with "Not available in your region" message, or redirect to blackout feed (e.g., local affiliate). Never serve blank screen — explain why.</div></div></div>
+    </div>
+    <h3>DRM (Digital Rights Management)</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>What DRM Does</h4><p>Encrypts video segments. Each player needs a license (decryption key) from a DRM license server. License issued only to authenticated, authorized users. Even if someone intercepts the encrypted segments, they can't play them without the key.</p></div>
+      <div class="card ct-g"><h4>Multi-DRM</h4><p>Different devices use different DRM systems: Widevine (Android, Chrome), FairPlay (Apple), PlayReady (Microsoft). Must support all three. DRM-as-a-service providers (Irdeto, EZDRM) handle license servers for all three from one API.</p></div>
+      <div class="card ct-a"><h4>CDN Token Auth</h4><p>CDN URLs are signed with a time-limited token. Without a valid token, the CDN returns 403. Prevents unauthorized users from accessing stream URLs. Token includes: user_id, content_id, expiry, signature. Renewed every 15 minutes.</p></div>
+    </div>
+    <h3>GDPR & Privacy Consent</h3>
+    <div class="call cw"><strong>Consent flow for live streaming:</strong> Before showing targeted ads or processing viewing data for analytics: (1) Show consent banner on first visit. (2) If user consents: track viewing, serve targeted ads. (3) If user declines: serve non-targeted ads, no cross-session tracking. (4) Store consent decision in cookie + server-side DB. (5) Respect consent regardless of CDN edge node serving the viewer.</div>
+  </div>
+
+  <div class="spanel" id="t5c">
+    <div class="ptitle"><em>High Availability</em> Architecture</div>
+    <h3>Failure Points in Live Streaming</h3>
+    <div class="g g3">
+      <div class="card ct-r"><h4>Encoder failure</h4><p>Primary encoder dies mid-game. Solution: always run two encoders simultaneously pushing to ingest. Automatic failover from encoder A to B. Viewer sees a 3–5 second freeze, then stream resumes from backup.</p></div>
+      <div class="card ct-r"><h4>Ingest server failure</h4><p>Encoder pushes RTMP to ingest. Ingest crashes. Solution: push to two geographically separate ingest points. Redundant ingest servers at each point. If one ingest fails, encoder switches to backup within 30 seconds.</p></div>
+      <div class="card ct-a"><h4>Transcode cluster failure</h4><p>GPU cluster fails mid-stream. Solution: two independent transcode clusters process the same ingest. Primary feeds CDN. If primary fails, CDN switches to backup transcode output. Segment timestamps keep playback seamless.</p></div>
+      <div class="card ct-c"><h4>CDN PoP failure</h4><p>A CDN point-of-presence goes down. Solution: multi-CDN — Akamai + Cloudflare + AWS CloudFront simultaneously. DNS-based steering routes viewers away from failed CDN within 30–60 seconds (DNS TTL).</p></div>
+      <div class="card ct-p"><h4>Origin failure</h4><p>CDN origin (where segments are stored) fails. Solution: CDN edge nodes have 2–4 hours of segment cache. Viewers continue watching from cache while origin recovers. Grace period buys time for repair.</p></div>
+      <div class="card ct-t"><h4>Network partition</h4><p>AWS region goes down. Solution: redundant ingest and transcode in two regions (US-East + US-West). Traffic automatically shifts to healthy region via Anycast routing or Global Accelerator.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5d">
+    <div class="ptitle">Stream <em>Failover Design</em></div>
+    <h3>Redundant Ingest Architecture</h3>
+    <div class="diag">
+<svg viewBox="0 0 700 170" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs>
+    <marker id="af" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+    <marker id="afr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#ef4444" opacity=".8"/></marker>
+    <marker id="afg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker>
+  </defs>
+  <rect x="2" y="2" width="696" height="166" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Encoders -->
+  <rect x="14" y="30" width="80" height="50" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="54" y="52" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">Encoder A</text>
+  <text x="54" y="65" text-anchor="middle" fill="#5a6a85" font-size="7.5">Primary</text>
+  <rect x="14" y="92" width="80" height="50" rx="4" fill="#131a2a" stroke="#1e2d45" stroke-dasharray="3,2"/>
+  <text x="54" y="114" text-anchor="middle" fill="#8a9bb5" font-size="9">Encoder B</text>
+  <text x="54" y="127" text-anchor="middle" fill="#5a6a85" font-size="7.5">Hot standby</text>
+  <!-- Ingest -->
+  <rect x="154" y="20" width="100" height="60" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="204" y="40" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">Ingest US-East</text>
+  <text x="204" y="53" text-anchor="middle" fill="#5a6a85" font-size="7.5">Primary ingest</text>
+  <text x="204" y="65" text-anchor="middle" fill="#5a6a85" font-size="7.5">RTMP receive</text>
+  <rect x="154" y="90" width="100" height="60" rx="4" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="204" y="110" text-anchor="middle" fill="#8a9bb5" font-size="9">Ingest US-West</text>
+  <text x="204" y="123" text-anchor="middle" fill="#5a6a85" font-size="7.5">Backup ingest</text>
+  <text x="204" y="135" text-anchor="middle" fill="#5a6a85" font-size="7.5">+30ms latency</text>
+  <!-- Transcode -->
+  <rect x="314" y="20" width="110" height="60" rx="4" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="369" y="40" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700">Transcode A</text>
+  <text x="369" y="53" text-anchor="middle" fill="#5a6a85" font-size="7.5">Active pipeline</text>
+  <text x="369" y="65" text-anchor="middle" fill="#5a6a85" font-size="7.5">Feeds CDN origin</text>
+  <rect x="314" y="90" width="110" height="60" rx="4" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="369" y="110" text-anchor="middle" fill="#8a9bb5" font-size="9">Transcode B</text>
+  <text x="369" y="123" text-anchor="middle" fill="#5a6a85" font-size="7.5">Warm standby</text>
+  <text x="369" y="135" text-anchor="middle" fill="#5a6a85" font-size="7.5">Lag: 2 segments</text>
+  <!-- CDN -->
+  <rect x="484" y="30" width="80" height="44" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="524" y="50" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="700">CDN 1</text>
+  <text x="524" y="64" text-anchor="middle" fill="#5a6a85" font-size="7.5">Akamai</text>
+  <rect x="484" y="82" width="80" height="44" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="524" y="102" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="700">CDN 2</text>
+  <text x="524" y="116" text-anchor="middle" fill="#5a6a85" font-size="7.5">CloudFront</text>
+  <!-- Viewers -->
+  <rect x="622" y="50" width="64" height="70" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="654" y="72" text-anchor="middle" fill="#86efac" font-size="9" font-weight="700">Viewers</text>
+  <text x="654" y="86" text-anchor="middle" fill="#5a6a85" font-size="7.5">DNS routing</text>
+  <text x="654" y="99" text-anchor="middle" fill="#5a6a85" font-size="7.5">to nearest</text>
+  <text x="654" y="112" text-anchor="middle" fill="#5a6a85" font-size="7.5">CDN PoP</text>
+  <!-- Arrows primary path -->
+  <line x1="96" y1="56" x2="152" y2="50" stroke="#22c55e" stroke-width="1.5" marker-end="url(#afg)" opacity=".8"/>
+  <line x1="256" y1="50" x2="312" y2="50" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#af)" opacity=".8"/>
+  <line x1="426" y1="50" x2="482" y2="52" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#af)" opacity=".8"/>
+  <line x1="566" y1="54" x2="620" y2="72" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#af)" opacity=".7"/>
+  <line x1="566" y1="104" x2="620" y2="88" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#af)" opacity=".7"/>
+  <!-- Backup lines dashed -->
+  <line x1="96" y1="120" x2="152" y2="120" stroke="#5a6a85" stroke-width="1" marker-end="url(#af)" opacity=".4" stroke-dasharray="4,2"/>
+  <line x1="256" y1="120" x2="312" y2="120" stroke="#5a6a85" stroke-width="1" marker-end="url(#af)" opacity=".4" stroke-dasharray="4,2"/>
+  <line x1="426" y1="120" x2="482" y2="104" stroke="#5a6a85" stroke-width="1" marker-end="url(#af)" opacity=".3" stroke-dasharray="4,2"/>
+  <!-- Failure annotation -->
+  <text x="350" y="155" text-anchor="middle" fill="#ef4444" font-size="8">Auto-failover: if Transcode A fails → CDN switches origin to Transcode B output within 2 segment lengths (~4s)</text>
+</svg>
+    </div>
+    <h3>Segment Health Monitoring</h3>
+    <div class="cwrap"><div class="ctop"><span>stream_monitor.py — detect and failover on segment gaps</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, time
+
+<span class="kw">class</span> <span class="cls">StreamHealthMonitor</span>:
+    <span class="str">"""
+    Monitor segment generation rate. Switch to backup if primary stalls.
+    Expected: 1 segment every 2 seconds (2s HLS segments).
+    Trigger failover if: no new segment for > 4s (2 missed segments).
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, segment_interval=<span class="num">2.0</span>, failover_threshold=<span class="num">4.0</span>):
+        <span class="kw">self</span>.interval  = segment_interval
+        <span class="kw">self</span>.threshold = failover_threshold
+        <span class="kw">self</span>.last_seg  = time.<span class="fn">time</span>()
+        <span class="kw">self</span>.active    = <span class="str">"primary"</span>
+
+    <span class="kw">async def</span> <span class="fn">on_segment_received</span>(<span class="kw">self</span>, origin: str, seg_num: int):
+        <span class="kw">self</span>.last_seg = time.<span class="fn">time</span>()
+        <span class="kw">if</span> origin != <span class="kw">self</span>.active:
+            <span class="kw">return</span>   <span class="cmt"># ignore backup segments while primary is healthy</span>
+
+    <span class="kw">async def</span> <span class="fn">watch</span>(<span class="kw">self</span>):
+        <span class="str">"""Background loop: trigger failover if segments stop arriving."""</span>
+        <span class="kw">while True</span>:
+            <span class="kw">await</span> asyncio.<span class="fn">sleep</span>(<span class="num">0.5</span>)
+            staleness = time.<span class="fn">time</span>() - <span class="kw">self</span>.last_seg
+            <span class="kw">if</span> staleness > <span class="kw">self</span>.threshold:
+                <span class="kw">await self</span>.<span class="fn">failover</span>()
+
+    <span class="kw">async def</span> <span class="fn">failover</span>(<span class="kw">self</span>):
+        <span class="kw">if self</span>.active == <span class="str">"primary"</span>:
+            <span class="fn">print</span>(<span class="str">"FAILOVER: primary → backup"</span>)
+            <span class="kw">self</span>.active = <span class="str">"backup"</span>
+            <span class="cmt"># Update CDN origin to point to backup transcode output</span>
+            <span class="kw">await</span> <span class="fn">update_cdn_origin</span>(<span class="str">"backup-origin.streaming.com"</span>)
+            <span class="cmt"># Alert on-call team</span>
+            <span class="kw">await</span> <span class="fn">page_oncall</span>(<span class="str">"LIVE STREAM FAILOVER: primary transcode down"</span>)
+            <span class="kw">self</span>.last_seg = time.<span class="fn">time</span>()   <span class="cmt"># reset timer for backup monitoring</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t5e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Live Stream Segment Simulator</span>
+        <button class="dbtn dbtn-g" onclick="streamStart()" style="margin-left:auto">▶ Start Stream</button>
+        <button class="dbtn dbtn-r" onclick="streamFail()" style="margin-left:6px">💥 Kill Primary</button>
+        <button class="dbtn dbtn-c" onclick="streamInjectAd()" style="margin-left:6px">📢 Ad Break</button>
+        <button class="dbtn dbtn-a" onclick="streamStop()" style="margin-left:6px">⏹ Stop</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Stream Buffer</h4>
+            <div id="stream-buffer" style="display:flex;flex-wrap:wrap;gap:3px;min-height:40px;margin-bottom:8px"></div>
+            <div id="stream-status" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)">Stopped</div>
+          </div>
+          <div>
+            <h4>Stream Log</h4>
+            <div id="stream-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:140px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Redundancy at every layer is the only path to 99.99% uptime</strong> — dual encoders, dual ingest, dual transcode, multi-CDN. Any single point of failure that isn't redundant will cause an outage during a live event.</li>
+      <li><strong>Failover must be automatic and fast</strong> — human-triggered failover during a live Super Bowl is too slow. Automated segment gap detection → CDN origin switch → all within 4 seconds (2 missed 2-second segments).</li>
+      <li><strong>Multi-CDN with DNS steering is the HA pattern</strong> — serve from Akamai + CloudFront + others simultaneously. Route viewers to best CDN based on latency, error rate. If one CDN degrades, DNS shifts traffic in 30–60 seconds.</li>
+      <li><strong>DRM + tokenized CDN URLs + geo-blocking work together</strong> — CDN token validates that the request comes from an authenticated session. DRM ensures even intercepted segments can't be played. Geo-IP blocks unauthorized territories.</li>
+      <li><strong>GDPR consent affects ad targeting, not stream access</strong> — the stream itself must be available regardless of consent. Only targeted ad data collection requires consent. Serve non-targeted ads to users who decline consent.</li>
+    </ul>
+    <div class="done">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 6 — High Throughput Systems Complete ✦</div>
+      <p style="font-size:13px;color:var(--muted)">All 5 high-throughput topics covered. Next: <strong>Week 7 — IR Systems & Adhoc Designs</strong> · Recent Searches · Cricket Text Commentary · Instagram Live Reactions · Distributed Task Scheduler · Flash Sale</p>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="hbadge hb-c">Week 6 of 8 Complete</span>
+        <span class="hbadge hb-g">5/5 Topics Done</span>
+        <span class="hbadge hb-a">Week 7 → IR Systems</span>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ── TAB WIRING ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const id=t.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');document.getElementById(id).classList.add('active');
+    t.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(s=>{
+  s.addEventListener('click',()=>{
+    const sid=s.dataset.s;
+    s.closest('.subtabwrap').querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));
+    s.closest('.topic').querySelectorAll('.spanel').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active');document.getElementById(sid).classList.add('active');
+    s.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.ltab').forEach(lt=>{
+  lt.addEventListener('click',()=>{
+    const l=lt.dataset.l;if(!l)return;
+    lt.closest('.ltabs').querySelectorAll('.ltab').forEach(x=>x.classList.remove('on'));
+    lt.classList.add('on');
+    lt.parentElement.querySelectorAll('.lpanel').forEach(p=>p.classList.toggle('on',p.id===l));
+  });
+});
+
+// ── ORDER STATE MACHINE ─────────────────────────────────────────────────────
+const ORDER_STATES=[
+  {id:'pending',  label:'PENDING',   desc:'Order created. Waiting for inventory reservation.'},
+  {id:'reserved', label:'RESERVED',  desc:'Inventory reserved. Waiting for payment processing.'},
+  {id:'charged',  label:'CHARGED',   desc:'Payment successful. Triggering fulfillment.'},
+  {id:'confirmed',label:'CONFIRMED', desc:'Order confirmed. Fulfillment scheduled at warehouse.'},
+  {id:'shipped',  label:'SHIPPED',   desc:'Package handed to carrier. Tracking number assigned.'},
+  {id:'delivered',label:'DELIVERED', desc:'Package delivered. Order complete.'},
+];
+const ERR_STATES=[
+  {id:'payment_failed',label:'PAYMENT FAILED',desc:'Payment declined. Inventory reservation released. Order cancelled.'},
+  {id:'cancelled',label:'CANCELLED',desc:'Order cancelled. Full refund initiated.'},
+];
+let currentState=0;
+function renderOrderStates(){
+  const el=document.getElementById('order-states');if(!el)return;
+  el.innerHTML=ORDER_STATES.map((s,i)=>
+    `<span class="state-node ${i===currentState?'state-active':i<currentState?'state-inactive state-done':'state-inactive'}" onclick="advanceState(${i})">${s.label}</span>${i<ORDER_STATES.length-1?'<span style="color:var(--muted);font-size:14px">→</span>':''}`
+  ).join('')+`<span style="color:var(--muted);font-size:12px"> | </span>`+
+  ERR_STATES.map(s=>`<span class="state-node state-error">${s.label}</span>`).join(' ');
+  const desc=document.getElementById('order-desc');if(desc&&ORDER_STATES[currentState])desc.textContent=ORDER_STATES[currentState].desc;
+}
+function advanceState(idx){if(idx===currentState+1){currentState=idx;renderOrderStates();}}
+renderOrderStates();
+
+// ── SAGA DEMO ────────────────────────────────────────────────────────────────
+function sagaLog(m,c='#5a6a85'){const el=document.getElementById('saga-log');if(!el)return;const ts=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});el.innerHTML+=`<div style="color:${c};margin-bottom:2px">[${ts}] ${m}</div>`;el.scrollTop=el.scrollHeight;}
+async function sagaCreate(){
+  const id='ORD-'+Math.floor(Math.random()*10000);
+  sagaLog(`Order ${id}: CREATED → published order.created`,'var(--accent)');
+  await sleep(400);sagaLog(`Inventory: reserved 1x iPhone16 → published inventory.reserved`,'var(--green)');
+  await sleep(600);sagaLog(`Payment: charged $1299 → published payment.charged`,'var(--green)');
+  await sleep(500);sagaLog(`Fulfillment: scheduled at Warehouse-3 → published fulfillment.scheduled`,'var(--green)');
+  await sleep(300);sagaLog(`Notification: confirmation email sent ✓`,'var(--muted)');
+  sagaLog(`Order ${id}: CONFIRMED ✦`,'var(--green)');
+}
+async function sagaFail(){
+  const id='ORD-'+Math.floor(Math.random()*10000);
+  sagaLog(`Order ${id}: CREATED → published order.created`,'var(--accent)');
+  await sleep(400);sagaLog(`Inventory: reserved 1x MacBook → published inventory.reserved`,'var(--green)');
+  await sleep(500);sagaLog(`Payment: ❌ DECLINED (insufficient funds) → published payment.failed`,'var(--red)');
+  await sleep(300);sagaLog(`COMPENSATING: Inventory releasing reservation → published inventory.release`,'var(--amber)');
+  await sleep(400);sagaLog(`Inventory: reservation released ✓`,'var(--amber)');
+  sagaLog(`Order ${id}: CANCELLED. Customer notified.`,'var(--red)');
+}
+function sagaReset(){document.getElementById('saga-log').innerHTML='';}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ── STREAM DEMO ──────────────────────────────────────────────────────────────
+let streamInterval=null, segCount=0, primaryAlive=true, adMode=false;
+
+function streamLog(m,c='#5a6a85'){const el=document.getElementById('stream-log');if(!el)return;el.innerHTML+=`<div style="color:${c};margin-bottom:2px">${m}</div>`;el.scrollTop=el.scrollHeight;}
+function streamStatus(m,c='#5a6a85'){const el=document.getElementById('stream-status');if(el){el.textContent=m;el.style.color=c;}}
+
+function addSegment(type='content'){
+  const buf=document.getElementById('stream-buffer');if(!buf)return;
+  segCount++;
+  const el=document.createElement('span');
+  el.className=`stream-chunk ${type==='ad'?'ad':type==='buffered'?'buffered':''}`;
+  el.textContent=type==='ad'?`AD#${segCount}`:`S${segCount}`;
+  el.title=type==='ad'?'Ad segment':'Content segment';
+  buf.appendChild(el);
+  // Mark older as played
+  const chunks=[...buf.querySelectorAll('.stream-chunk')];
+  if(chunks.length>12)chunks[chunks.length-13].classList.add('played');
+  if(buf.children.length>20)buf.removeChild(buf.firstChild);
+}
+
+function streamStart(){
+  if(streamInterval)return;
+  primaryAlive=true;adMode=false;segCount=0;
+  document.getElementById('stream-buffer').innerHTML='';
+  streamStatus('● LIVE — Primary encoder active','var(--green)');
+  streamLog('▶ Stream started — Primary encoder active','var(--green)');
+  streamInterval=setInterval(()=>{
+    if(!primaryAlive){streamLog('⚠ No segment from primary — failover check...','var(--amber)');return;}
+    addSegment(adMode?'ad':'content');
+    if(adMode&&segCount%3===0){adMode=false;streamLog('Ad break complete → back to content','var(--muted)');}
+  },1000);
+}
+
+function streamFail(){
+  if(!streamInterval)return;
+  primaryAlive=false;
+  streamStatus('💥 PRIMARY FAILED — switching to backup','var(--red)');
+  streamLog('💥 Primary encoder FAILED — triggering failover','var(--red)');
+  setTimeout(()=>{
+    primaryAlive=true;
+    streamStatus('✅ LIVE — Backup encoder (failover complete)','var(--amber)');
+    streamLog('✅ Failover complete — backup encoder active (4s disruption)','var(--green)');
+    addSegment('buffered');addSegment('content');
+  },3000);
+}
+
+function streamInjectAd(){
+  if(!primaryAlive||!streamInterval)return;
+  adMode=true;segCount=0;
+  streamLog('📢 SCTE-35 marker detected → ad decision in 200ms...','var(--pink)');
+  setTimeout(()=>streamLog('📢 Ad selected (CPM $45.20, 30s break) → injecting into manifest','var(--pink)'),200);
+}
+
+function streamStop(){
+  clearInterval(streamInterval);streamInterval=null;
+  streamStatus('⏹ Stopped','var(--muted)');
+  streamLog('⏹ Stream stopped','var(--muted)');
+}
+</script>
+</body>
+</html>
