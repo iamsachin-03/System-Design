@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 8 — Building Algorithmic Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--green:#22c55e;--amber:#f59e0b;
+  --red:#ef4444;--purple:#7c3aed;--pink:#ec4899;--teal:#14b8a6;
+  --orange:#f97316;--text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+  --gold:#f59e0b;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent)}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-gold{color:var(--gold);border-color:var(--gold);background:rgba(245,158,11,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+strong{color:var(--text)}
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-t{border-top:2px solid var(--teal)}
+.ct-o{border-top:2px solid var(--orange)}.ct-pk{border-top:2px solid var(--pink)}
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+.cgold{border-color:var(--gold);background:rgba(245,158,11,.05);color:var(--gold)}
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;border:1px solid;transition:all .15s}
+.dbtn-c{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--accent)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+.dbtn-a{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+.dbtn-p{background:rgba(124,58,237,.08);border-color:#a78bfa;color:#a78bfa}
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+
+/* Completion screen */
+.completion{text-align:center;padding:30px 20px;max-width:760px;margin:0 auto}
+.completion-title{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;color:#fff;margin-bottom:10px;line-height:1.2}
+.completion-sub{color:var(--muted);font-size:15px;margin-bottom:24px;line-height:1.6}
+.weeks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:20px 0}
+.week-card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:left}
+.week-card-num{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);margin-bottom:4px}
+.week-card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:#e2e8f0;margin-bottom:6px}
+.week-card-topics{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);line-height:1.6}
+
+/* File diff visualiser */
+.diff-line{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 8px;border-radius:2px;margin:1px 0}
+.diff-add{background:rgba(34,197,94,.1);color:#86efac;border-left:3px solid var(--green)}
+.diff-del{background:rgba(239,68,68,.1);color:#fca5a5;border-left:3px solid var(--red)}
+.diff-ctx{color:var(--muted);border-left:3px solid var(--border)}
+.diff-hdr{color:var(--accent);font-style:italic}
+
+/* Geo grid cells */
+.geo-grid{display:grid;gap:2px;margin:10px 0}
+.geo-cell{border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-family:'JetBrains Mono',monospace;font-size:10px;text-align:center;cursor:pointer;transition:all .2s;aspect-ratio:1}
+.geo-cell.active{border-color:var(--accent);background:rgba(0,229,255,.12);color:var(--accent)}
+.geo-cell.query-zone{border-color:var(--amber);background:rgba(245,158,11,.08);color:var(--amber)}
+.geo-cell.result{border-color:var(--green);background:rgba(34,197,94,.12);color:var(--green)}
+.geo-cell:hover{border-color:var(--muted)}
+
+/* Affinity graph */
+.affinity-user{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:#fff;cursor:pointer;transition:all .2s;border:2px solid var(--border)}
+.affinity-user:hover{transform:scale(1.1)}
+.affinity-user.selected{border-color:var(--accent);box-shadow:0 0 12px rgba(0,229,255,.3)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 8 · Building Algorithmic Systems — FINAL MODULE</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">GitHub File Sync</span>
+    <span class="hbadge hb-g">GeoSpatial Search</span>
+    <span class="hbadge hb-p">User Affinity</span>
+    <span class="hbadge hb-gold">8/8 Complete</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>GitHub's File Sync Algorithm</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>GeoSpatial Search at Scale</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>User Affinity Service</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">✦</span>Course Completion</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════ T1: GITHUB FILE SYNC ══════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t1a">Problem & Core Algorithm</div>
+    <div class="stab" data-s="t1b">Delta Sync & Chunking</div>
+    <div class="stab" data-s="t1c">Conflict Resolution</div>
+    <div class="stab" data-s="t1d">Architecture</div>
+    <div class="stab" data-s="t1e">Code</div>
+    <div class="stab" data-s="t1f">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">GitHub's <em>File Sync Algorithm</em></div>
+    <p class="psub">Remote file sync (Dropbox, GitHub, Google Drive) must efficiently synchronise files across devices: only sending changes (deltas), not the entire file. For a 1 GB file with a 1 KB change, transferring 1 KB not 1 GB. This is the core engineering challenge of every file sync system.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">1 KB</div><div class="slbl">Ideal transfer for 1 byte change in 1 GB file</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">rsync</div><div class="slbl">Rolling checksum algorithm (1996)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">O(N)</div><div class="slbl">Time complexity for diff computation</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">Merkle tree</div><div class="slbl">Directory-level change detection</div></div>
+    </div>
+    <h3>The Naive Approach — Why It Fails</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Send whole file every time</h4><p>Simple but wasteful. Edit one line in a 10 GB video file → upload 10 GB. For large binary files (designs, videos, databases), this is completely impractical. Wastes bandwidth, time, and money.</p></div>
+      <div class="card ct-g"><h4>Send only diff (line-by-line)</h4><p>Works beautifully for text files (Unix diff). But binary files have no line concept. Moving 1 byte at position 0 shifts every subsequent byte → the entire file looks "different" even though only one byte changed.</p></div>
+    </div>
+    <h3>The rsync Algorithm — Elegant Solution</h3>
+    <p>rsync (1996, Andrew Tridgell) solves the binary file delta problem with rolling checksums. The core insight: find which chunks of the old file still exist in the new file, regardless of their position.</p>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Remote has OLD file: split into fixed-size chunks (e.g., 4 KB)</div><div class="fd">For each chunk: compute <strong>weak checksum</strong> (Adler-32, 4 bytes) and <strong>strong checksum</strong> (MD5, 16 bytes). Send these checksums to the local sender — very small overhead (~5 bytes per 4 KB chunk = 0.12%).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Local sender has NEW file: rolling window search</div><div class="fd">For every byte offset in the NEW file, compute weak checksum for the next 4 KB. If it matches a remote chunk's weak checksum → verify with strong checksum (MD5). If both match → this chunk is already on remote — no need to send!</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Build delta: instructions for remote to reconstruct new file</div><div class="fd">Delta = sequence of: COPY(chunk_id) — use existing chunk from remote. LITERAL(bytes) — these bytes are new, send them. Only the LITERAL portions transfer over the network.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Remote reconstructs new file from delta</div><div class="fd">Apply instructions: for each COPY → read chunk from old file. For each LITERAL → use the sent bytes. Result: exact copy of new file with minimal data transfer.</div></div></div>
+    </div>
+    <h3>Rolling Checksum — The Key Insight</h3>
+    <p>Computing checksum for every 4 KB window (1 byte step) would be O(N × chunk_size) = very slow. A <strong>rolling checksum</strong> (Adler-32) can be updated in O(1) when the window slides one byte: <code>new_checksum = (old_checksum - old_byte_contribution + new_byte_contribution) % modulus</code>. This makes the entire file scan O(N).</p>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle">Delta Sync &amp; <em>Chunking Strategies</em></div>
+    <h3>Fixed-size vs Content-defined Chunking</h3>
+    <div class="tdp">
+      <div class="tdc con">
+        <h4>Fixed-size Chunks (rsync classic)</h4>
+        <ul>
+          <li>Split file into chunks of exactly N bytes (e.g., 4 KB)</li>
+          <li>Inserting 1 byte shifts ALL subsequent chunks</li>
+          <li>Example: insert "X" at position 0 of 1 GB file → all 256K chunks are now "different"</li>
+          <li>❌ Bad for files with frequent insertions (text, code)</li>
+          <li>✅ Simple, fast</li>
+        </ul>
+      </div>
+      <div class="tdc pro">
+        <h4>Content-Defined Chunking (CDC) ✓</h4>
+        <ul>
+          <li>Chunk boundaries determined by content, not position</li>
+          <li>Rolling hash: when hash(window) ends in N zeros → chunk boundary</li>
+          <li>Inserting 1 byte only changes the chunks containing/near the change</li>
+          <li>✅ Used by Dropbox, Bup, restic, Perkeep</li>
+          <li>Average chunk size tunable (Dropbox: 4 MB avg, min 512 KB, max 16 MB)</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Content-Defined Chunking Algorithm (Rabin Fingerprinting)</h3>
+    <div class="cwrap"><div class="ctop"><span>cdc.py — content-defined chunking with Rabin fingerprint</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">class</span> <span class="cls">RabinChunker</span>:
+    <span class="str">"""
+    Content-defined chunking using Rabin fingerprinting.
+    Chunk boundaries at positions where rolling hash has N trailing zeros.
+    Average chunk size = 2^N bytes.
+    """</span>
+    <span class="cls">WINDOW_SIZE</span> = <span class="num">48</span>
+    <span class="cls">MASK</span>        = (<span class="num">1</span> << <span class="num">22</span>) - <span class="num">1</span>   <span class="cmt"># target avg chunk size ~4 MB = 2^22 bytes</span>
+    <span class="cls">MIN_CHUNK</span>   = <span class="num">512</span>  * <span class="num">1024</span>     <span class="cmt"># 512 KB minimum</span>
+    <span class="cls">MAX_CHUNK</span>   = <span class="num">16</span>   * <span class="num">1024</span>**<span class="num">2</span>  <span class="cmt"># 16 MB maximum</span>
+
+    <span class="kw">def</span> <span class="fn">chunk</span>(<span class="kw">self</span>, data: bytes) -> list[bytes]:
+        <span class="str">"""Split data at content-defined boundaries. Returns list of chunks."""</span>
+        chunks  = []
+        start   = <span class="num">0</span>
+        fp      = <span class="num">0</span>   <span class="cmt"># rolling Rabin fingerprint</span>
+        window  = bytearray(<span class="kw">self</span>.<span class="cls">WINDOW_SIZE</span>)
+
+        <span class="kw">for</span> i, byte <span class="kw">in</span> <span class="fn">enumerate</span>(data):
+            <span class="cmt"># Update rolling fingerprint (simplified)</span>
+            oldest  = window[i % <span class="kw">self</span>.<span class="cls">WINDOW_SIZE</span>]
+            fp      = (fp * <span class="num">31</span> + byte - oldest * (<span class="num">31</span> ** <span class="kw">self</span>.<span class="cls">WINDOW_SIZE</span>)) % (<span class="num">2</span>**<span class="num">32</span>)
+            window[i % <span class="kw">self</span>.<span class="cls">WINDOW_SIZE</span>] = byte
+
+            chunk_size = i - start + <span class="num">1</span>
+            <span class="kw">if</span> chunk_size < <span class="kw">self</span>.<span class="cls">MIN_CHUNK</span>: <span class="kw">continue</span>
+
+            <span class="cmt"># Boundary: hash ends in MASK zeros OR chunk hit max size</span>
+            <span class="kw">if</span> (fp & <span class="kw">self</span>.<span class="cls">MASK</span>) == <span class="num">0</span> <span class="kw">or</span> chunk_size >= <span class="kw">self</span>.<span class="cls">MAX_CHUNK</span>:
+                chunks.<span class="fn">append</span>(data[start:i+<span class="num">1</span>])
+                start = i + <span class="num">1</span>
+                fp    = <span class="num">0</span>
+
+        <span class="kw">if</span> start < <span class="fn">len</span>(data):
+            chunks.<span class="fn">append</span>(data[start:])   <span class="cmt"># last chunk</span>
+        <span class="kw">return</span> chunks</pre></div>
+
+    <h3>Deduplication via Content-Addressing</h3>
+    <div class="call ci"><strong>Content-addressing:</strong> Each chunk is identified by <code>SHA-256(chunk_content)</code>. If two files have an identical chunk, it's stored once. Dropbox achieved 70%+ deduplication for typical user files. Large benefits for: office templates, firmware updates, video segments with common frames.</div>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle">Conflict <em>Resolution</em></div>
+    <p class="psub">When two users (or devices) modify the same file concurrently, their changes must be merged or conflicts detected and surfaced. This is one of the hardest problems in distributed file sync.</p>
+    <h3>Three-way Merge</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">B</div><div class="fline"></div></div><div class="fb"><div class="ft">Base version — last common ancestor</div><div class="fd">The version both devices had before they diverged. Stored in the sync server. This is the "origin" of the branch.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">A</div><div class="fline"></div></div><div class="fb"><div class="ft">Version A — what Device 1 has</div><div class="fd">Changes made on laptop since last sync. Diff(Base, A) = what Device 1 added/removed.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">M</div><div class="fline"></div></div><div class="fb"><div class="ft">Merge: apply A's changes to B, then B's changes to A</div><div class="fd">If A changed line 5 and B changed line 20: merge is unambiguous. If A changed line 5 AND B also changed line 5: CONFLICT — human must resolve.</div></div></div>
+    </div>
+    <h3>Conflict Strategies</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Last-write-wins (LWW)</h4><p>Whoever saved last overwrites. Simple. May silently discard work. Used by: Dropbox (saves conflicted copy), Google Docs (reverts one).</p></div>
+      <div class="card ct-g"><h4>Operational Transformation (OT)</h4><p>Real-time collaborative editing. Each operation transformed relative to concurrent operations. Used by: Google Docs, Notion, Figma. Complex but enables real-time collaboration without conflicts.</p></div>
+      <div class="card ct-p"><h4>CRDTs</h4><p>Conflict-free Replicated Data Types. Math guarantees that all replicas converge to the same state regardless of operation order. Used by: Figma multiplayer, Notion (new), Linear. Works for specific data types (counters, sets, sequences).</p></div>
+    </div>
+    <h3>Dropbox's Conflict Copy Pattern</h3>
+    <div class="call ci"><strong>Dropbox approach (pragmatic):</strong> When a conflict is detected, rather than attempting complex merge: rename the conflicted version to <code>filename (User's conflicted copy 2024-03-26).ext</code> and save it alongside the winner. The user sees both copies and can manually resolve. Simple, never loses data, user-visible. Most sync conflicts are due to accidental concurrent edits, not genuine merge scenarios.</div>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle"><em>Architecture</em></div>
+    <h3>Merkle Trees for Directory Sync</h3>
+    <p>To sync a directory tree, you need to efficiently determine which files changed. Comparing every file's hash is O(N) over the network. A Merkle tree reduces this to O(log N) round trips.</p>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>Merkle Tree Structure</h4>
+        <ul class="rl">
+          <li>Leaf node = SHA-256(file_content)</li>
+          <li>Interior node = SHA-256(concat of children hashes)</li>
+          <li>Root hash = fingerprint of entire directory tree</li>
+          <li>If root hashes match → nothing changed. Done. 1 comparison.</li>
+          <li>If different → compare children to find the changed subtree</li>
+          <li>O(log N) comparisons to locate any changed file in a tree of N files</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Why This Matters</h4>
+        <ul class="rl">
+          <li>1M files in repo: without Merkle = 1M hash comparisons per sync</li>
+          <li>With Merkle tree = log₂(1M) ≈ 20 comparisons per sync</li>
+          <li>50,000× fewer comparisons to locate changes</li>
+          <li>Git uses this: every commit has a root Merkle tree hash</li>
+          <li>Two commits with same root hash = identical file trees</li>
+        </ul>
+      </div>
+    </div>
+    <div class="diag">
+<svg viewBox="0 0 620 170" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="10">
+  <defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#5a6a85" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="616" height="166" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Root -->
+  <rect x="250" y="14" width="120" height="28" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="310" y="24" text-anchor="middle" fill="#00e5ff" font-size="9" font-weight="700">ROOT</text>
+  <text x="310" y="35" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(L+R)</text>
+  <!-- Level 1 -->
+  <rect x="100" y="62" width="110" height="28" rx="4" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="155" y="72" text-anchor="middle" fill="#a78bfa" font-size="9">src/ subtree</text>
+  <text x="155" y="83" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(children)</text>
+  <rect x="410" y="62" width="110" height="28" rx="4" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="465" y="72" text-anchor="middle" fill="#a78bfa" font-size="9">docs/ subtree</text>
+  <text x="465" y="83" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(children)</text>
+  <!-- Level 2 -->
+  <rect x="14" y="118" width="100" height="28" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="64" y="128" text-anchor="middle" fill="#86efac" font-size="9">main.py</text>
+  <text x="64" y="139" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(file)</text>
+  <rect x="126" y="118" width="100" height="28" rx="4" fill="#131a2a" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="176" y="128" text-anchor="middle" fill="#fca5a5" font-size="9">utils.py ← CHANGED</text>
+  <text x="176" y="139" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(changed)</text>
+  <rect x="366" y="118" width="100" height="28" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="416" y="128" text-anchor="middle" fill="#86efac" font-size="9">readme.md</text>
+  <text x="416" y="139" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(file)</text>
+  <rect x="478" y="118" width="100" height="28" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="528" y="128" text-anchor="middle" fill="#86efac" font-size="9">api.md</text>
+  <text x="528" y="139" text-anchor="middle" fill="#5a6a85" font-size="7.5">SHA256(file)</text>
+  <!-- Lines -->
+  <line x1="310" y1="42" x2="155" y2="62" stroke="#5a6a85" stroke-width="1" marker-end="url(#a)"/>
+  <line x1="310" y1="42" x2="465" y2="62" stroke="#5a6a85" stroke-width="1" marker-end="url(#a)"/>
+  <line x1="155" y1="90" x2="64" y2="118" stroke="#5a6a85" stroke-width="1" marker-end="url(#a)"/>
+  <line x1="155" y1="90" x2="176" y2="118" stroke="#ef4444" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="465" y1="90" x2="416" y2="118" stroke="#5a6a85" stroke-width="1" marker-end="url(#a)"/>
+  <line x1="465" y1="90" x2="528" y2="118" stroke="#5a6a85" stroke-width="1" marker-end="url(#a)"/>
+  <text x="310" y="158" text-anchor="middle" fill="#ef4444" font-size="8">Change propagates up: utils.py → src/ hash → ROOT hash all change. Only 2 comparisons to find the change.</text>
+</svg>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Code — <em>Delta Sync Implementation</em></div>
+    <div class="cwrap"><div class="ctop"><span>delta_sync.py — rsync-style delta computation</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> hashlib, struct
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+<span class="cls">CHUNK_SIZE</span> = <span class="num">4096</span>   <span class="cmt"># 4 KB chunks</span>
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">ChunkSignature</span>:
+    index:      int
+    weak_hash:  int   <span class="cmt"># Adler-32 rolling checksum</span>
+    strong_hash: str  <span class="cmt"># MD5/SHA-256 of chunk content</span>
+
+<span class="kw">def</span> <span class="fn">adler32</span>(data: bytes) -> int:
+    <span class="str">"""Adler-32: fast rolling checksum. Supports O(1) window slide."""</span>
+    MOD, s1, s2 = <span class="num">65521</span>, <span class="num">1</span>, <span class="num">0</span>
+    <span class="kw">for</span> b <span class="kw">in</span> data: s1 = (s1 + b) % MOD; s2 = (s2 + s1) % MOD
+    <span class="kw">return</span> (s2 << <span class="num">16</span>) | s1
+
+<span class="kw">def</span> <span class="fn">build_signatures</span>(old_data: bytes) -> <span class="fn">dict</span>[int, <span class="cls">ChunkSignature</span>]:
+    <span class="str">"""Build chunk signatures for old file. Sent to remote sender."""</span>
+    sigs = {}
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="fn">len</span>(old_data), CHUNK_SIZE):
+        chunk = old_data[i : i + CHUNK_SIZE]
+        weak  = <span class="fn">adler32</span>(chunk)
+        strong = hashlib.<span class="fn">md5</span>(chunk).<span class="fn">hexdigest</span>()
+        sigs[weak] = <span class="cls">ChunkSignature</span>(i // CHUNK_SIZE, weak, strong)
+    <span class="kw">return</span> sigs
+
+<span class="kw">def</span> <span class="fn">compute_delta</span>(old_sigs: <span class="fn">dict</span>, new_data: bytes) -> list:
+    <span class="str">"""
+    Find which parts of new_data exist in old_data (by chunk matching).
+    Return delta: list of COPY(chunk_idx) or LITERAL(bytes) instructions.
+    """</span>
+    delta, i, unmatched_start = [], <span class="num">0</span>, <span class="num">0</span>
+    <span class="kw">while</span> i <= <span class="fn">len</span>(new_data) - CHUNK_SIZE:
+        chunk = new_data[i : i + CHUNK_SIZE]
+        weak  = <span class="fn">adler32</span>(chunk)
+
+        <span class="kw">if</span> weak <span class="kw">in</span> old_sigs:
+            sig = old_sigs[weak]
+            strong = hashlib.<span class="fn">md5</span>(chunk).<span class="fn">hexdigest</span>()
+            <span class="kw">if</span> strong == sig.strong_hash:   <span class="cmt"># chunk match confirmed</span>
+                <span class="kw">if</span> unmatched_start < i:
+                    delta.<span class="fn">append</span>({<span class="str">"op"</span>: <span class="str">"LITERAL"</span>,
+                                   <span class="str">"data"</span>: new_data[unmatched_start:i]})
+                delta.<span class="fn">append</span>({<span class="str">"op"</span>: <span class="str">"COPY"</span>, <span class="str">"chunk"</span>: sig.index})
+                i += CHUNK_SIZE
+                unmatched_start = i
+                <span class="kw">continue</span>
+        i += <span class="num">1</span>   <span class="cmt"># slide one byte (rolling window)</span>
+
+    <span class="kw">if</span> unmatched_start < <span class="fn">len</span>(new_data):
+        delta.<span class="fn">append</span>({<span class="str">"op"</span>: <span class="str">"LITERAL"</span>, <span class="str">"data"</span>: new_data[unmatched_start:]})
+    <span class="kw">return</span> delta
+
+<span class="kw">def</span> <span class="fn">apply_delta</span>(old_data: bytes, delta: list) -> bytes:
+    <span class="str">"""Reconstruct new file from old file + delta instructions."""</span>
+    result = bytearray()
+    <span class="kw">for</span> op <span class="kw">in</span> delta:
+        <span class="kw">if</span>   op[<span class="str">"op"</span>] == <span class="str">"COPY"</span>:
+            start = op[<span class="str">"chunk"</span>] * CHUNK_SIZE
+            result.<span class="fn">extend</span>(old_data[start : start + CHUNK_SIZE])
+        <span class="kw">elif</span> op[<span class="str">"op"</span>] == <span class="str">"LITERAL"</span>:
+            result.<span class="fn">extend</span>(op[<span class="str">"data"</span>])
+    <span class="kw">return</span> <span class="fn">bytes</span>(result)</pre></div>
+  </div>
+
+  <div class="spanel" id="t1f">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">File Diff Visualiser</span>
+        <button class="dbtn dbtn-c" onclick="diffEdit()" style="margin-left:auto">Edit a line</button>
+        <button class="dbtn dbtn-g" onclick="diffAdd()" style="margin-left:6px">Add a line</button>
+        <button class="dbtn dbtn-r" onclick="diffDelete()" style="margin-left:6px">Delete a line</button>
+        <button class="dbtn dbtn-a" onclick="diffReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>File Diff (original → modified)</h4>
+            <div id="diff-view" style="max-height:220px;overflow-y:auto"></div>
+          </div>
+          <div>
+            <h4>Transfer Efficiency</h4>
+            <div id="diff-stats" style="font-family:'JetBrains Mono',monospace;font-size:11px;display:grid;gap:5px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Rolling checksum enables O(N) delta computation</strong> — Adler-32 updates in O(1) as the window slides one byte. Without rolling checksum: O(N × chunk_size) = millions of times slower.</li>
+      <li><strong>Content-defined chunking eliminates the shift problem</strong> — inserting one byte in a fixed-chunk scheme shifts all subsequent chunks. CDC uses content-derived boundaries, so only the chunk containing the change needs retransmission.</li>
+      <li><strong>Merkle trees reduce directory scan from O(N) to O(log N)</strong> — comparing root hashes in one step determines if anything changed at all. Traversing the tree to the changed file requires O(depth) comparisons instead of O(N file hashes).</li>
+      <li><strong>Content-addressing enables deduplication</strong> — chunk = SHA256(content). Identical chunks (across files or versions) stored once. Dropbox reported 70%+ storage savings from deduplication.</li>
+      <li><strong>Conflict resolution is a product decision, not a technical one</strong> — OT and CRDTs are complex but enable real-time collaboration. For file sync (not real-time editing), conflict copies (Dropbox model) are simpler and just as correct.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T2: GEOSPATIAL SEARCH ══════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t2a">Problem & Indexing</div>
+    <div class="stab" data-s="t2b">Geohash</div>
+    <div class="stab" data-s="t2c">QuadTree & R-Tree</div>
+    <div class="stab" data-s="t2d">Scaling</div>
+    <div class="stab" data-s="t2e">Code</div>
+    <div class="stab" data-s="t2f">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">GeoSpatial Search <em>at Scale</em></div>
+    <p class="psub">"Find restaurants within 2 km of me." "Show drivers near this pickup point." "Alert me when a friend is within 500m." Geospatial search requires indexing millions of locations and finding all within a radius — efficiently, at scale. Standard B-tree indexes don't work for 2D spatial queries.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">O(log N)</div><div class="slbl">Ideal query complexity</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">±1m</div><div class="slbl">Geohash precision at level 12</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">Haversine</div><div class="slbl">Formula for great-circle distance</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">H3 + S2</div><div class="slbl">Uber/Google geo-indexing libs</div></div>
+    </div>
+    <h3>Why Standard Indexes Don't Work</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Naive: query by lat/lng ranges</h4><p><code>WHERE lat BETWEEN 12.9 AND 13.1 AND lng BETWEEN 77.5 AND 77.7</code>. This is a bounding box query, not a radius query. A B-tree index on lat helps for the lat range, but then must scan all rows in that lat band for the lng filter. O(N) scan within the band.</p></div>
+      <div class="card ct-c"><h4>Solution: Space-filling curves</h4><p>Map 2D coordinates to a 1D curve (Geohash, S2, H3) that preserves spatial locality. Points close in space map to nearby 1D codes. Then index the 1D code in a B-tree for O(log N) proximity queries.</p></div>
+    </div>
+    <h3>Haversine Formula</h3>
+    <div class="cwrap"><div class="ctop"><span>distance.py — great-circle distance between two lat/lng points</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> math
+
+<span class="kw">def</span> <span class="fn">haversine_km</span>(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    <span class="str">"""Great-circle distance in km using Haversine formula."""</span>
+    R = <span class="num">6371.0</span>   <span class="cmt"># Earth radius in km</span>
+    φ1, φ2 = math.<span class="fn">radians</span>(lat1), math.<span class="fn">radians</span>(lat2)
+    Δφ = math.<span class="fn">radians</span>(lat2 - lat1)
+    Δλ = math.<span class="fn">radians</span>(lon2 - lon1)
+    a  = (math.<span class="fn">sin</span>(Δφ/2)**<span class="num">2</span> +
+          math.<span class="fn">cos</span>(φ1) * math.<span class="fn">cos</span>(φ2) * math.<span class="fn">sin</span>(Δλ/2)**<span class="num">2</span>)
+    <span class="kw">return</span> R * <span class="num">2</span> * math.<span class="fn">asin</span>(math.<span class="fn">sqrt</span>(a))
+
+<span class="cmt"># Bangalore (12.9716°N, 77.5946°E) → Mumbai (19.0760°N, 72.8777°E)</span>
+<span class="cmt"># haversine_km(12.9716, 77.5946, 19.0760, 72.8777) ≈ 845 km</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle"><em>Geohash</em> — 1D Encoding of 2D Space</div>
+    <p class="psub">Geohash encodes a lat/lng pair into a short alphanumeric string by recursively bisecting the Earth's surface. Nearby points share a common prefix — enabling O(log N) proximity queries via a standard B-tree index.</p>
+    <h3>How Geohash Works</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Bisect longitude range → 1 bit</div><div class="fd">Earth is between -180° and 180°. Point is in West half (0) or East half (1). Repeat, alternating between lat and lng bisections.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Interleave lat and lng bits</div><div class="fd">Bits alternate: lng₀, lat₀, lng₁, lat₁, … → a single bitstring. This interleaving creates the space-filling curve property: nearby points → nearby bitstrings.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Encode bitstring as Base-32 string</div><div class="fd">Every 5 bits → one character. "ezs42" encodes a ~2.4 km × 4.9 km cell. Length 12 → ±1m precision. Length 6 → ±1.2 km.</div></div></div>
+    </div>
+    <h3>Geohash Precision Table</h3>
+    <table>
+      <tr><th>Length</th><th>Cell Size (km)</th><th>Use Case</th><th>Prefix Search Query</th></tr>
+      <tr><td>1</td><td>5000 × 5000</td><td>Continent</td><td><code>LIKE 'e%'</code></td></tr>
+      <tr><td>4</td><td>39 × 20</td><td>City region</td><td><code>LIKE 'ezs4%'</code></td></tr>
+      <tr><td>6</td><td>1.2 × 0.6</td><td>Neighborhood</td><td><code>LIKE 'ezs42e%'</code></td></tr>
+      <tr><td>8</td><td>38 × 19 m</td><td>City block</td><td><code>LIKE 'ezs42e44%'</code></td></tr>
+      <tr><td>10</td><td>1.2 × 0.6 m</td><td>Specific location</td><td><code>LIKE 'ezs42e44h%'</code></td></tr>
+      <tr><td>12</td><td>±1 m</td><td>GPS precision</td><td>Exact match</td></tr>
+    </table>
+    <h3>The Boundary Problem</h3>
+    <div class="call cw"><strong>Geohash boundary problem:</strong> Two points very close together but on different sides of a geohash cell boundary may have very different hashes. A restaurant at the edge of cell "ezs42" and a user just inside "ezs43" share no common prefix, yet may be 10m apart. Fix: query the target cell AND all 8 neighboring cells. Redis GEOSEARCH handles this automatically.</div>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">QuadTree &amp; <em>R-Tree</em></div>
+    <h3>QuadTree</h3>
+    <p>Recursively divide a 2D region into 4 quadrants. Each node represents a region. If a quadrant has more than K points, subdivide it. Efficient for sparse, non-uniform spatial distributions.</p>
+    <div class="g g2">
+      <div class="card ct-c"><h4>QuadTree Properties</h4><ul class="rl"><li>Adapts to point density — densely populated areas subdivide more</li><li>O(log N) query for uniformly distributed points</li><li>Used by: Bing Maps, Mapbox, Twitter's search-by-location</li><li>Leaf node stores points. Internal node stores bounding box.</li></ul></div>
+      <div class="card ct-g"><h4>R-Tree (PostgreSQL PostGIS)</h4><ul class="rl"><li>Indexes arbitrary rectangles/polygons (not just points)</li><li>Minimum Bounding Rectangles at each level</li><li>Supports: contains, intersects, within queries</li><li>Used by: PostgreSQL (GIST index), SQLite, MySQL Spatial</li><li>Preferred for complex polygon queries (city boundaries, delivery zones)</li></ul></div>
+    </div>
+    <h3>Redis GEOSET — Production-ready Geospatial</h3>
+    <div class="cwrap"><div class="ctop"><span>Redis GEOSET — geospatial indexing built-in</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- Redis internally uses Geohash 52-bit integer stored in a Sorted Set
+-- Score = geohash value (enables ZRANGE-based proximity queries)</span>
+
+<span class="cmt">-- Add locations</span>
+GEOADD  restaurants  77.5946 12.9716  "Truffles"
+GEOADD  restaurants  77.6034 12.9698  "MTR"
+GEOADD  restaurants  77.5900 12.9750  "Karavalli"
+
+<span class="cmt">-- Find restaurants within 2 km of user location</span>
+GEOSEARCH restaurants  FROMLONLAT 77.5946 12.9716  BYRADIUS 2 km  ASC  COUNT 10
+
+<span class="cmt">-- Response: [["Truffles", 0], ["MTR", 0.8], ["Karavalli", 1.4]]</span>
+<span class="cmt">-- Distances in km, sorted by proximity</span>
+
+<span class="cmt">-- Distance between two points</span>
+GEODIST restaurants "Truffles" "MTR" km  <span class="cmt">→ 0.8</span>
+
+<span class="cmt">-- Get geohash strings</span>
+GEOHASH restaurants "Truffles"  <span class="cmt">→ "tdr28yj90n0"</span>
+
+<span class="cmt">-- Get coordinates back</span>
+GEOPOS restaurants "Truffles"   <span class="cmt">→ [77.5946, 12.9716]</span></pre></div>
+    <div class="call cg"><strong>GEOSEARCH vs GEORADIUS:</strong> GEOSEARCH (Redis 6.2+) is the modern API. It handles the 8-neighbor boundary problem automatically — no need to manually query adjacent cells. For most production use: just use GEOSEARCH.</div>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle"><em>Scaling</em> Geospatial Search</div>
+    <h3>Sharding Geospatial Data</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Shard by City/Region</h4><p>All restaurants in Bangalore → shard 1. All in Mumbai → shard 2. Queries are routed to the appropriate shard based on the search location. Uneven distribution — large cities get disproportionate load. Use consistent hashing on city_id.</p></div>
+      <div class="card ct-g"><h4>Shard by Geohash Prefix</h4><p>All geohash prefixes starting with 'a'-'h' → shard 1, 'i'-'p' → shard 2, etc. Geographic regions naturally map to shards. Cross-shard queries rare (same city usually same prefix).</p></div>
+      <div class="card ct-a"><h4>Hierarchical Indexing</h4><p>Global → Country → City → Neighborhood hierarchy. Start search at city level (fast). Drill down if needed. Uber uses H3 (hexagonal grid) at multiple resolutions — H3 level 6 for city-wide, level 9 for block-level.</p></div>
+    </div>
+    <h3>Uber's H3 Hexagonal Grid</h3>
+    <div class="call ci"><strong>Why hexagons?</strong> A hexagonal grid has equal distance from center to all 6 neighbors (unlike squares where diagonals are 1.41× farther). This makes distance calculations uniform and eliminates the corner effect. H3 has 16 resolution levels: level 0 = continent (~4M km²), level 15 = ~1 m².</div>
+    <h3>Indexing Moving Objects (Drivers, Riders)</h3>
+    <div class="cwrap"><div class="ctop"><span>Indexing real-time moving objects — Uber-style</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- Driver updates location every 5 seconds</span>
+<span class="cmt">-- Use GEOADD to update position (overwrites previous)</span>
+GEOADD  active_drivers  77.5946 12.9716  "driver:42"
+GEOADD  active_drivers  77.6034 12.9698  "driver:99"
+
+<span class="cmt">-- Expire drivers who haven't updated in 30s (went offline)</span>
+<span class="cmt">-- Redis doesn't support per-member TTL in GEOSET</span>
+<span class="cmt">-- Solution: separate expiry set</span>
+ZADD    driver_expiry  {timestamp+30}  "driver:42"
+
+<span class="cmt">-- Find available drivers within 3 km of rider</span>
+GEOSEARCH active_drivers  FROMLONLAT 77.5900 12.9750  BYRADIUS 3 km  ASC  COUNT 5
+
+<span class="cmt">-- Ride matching: batch GEOSEARCH, filter by available status, assign nearest</span>
+<span class="cmt">-- At Uber scale: 1M+ drivers globally → partition by city → separate GEOSET per city</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Code — <em>Full Geo Search Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>geo_search.py — FastAPI + Redis GEOSET</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> math
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis
+
+app   = <span class="fn">FastAPI</span>()
+redis = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+
+<span class="dec">@app.post</span>(<span class="str">"/locations/{category}/{entity_id}"</span>)
+<span class="kw">async def</span> <span class="fn">add_location</span>(category: str, entity_id: str, lat: float, lng: float):
+    <span class="str">"""Add or update entity location. category = 'restaurants', 'drivers', etc."""</span>
+    geo_key = <span class="str">f"geo:{category}"</span>
+    <span class="kw">await</span> redis.<span class="fn">geoadd</span>(geo_key, {entity_id: (lng, lat)})
+    <span class="kw">return</span> {<span class="str">"indexed"</span>: <span class="kw">True</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/search/{category}"</span>)
+<span class="kw">async def</span> <span class="fn">search_nearby</span>(category: str, lat: float, lng: float,
+                         radius_km: float = <span class="num">5.0</span>, limit: int = <span class="num">20</span>):
+    <span class="str">"""Find all entities within radius_km of (lat, lng)."""</span>
+    geo_key = <span class="str">f"geo:{category}"</span>
+    results = <span class="kw">await</span> redis.<span class="fn">geosearch</span>(
+        geo_key,
+        longitude=lng, latitude=lat,
+        radius=radius_km, unit=<span class="str">"km"</span>,
+        sort=<span class="str">"ASC"</span>, count=limit,
+        withcoord=<span class="kw">True</span>, withdist=<span class="kw">True</span>
+    )
+    <span class="kw">return</span> [{
+        <span class="str">"id"</span>:       r[<span class="num">0</span>].<span class="fn">decode</span>(),
+        <span class="str">"dist_km"</span>: <span class="fn">round</span>(r[<span class="num">1</span>], <span class="num">3</span>),
+        <span class="str">"lat"</span>:     r[<span class="num">2</span>][<span class="num">1</span>],
+        <span class="str">"lng"</span>:     r[<span class="num">2</span>][<span class="num">0</span>],
+    } <span class="kw">for</span> r <span class="kw">in</span> results]
+
+<span class="dec">@app.put</span>(<span class="str">"/driver/{driver_id}/location"</span>)
+<span class="kw">async def</span> <span class="fn">update_driver</span>(driver_id: str, lat: float, lng: float):
+    <span class="str">"""Driver location update (called every 5s from mobile app)."""</span>
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>() <span class="kw">as</span> pipe:
+        pipe.<span class="fn">geoadd</span>(<span class="str">"geo:drivers"</span>, {driver_id: (lng, lat)})
+        pipe.<span class="fn">zadd</span>(<span class="str">"driver:last_seen"</span>, {driver_id: <span class="fn">int</span>(time.<span class="fn">time</span>())})
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()
+
+<span class="dec">@app.get</span>(<span class="str">"/drivers/nearby"</span>)
+<span class="kw">async def</span> <span class="fn">find_drivers</span>(lat: float, lng: float, radius_km: float = <span class="num">3</span>):
+    <span class="str">"""Find available (recently active) drivers near a rider."""</span>
+    cutoff = <span class="fn">int</span>(time.<span class="fn">time</span>()) - <span class="num">30</span>   <span class="cmt"># active in last 30s</span>
+    nearby = <span class="kw">await</span> <span class="fn">search_nearby</span>(<span class="str">"drivers"</span>, lat, lng, radius_km, limit=<span class="num">10</span>)
+    active = []
+    <span class="kw">for</span> driver <span class="kw">in</span> nearby:
+        last_seen = <span class="kw">await</span> redis.<span class="fn">zscore</span>(<span class="str">"driver:last_seen"</span>, driver[<span class="str">"id"</span>])
+        <span class="kw">if</span> last_seen <span class="kw">and</span> <span class="fn">int</span>(last_seen) > cutoff:
+            active.<span class="fn">append</span>(driver)
+    <span class="kw">return</span> active</pre></div>
+  </div>
+
+  <div class="spanel" id="t2f">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">GeoHash Grid Demo — click cell to query neighborhood</span>
+        <button class="dbtn dbtn-a" onclick="geoAddPoints()" style="margin-left:auto">Add 20 random points</button>
+        <button class="dbtn dbtn-r" onclick="geoReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>8×8 GeoHash Grid (click to query)</h4>
+            <div id="geo-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px"></div>
+          </div>
+          <div>
+            <h4>Query Results</h4>
+            <div id="geo-results" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);min-height:40px"></div>
+            <h4 style="margin-top:8px">Nearby Cells (8 neighbors)</h4>
+            <div id="geo-neighbors" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Geohash maps 2D space to 1D with prefix locality</strong> — nearby points share long common prefixes. Enables proximity queries with simple string prefix search on a standard B-tree index. O(log N) lookup.</li>
+      <li><strong>The 8-neighbor query solves the boundary problem</strong> — always query target cell + 8 surrounding cells. Redis GEOSEARCH does this automatically.</li>
+      <li><strong>Redis GEOSET is production-ready for millions of locations</strong> — internally uses Geohash 52-bit integers in a Sorted Set. GEOSEARCH handles radius queries, returns distances, handles boundaries. Zero extra code needed.</li>
+      <li><strong>Moving objects (drivers) need short-TTL freshness tracking</strong> — separate <code>driver:last_seen</code> Sorted Set with timestamps. Filter GEOSEARCH results by recency. TTL-based automatic cleanup for offline drivers.</li>
+      <li><strong>Shard by geographic region at scale</strong> — one Redis GEOSET per city. Route query to city shard based on search coordinates. At Uber scale: separate clusters per city, H3 hexagons for sub-city granularity.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T3: USER AFFINITY SERVICE ══════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t3a">Problem & Design</div>
+    <div class="stab" data-s="t3b">Follow Graph at Scale</div>
+    <div class="stab" data-s="t3c">Affinity Score</div>
+    <div class="stab" data-s="t3d">Code</div>
+    <div class="stab" data-s="t3e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">Designing the <em>User Affinity Service</em></div>
+    <p class="psub">Every social network needs to efficiently answer: "Who does user X follow?", "Who follows user X?", and "How close is the relationship between X and Y?" The affinity service is the foundation of the news feed, recommendations, notifications, and privacy controls.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">1B+</div><div class="slbl">Social graph edges (Instagram)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">&lt;10ms</div><div class="slbl">Follow/Follower list fetch</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">500M+</div><div class="slbl">Follow operations per day</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">Affinity</div><div class="slbl">Quantified relationship strength</div></div>
+    </div>
+    <h3>Requirements</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Core Queries</h4><ul class="rl"><li><code>follows(A, B)</code> → Is A following B? O(1)</li><li><code>following(A)</code> → All users A follows</li><li><code>followers(A)</code> → All users following A</li><li><code>mutual_follows(A, B)</code> → Users both A and B follow</li><li><code>affinity_score(A, B)</code> → Strength of A→B relationship</li></ul></div>
+      <div class="card ct-g"><h4>Scale Challenges</h4><ul class="rl"><li>Celebrities: Taylor Swift has 270M followers — can't store in one row</li><li>Active users: 500M follow operations/day = 5,787 ops/sec</li><li>Feed generation: need following list for 100M+ users quickly</li><li>Affinity calculation: real-time, affects feed ranking</li></ul></div>
+    </div>
+    <h3>Data Storage Options</h3>
+    <table>
+      <tr><th>Storage</th><th>follows(A,B)</th><th>following(A)</th><th>followers(A)</th><th>Celebrity problem</th></tr>
+      <tr><td>MySQL (adjacency list)</td><td>O(log N) index</td><td>O(k) where k=following count</td><td>O(k)</td><td>Indexed — 270M rows for Taylor Swift</td></tr>
+      <tr><td>Redis SET per user</td><td>SISMEMBER O(1)</td><td>SMEMBERS O(k)</td><td>Separate reverse SET</td><td>One huge SET — 270M members</td></tr>
+      <tr><td>Graph DB (Neo4j)</td><td>Edge exists check</td><td>Traverse edges</td><td>Traverse reverse</td><td>Handled naturally</td></tr>
+      <tr><td>Hybrid ✓</td><td>Redis for hot cache</td><td>Redis + MySQL</td><td>MySQL for cold</td><td>Paginated — no single huge structure</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle">Follow Graph <em>at Scale</em></div>
+    <h3>MySQL Adjacency List Schema</h3>
+    <div class="cwrap"><div class="ctop"><span>follows table — bidirectional adjacency list</span><span class="ltag lsq">SQL</span></div>
+    <pre><span class="kw">CREATE TABLE</span> follows (
+    follower_id  <span class="cls">BIGINT</span>   <span class="kw">NOT NULL</span>,   <span class="cmt">-- the person following</span>
+    following_id <span class="cls">BIGINT</span>   <span class="kw">NOT NULL</span>,   <span class="cmt">-- the person being followed</span>
+    created_at   <span class="cls">BIGINT</span>   <span class="kw">NOT NULL</span>,   <span class="cmt">-- epoch ms (when followed)</span>
+    status       <span class="cls">ENUM</span>(<span class="str">'active'</span>, <span class="str">'pending'</span>, <span class="str">'blocked'</span>) <span class="kw">DEFAULT</span> <span class="str">'active'</span>,
+
+    <span class="kw">PRIMARY KEY</span> (follower_id, following_id),
+
+    <span class="cmt">-- Forward index: "who does user X follow?"</span>
+    <span class="kw">INDEX</span> idx_follower (follower_id, created_at <span class="kw">DESC</span>),
+
+    <span class="cmt">-- Reverse index: "who follows user X?"</span>
+    <span class="kw">INDEX</span> idx_following (following_id, follower_id)
+) <span class="kw">PARTITION BY HASH</span>(follower_id) <span class="kw">PARTITIONS</span> <span class="num">16</span>;
+<span class="cmt">-- Shard by follower_id so "who do I follow?" stays on one shard</span>
+<span class="cmt">-- "who follows celebrity X?" spans all shards — handled with fan-out reads</span>
+
+<span class="cmt">-- follows(A, B): is A following B?</span>
+<span class="kw">SELECT</span> <span class="num">1</span> <span class="kw">FROM</span> follows
+<span class="kw">WHERE</span> follower_id=A <span class="kw">AND</span> following_id=B <span class="kw">AND</span> status=<span class="str">'active'</span>;
+
+<span class="cmt">-- following(A): paginated list of who A follows</span>
+<span class="kw">SELECT</span> following_id <span class="kw">FROM</span> follows
+<span class="kw">WHERE</span> follower_id=A <span class="kw">AND</span> status=<span class="str">'active'</span>
+<span class="kw">ORDER BY</span> created_at <span class="kw">DESC</span> <span class="kw">LIMIT</span> <span class="num">1000</span>;</pre></div>
+
+    <h3>Redis Cache for Hot Follow Graphs</h3>
+    <div class="cwrap"><div class="ctop"><span>Redis caching for follow relationships</span><span class="ltag lsq">Redis</span></div>
+    <pre><span class="cmt">-- Cache following set for active users (TTL = 1 hour)</span>
+<span class="cmt">-- Key: following:{user_id}  Value: SET of user_ids</span>
+SADD   following:42    99  201  555  1099
+EXPIRE following:42    3600
+
+<span class="cmt">-- O(1) follow check (before DB query)</span>
+SISMEMBER following:42  99       <span class="cmt">→ 1 (is following)</span>
+SISMEMBER following:42  9999     <span class="cmt">→ 0 (not following)</span>
+
+<span class="cmt">-- Set intersection: mutual follows between A and B</span>
+SINTERSTORE mutual:42:99  following:42  following:99
+SMEMBERS    mutual:42:99
+EXPIRE      mutual:42:99  300   <span class="cmt">-- cache for 5 minutes</span>
+
+<span class="cmt">-- Note: for celebrities (Taylor Swift, 270M followers):
+-- Don't cache full follower SET in Redis (270M members × 8 bytes = 2 GB per user!)
+-- Instead: cache in MySQL, serve paginated. Cache small popular subsets.</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">Affinity <em>Score</em></div>
+    <p class="psub">Affinity is a numeric score quantifying the strength of the relationship between two users. It's used in feed ranking (show posts from close friends higher) and "suggested friends" recommendations.</p>
+    <h3>Signals that Contribute to Affinity</h3>
+    <div class="g g3">
+      <div class="card ct-c"><h4>Explicit signals</h4><ul class="rl"><li>Follow/friend connection (+100)</li><li>Direct message exchange (+50/message)</li><li>Close Friends list membership (+200)</li><li>Comment on each other's posts (+10/comment)</li></ul></div>
+      <div class="card ct-g"><h4>Implicit signals</h4><ul class="rl"><li>Like their posts (+1/like)</li><li>View their stories (+2/view)</li><li>Visit their profile (+5/visit)</li><li>Share their content (+15)</li></ul></div>
+      <div class="card ct-a"><h4>Time decay</h4><p>Recent interactions weigh more heavily than old ones. Score decays exponentially with time: <code>score × e^(-λ × days)</code>. A like from yesterday = 10× a like from 30 days ago.</p></div>
+    </div>
+    <h3>Affinity Score Formula</h3>
+    <div class="cwrap"><div class="ctop"><span>affinity_score.py — time-decayed weighted interactions</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> math, time
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+<span class="cls">WEIGHTS</span> = {
+    <span class="str">"follow"</span>:     <span class="num">100</span>,
+    <span class="str">"dm_sent"</span>:     <span class="num">50</span>,
+    <span class="str">"close_friend"</span>:<span class="num">200</span>,
+    <span class="str">"comment"</span>:      <span class="num">10</span>,
+    <span class="str">"like"</span>:          <span class="num">1</span>,
+    <span class="str">"story_view"</span>:    <span class="num">2</span>,
+    <span class="str">"profile_visit"</span>: <span class="num">5</span>,
+    <span class="str">"share"</span>:        <span class="num">15</span>,
+}
+<span class="cls">DECAY_RATE</span> = <span class="num">0.05</span>   <span class="cmt"># λ: half-life ≈ 14 days</span>
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Interaction</span>:
+    event_type: str
+    timestamp_ms: int
+
+<span class="kw">def</span> <span class="fn">compute_affinity</span>(interactions: list[<span class="cls">Interaction</span>]) -> float:
+    <span class="str">"""
+    Affinity score = Σ (weight × e^(-λ × age_in_days))
+    Time decay: interactions decay exponentially with age.
+    """</span>
+    now = time.<span class="fn">time</span>() * <span class="num">1000</span>
+    score = <span class="num">0.0</span>
+    <span class="kw">for</span> ix <span class="kw">in</span> interactions:
+        weight   = WEIGHTS.<span class="fn">get</span>(ix.event_type, <span class="num">0</span>)
+        age_days = (now - ix.timestamp_ms) / <span class="num">86_400_000</span>
+        decay    = math.<span class="fn">exp</span>(-DECAY_RATE * age_days)
+        score   += weight * decay
+    <span class="kw">return</span> <span class="fn">round</span>(score, <span class="num">2</span>)
+
+<span class="cmt"># Usage: compare A→B vs B→A (asymmetric affinity)</span>
+<span class="cmt"># If A→B affinity is high but B→A is low: A is a fan, not a close friend</span>
+<span class="cmt"># Mutual high affinity → close friends → boost in feed ranking</span></pre></div>
+
+    <h3>Storing Affinity Scores</h3>
+    <div class="call ci"><strong>Storage pattern:</strong> Store affinity as a Redis Sorted Set. Key: <code>affinity:{user_id}</code>. Member: other_user_id. Score: affinity score. <code>ZREVRANGE affinity:42 0 9</code> → user 42's top 10 closest connections. Used to rank the feed, determine notification priority, and sort suggested friends. Recomputed periodically (every few hours) from the interaction event stream.</div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle">Code — <em>Full Affinity Service</em></div>
+    <div class="cwrap"><div class="ctop"><span>affinity_service.py — follow graph + affinity scoring</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+<span class="kw">import</span> redis.asyncio <span class="kw">as</span> aioredis, time
+
+app   = <span class="fn">FastAPI</span>()
+redis = aioredis.<span class="fn">Redis</span>(host=<span class="str">"redis"</span>)
+
+<span class="cmt">───────────────────────────────────
+ FOLLOW OPERATIONS
+───────────────────────────────────</span>
+<span class="dec">@app.post</span>(<span class="str">"/follow"</span>)
+<span class="kw">async def</span> <span class="fn">follow</span>(follower_id: int, following_id: int):
+    <span class="str">"""A follows B. Update DB + invalidate Redis cache."""</span>
+    now = <span class="fn">int</span>(time.<span class="fn">time</span>() * <span class="num">1000</span>)
+    <span class="kw">await</span> db.<span class="fn">execute</span>(
+        <span class="str">"INSERT IGNORE INTO follows(follower_id, following_id, created_at, status) VALUES(?,?,'active',?)"</span>,
+        [follower_id, following_id, now]
+    )
+    <span class="cmt"># Update Redis caches atomically</span>
+    <span class="kw">async with</span> redis.<span class="fn">pipeline</span>() <span class="kw">as</span> pipe:
+        pipe.<span class="fn">sadd</span>(<span class="str">f"following:{follower_id}"</span>, following_id)
+        pipe.<span class="fn">sadd</span>(<span class="str">f"followers:{following_id}"</span>, follower_id)
+        <span class="cmt"># Update affinity: follow = +100</span>
+        pipe.<span class="fn">zincrby</span>(<span class="str">f"affinity:{follower_id}"</span>, <span class="num">100</span>, <span class="fn">str</span>(following_id))
+        <span class="kw">await</span> pipe.<span class="fn">execute</span>()
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"following"</span>}
+
+<span class="dec">@app.get</span>(<span class="str">"/following/{user_id}"</span>)
+<span class="kw">async def</span> <span class="fn">get_following</span>(user_id: int, page: int = <span class="num">0</span>, size: int = <span class="num">100</span>):
+    <span class="str">"""Paginated list of who user_id follows."""</span>
+    cache = <span class="kw">await</span> redis.<span class="fn">smembers</span>(<span class="str">f"following:{user_id}"</span>)
+    <span class="kw">if</span> cache:
+        ids = [<span class="fn">int</span>(x) <span class="kw">for</span> x <span class="kw">in</span> cache]
+        <span class="kw">return</span> {<span class="str">"following"</span>: ids[page*size:(page+<span class="num">1</span>)*size], <span class="str">"source"</span>: <span class="str">"cache"</span>}
+    <span class="cmt"># Cache miss → query DB</span>
+    rows = <span class="kw">await</span> db.<span class="fn">fetch</span>(<span class="str">"SELECT following_id FROM follows WHERE follower_id=? AND status='active'"</span>, user_id)
+    ids  = [r[<span class="str">"following_id"</span>] <span class="kw">for</span> r <span class="kw">in</span> rows]
+    <span class="kw">if</span> <span class="fn">len</span>(ids) <= <span class="num">5000</span>:   <span class="cmt"># only cache non-celebrity following lists</span>
+        <span class="kw">await</span> redis.<span class="fn">sadd</span>(<span class="str">f"following:{user_id}"</span>, *<span class="fn">map</span>(str, ids))
+        <span class="kw">await</span> redis.<span class="fn">expire</span>(<span class="str">f"following:{user_id}"</span>, <span class="num">3600</span>)
+    <span class="kw">return</span> {<span class="str">"following"</span>: ids[page*size:(page+<span class="num">1</span>)*size], <span class="str">"source"</span>: <span class="str">"db"</span>}
+
+<span class="cmt">───────────────────────────────────
+ AFFINITY
+───────────────────────────────────</span>
+<span class="dec">@app.get</span>(<span class="str">"/affinity/{user_id}/top"</span>)
+<span class="kw">async def</span> <span class="fn">top_affinity</span>(user_id: int, limit: int = <span class="num">20</span>):
+    <span class="str">"""Return top N users by affinity score. Used for feed ranking."""</span>
+    results = <span class="kw">await</span> redis.<span class="fn">zrevrange</span>(<span class="str">f"affinity:{user_id}"</span>, <span class="num">0</span>, limit-<span class="num">1</span>, withscores=<span class="kw">True</span>)
+    <span class="kw">return</span> [{<span class="str">"user_id"</span>: <span class="fn">int</span>(uid), <span class="str">"score"</span>: <span class="fn">round</span>(score, <span class="num">2</span>)}
+            <span class="kw">for</span> uid, score <span class="kw">in</span> results]</pre></div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">User Affinity Graph Demo</span>
+        <button class="dbtn dbtn-c" onclick="affinityFollow()" style="margin-left:auto">Follow</button>
+        <button class="dbtn dbtn-g" onclick="affinityLike()" style="margin-left:6px">Like Post</button>
+        <button class="dbtn dbtn-p" onclick="affinityDM()" style="margin-left:6px">Send DM</button>
+        <button class="dbtn dbtn-a" onclick="affinityViewStory()" style="margin-left:6px">View Story</button>
+        <button class="dbtn dbtn-r" onclick="affinityReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Affinity Leaderboard (User A → others)</h4>
+            <div id="affinity-board" style="font-family:'JetBrains Mono',monospace;font-size:11px;display:grid;gap:4px"></div>
+          </div>
+          <div>
+            <h4>Interaction Log</h4>
+            <div id="affinity-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:140px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Primary key (follower_id, following_id) is the optimal schema</strong> — O(1) lookup for "does A follow B". The reverse index (following_id, follower_id) handles "who follows B" efficiently via a separate B-tree traversal.</li>
+      <li><strong>Cache following lists in Redis SET for active users</strong> — SISMEMBER is O(1). For regular users (&lt;5K following), cache the full set in Redis. For celebrities (1M+ followers), paginate from DB — caching 270M members in one SET is impractical.</li>
+      <li><strong>Affinity score is time-decayed</strong> — recent interactions matter more. A like from yesterday outweighs a like from 60 days ago by 20×. Without decay, old interactions dominate and the feed becomes stale.</li>
+      <li><strong>Affinity is directional</strong> — A→B affinity ≠ B→A. A super-fan may have high affinity towards a celebrity, but the celebrity has near-zero affinity towards them. This asymmetry reflects real relationship strength.</li>
+      <li><strong>Redis Sorted Set for affinity ranking gives O(log N) per interaction</strong> — ZINCRBY updates the score. ZREVRANGE returns top-K by score. All in-memory, all fast. Recompute from scratch periodically for time-decay correctness.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════ T4: COMPLETION ══════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t4a">🎓 Completion</div>
+    <div class="stab" data-s="t4b">All 8 Weeks</div>
+    <div class="stab" data-s="t4c">Interview Checklist</div>
+    <div class="stab" data-s="t4d">Key Patterns</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="completion">
+      <div style="font-size:48px;margin-bottom:12px">🎓</div>
+      <div class="completion-title">Arpit Bhayani Masterclass<br>Complete!</div>
+      <div class="completion-sub">All 8 weeks of the System Design Masterclass are now in your hands as fully interactive reference artifacts. You've covered the full spectrum — from single-node cache internals to distributed systems at petabyte scale.</div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
+        <div style="text-align:center;background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:14px 20px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--accent)">8</div>
+          <div style="font-size:11px;color:var(--muted)">Weeks Complete</div>
+        </div>
+        <div style="text-align:center;background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:14px 20px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--green)">29+</div>
+          <div style="font-size:11px;color:var(--muted)">Systems Designed</div>
+        </div>
+        <div style="text-align:center;background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:14px 20px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--amber)">15+</div>
+          <div style="font-size:11px;color:var(--muted)">Interactive Demos</div>
+        </div>
+        <div style="text-align:center;background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:14px 20px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--purple)">80+</div>
+          <div style="font-size:11px;color:var(--muted)">Sub-topics Covered</div>
+        </div>
+      </div>
+      <div class="call cgold">Every artifact includes: capacity estimates, production code (Python + Java), SVG architecture diagrams, tradeoff tables, interactive demos, and interview-ready outcome summaries. Bookmark them. Revisit them before every interview. They are yours.</div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle">All <em>8 Weeks</em> at a Glance</div>
+    <div class="weeks-grid">
+      <div class="week-card"><div class="week-card-num">WEEK 1</div><div class="week-card-title">Foundation</div><div class="week-card-topics">Online/Offline Indicator · Mental Models · Connection Pools · Caching · Kafka Essentials · SSE/WebSocket</div></div>
+      <div class="week-card"><div class="week-card-num">WEEK 2</div><div class="week-card-title">Databases</div><div class="week-card-topics">Pessimistic Locking · SQL KV Store · Scaling RDBMS · NoSQL Tradeoffs · Graph DBs · Slack Real-time · WebSockets</div></div>
+      <div class="week-card"><div class="week-card-num">WEEK 3</div><div class="week-card-title">Going Distributed</div><div class="week-card-topics">Load Balancers · Leader Election (Raft) · Distributed Locks · ID Generators · Hot Shard Problem</div></div>
+      <div class="week-card"><div class="week-card-num">WEEK 4</div><div class="week-card-title">Social Networks</div><div class="week-card-topics">Photos at Scale · Private Photos (IDOR/ACL) · Gravatar & OG Images · HashTag Counters · Message Indicators</div></div>
+      <div class="week-card"><div class="week-card-num">WEEK 5</div><div class="week-card-title">Storage Engines</div><div class="week-card-topics">Single-node Cache (LRU) · DiceDB Internals · Consistent Hashing · No-downtime Migration · Word Dictionary · LSM Trees</div></div>
+      <div class="week-card"><div class="week-card-num">WEEK 6</div><div class="week-card-title">High Throughput</div><div class="week-card-topics">Designing S3 · Multi-tiered Orders (SAGA) · LSM Deep Dive · Ads in Live Streaming · Privacy & HA</div></div>
+      <div class="week-card"><div class="week-card-num">WEEK 7</div><div class="week-card-title">IR & Adhoc Systems</div><div class="week-card-topics">Recent Searches · Cricket Commentary · Live Reactions · Distributed Task Scheduler · Flash Sale</div></div>
+      <div class="week-card" style="border:1px solid rgba(0,229,255,.3);background:rgba(0,229,255,.04)"><div class="week-card-num" style="color:var(--gold)">WEEK 8</div><div class="week-card-title" style="color:var(--accent)">Algorithmic Systems</div><div class="week-card-topics">GitHub File Sync (rsync + CDC) · GeoSpatial Search (Geohash/QuadTree) · User Affinity Service</div></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">Interview <em>Checklist</em></div>
+    <h3>For Every System Design Interview</h3>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>The 5-step Framework</h4>
+        <div class="flow" style="margin-top:0">
+          <div class="fs" style="padding-bottom:8px"><div class="fl"><div class="fc">1</div><div class="fline" style="height:0"></div></div><div class="fb" style="padding-bottom:0"><div class="ft" style="font-size:12px">Requirements (3–5 min)</div><div class="fd">Functional + Non-functional. Clarify scale (DAU, QPS, storage). Define what "success" means.</div></div></div>
+          <div class="fs" style="padding-bottom:8px"><div class="fl"><div class="fc">2</div><div class="fline" style="height:0"></div></div><div class="fb" style="padding-bottom:0"><div class="ft" style="font-size:12px">Capacity estimation (3–5 min)</div><div class="fd">QPS, storage, bandwidth. Use round numbers. Identify bottlenecks proactively.</div></div></div>
+          <div class="fs" style="padding-bottom:8px"><div class="fl"><div class="fc">3</div><div class="fline" style="height:0"></div></div><div class="fb" style="padding-bottom:0"><div class="ft" style="font-size:12px">High-level design (10 min)</div><div class="fd">API endpoints, data flow, core components. Start simple, identify the core data structure or algorithm.</div></div></div>
+          <div class="fs" style="padding-bottom:8px"><div class="fl"><div class="fc">4</div><div class="fline" style="height:0"></div></div><div class="fb" style="padding-bottom:0"><div class="ft" style="font-size:12px">Deep dive (15 min)</div><div class="fd">Pick the hardest part: data model, concurrency, scaling strategy. Show depth here.</div></div></div>
+          <div class="fs"><div class="fl"><div class="fc">5</div></div><div class="fb" style="padding-bottom:0"><div class="ft" style="font-size:12px">Tradeoffs & extensions</div><div class="fd">Acknowledge weaknesses in your design. How would it handle 10× scale? What would you change?</div></div></div>
+        </div>
+      </div>
+      <div class="card ct-g">
+        <h4>Questions to Always Ask</h4>
+        <ul class="rl">
+          <li>What is the expected QPS / DAU?</li>
+          <li>Read-heavy or write-heavy? Ratio?</li>
+          <li>What are the consistency requirements? Can we tolerate eventual?</li>
+          <li>What is the data retention policy?</li>
+          <li>Is there a global deployment requirement?</li>
+          <li>What is the latency SLA? p50, p99?</li>
+          <li>Are there regulatory requirements (GDPR, data residency)?</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Common Anti-Patterns to Avoid</h3>
+    <div class="g g3">
+      <div class="card ct-r"><h4>Over-engineering</h4><p>Starting with microservices, Kafka, Redis, Elasticsearch before identifying if they're needed. Start simple. Add components only when you've identified a concrete bottleneck they solve.</p></div>
+      <div class="card ct-a"><h4>Ignoring the data model</h4><p>Jumping to architecture without defining the schema. The data model often determines the entire architecture. What you store and how drives everything else.</p></div>
+      <div class="card ct-r"><h4>No tradeoffs</h4><p>Every choice has a tradeoff. Saying "we'll use Cassandra because it scales" without mentioning its eventual consistency, no joins, or tombstone management shows shallow understanding.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">Key <em>Patterns</em> — The Building Blocks</div>
+    <h3>The 12 Most Important System Design Patterns</h3>
+    <table>
+      <tr><th>#</th><th>Pattern</th><th>When to Use</th><th>Example</th></tr>
+      <tr><td>1</td><td><strong>Pre-signed URL</strong></td><td>Upload large files to object storage</td><td>S3, GCS — bypass API server for bulk uploads</td></tr>
+      <tr><td>2</td><td><strong>Redis Sorted Set</strong></td><td>Rankings, leaderboards, recent items, rate limiting</td><td>Trending hashtags, recent searches, score boards</td></tr>
+      <tr><td>3</td><td><strong>Kafka fan-out</strong></td><td>One event → multiple consumers</td><td>Photo upload → resize, moderate, notify</td></tr>
+      <tr><td>4</td><td><strong>SAGA pattern</strong></td><td>Distributed transactions across microservices</td><td>Order → inventory → payment → fulfillment</td></tr>
+      <tr><td>5</td><td><strong>Consistent hashing</strong></td><td>Shard data with minimal reshuffling on scale</td><td>Redis Cluster, Cassandra, Memcached</td></tr>
+      <tr><td>6</td><td><strong>Content-addressing</strong></td><td>Deduplication, immutable CDN URLs, integrity</td><td>S3 storage, Git objects, IPFS</td></tr>
+      <tr><td>7</td><td><strong>Bloom filter</strong></td><td>Fast existence check with small false-positive rate</td><td>Spell check, LSM read path, CDN cache bypass</td></tr>
+      <tr><td>8</td><td><strong>Dual-write + shadow read</strong></td><td>Zero-downtime data migration</td><td>MySQL → Cassandra, sharding changes</td></tr>
+      <tr><td>9</td><td><strong>Geohash / GeoSET</strong></td><td>Proximity queries (nearby drivers, restaurants)</td><td>Uber, Swiggy, Yelp, Zomato</td></tr>
+      <tr><td>10</td><td><strong>Time-bucketed counters</strong></td><td>Rate limiting, aggregated metrics, trending</td><td>Live reactions, API rate limit, DAU/MAU</td></tr>
+      <tr><td>11</td><td><strong>LSM tree</strong></td><td>Write-heavy workloads requiring persistence</td><td>Cassandra, RocksDB, LevelDB</td></tr>
+      <tr><td>12</td><td><strong>CRDT / Operational Transform</strong></td><td>Real-time collaborative editing</td><td>Google Docs, Figma multiplayer, Notion</td></tr>
+    </table>
+    <div class="call cgold" style="margin-top:16px"><strong>Final words:</strong> System design has no perfect answers — only justified trade-offs. The interviewer wants to see your thought process: how you break down a vague problem, what constraints you surface, which patterns you reach for and why, and how you acknowledge the limitations of your choices. Build that muscle. These 8 weeks gave you the vocabulary. Practice is what makes it instinct.</div>
+  </div>
+
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ── TAB WIRING ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const id=t.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');document.getElementById(id).classList.add('active');
+    t.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(s=>{
+  s.addEventListener('click',()=>{
+    const sid=s.dataset.s;
+    s.closest('.subtabwrap').querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));
+    s.closest('.topic').querySelectorAll('.spanel').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active');document.getElementById(sid).classList.add('active');
+    s.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.ltab').forEach(lt=>{
+  lt.addEventListener('click',()=>{
+    const l=lt.dataset.l;if(!l)return;
+    lt.closest('.ltabs').querySelectorAll('.ltab').forEach(x=>x.classList.remove('on'));
+    lt.classList.add('on');
+    lt.parentElement.querySelectorAll('.lpanel').forEach(p=>p.classList.toggle('on',p.id===l));
+  });
+});
+
+// ── FILE DIFF DEMO ─────────────────────────────────────────────────────────
+let diffLines=['function authenticate(user) {','  const token = generateToken(user.id);','  if (!token) return null;','  saveSession(token, user);','  return { token, expires: Date.now() + 3600000 };','}','','function logout(token) {','  deleteSession(token);','  return true;','}'];
+let diffChanges=[];
+function diffView(){
+  const el=document.getElementById('diff-view');if(!el)return;
+  const combined=[...diffChanges.map(c=>({...c})),...diffLines.map((l,i)=>({type:'ctx',text:l,idx:i}))].sort((a,b)=>(a.idx||0)-(b.idx||0));
+  el.innerHTML=diffLines.map((l,i)=>{
+    const del=diffChanges.find(c=>c.type==='del'&&c.idx===i);
+    const add=diffChanges.find(c=>c.type==='add'&&c.idx===i);
+    let html='';
+    if(del)html+=`<div class="diff-line diff-del">- ${del.old}</div>`;
+    if(add)html+=`<div class="diff-line diff-add">+ ${add.text}</div>`;
+    if(!del&&!add)html+=`<div class="diff-line diff-ctx">  ${l}</div>`;
+    return html;
+  }).join('');
+  const changed=diffChanges.length;const total=diffLines.join('').length;
+  const stats=document.getElementById('diff-stats');if(stats){stats.innerHTML=`<div>Total file size: <span style="color:var(--text)">${total} bytes</span></div><div>Lines changed: <span style="color:var(--amber)">${changed}</span></div><div>Bytes to transfer: <span style="color:var(--green)">${changed*40} bytes</span></div><div>Transfer savings: <span style="color:var(--accent)">${(100-changed*40/total*100).toFixed(1)}%</span></div>`;}
+}
+function diffEdit(){
+  const i=Math.floor(Math.random()*diffLines.length);
+  diffChanges=diffChanges.filter(c=>c.idx!==i);
+  diffChanges.push({type:'del',idx:i,old:diffLines[i]});
+  diffChanges.push({type:'add',idx:i,text:diffLines[i]+' // edited',old:diffLines[i]});
+  diffView();
+}
+function diffAdd(){
+  const i=Math.floor(Math.random()*diffLines.length);
+  diffChanges.push({type:'add',idx:i,text:'  // new line added here'});
+  diffView();
+}
+function diffDelete(){
+  const i=Math.floor(Math.random()*diffLines.length);
+  diffChanges=diffChanges.filter(c=>c.idx!==i);
+  diffChanges.push({type:'del',idx:i,old:diffLines[i]});
+  diffView();
+}
+function diffReset(){diffChanges=[];diffView();}
+diffView();
+
+// ── GEO DEMO ──────────────────────────────────────────────────────────────
+const geoPoints=new Set();let geoSelected=null;
+function geoInit(){
+  const el=document.getElementById('geo-grid');if(!el)return;
+  el.innerHTML='';
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const cell=document.createElement('div');
+    cell.className='geo-cell';
+    cell.id=`gc-${r}-${c}`;
+    const hash=String.fromCharCode(97+r)+String.fromCharCode(97+c);
+    cell.title=`geohash: ${hash}`;
+    cell.innerHTML='·';
+    cell.onclick=()=>geoQuery(r,c);
+    el.appendChild(cell);
+  }
+}
+function geoAddPoints(){
+  for(let i=0;i<20;i++){const r=Math.floor(Math.random()*8),c=Math.floor(Math.random()*8);geoPoints.add(`${r},${c}`);document.getElementById(`gc-${r}-${c}`)?.classList.add('active');}
+  const el=document.getElementById('geo-results');if(el)el.innerHTML='<span style="color:var(--muted)">Click a cell to query nearby points</span>';
+}
+function geoQuery(r,c){
+  // Reset
+  document.querySelectorAll('.geo-cell').forEach(el=>{el.classList.remove('query-zone','result');});
+  // Mark neighbors
+  const neighbors=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<8&&nc>=0&&nc<8){const el=document.getElementById(`gc-${nr}-${nc}`);if(el){el.classList.add(dr===0&&dc===0?'query-zone':'result');if(geoPoints.has(`${nr},${nc}`))neighbors.push(`(${nr},${nc})`);}}}
+  const res=document.getElementById('geo-results');if(res){res.innerHTML=`<div style="color:var(--accent)">Queried cell (${r},${c}) and 8 neighbors</div><div style="color:var(--green);margin-top:4px">Points found: ${neighbors.length}</div><div style="color:var(--muted);font-size:10px">${neighbors.join(', ')||'none in range'}</div>`;}
+}
+geoInit();
+
+// ── AFFINITY DEMO ─────────────────────────────────────────────────────────
+const affinityScores={B:0,C:0,D:0,E:0};
+const affinityColors={B:'#22c55e',C:'#00e5ff',D:'#f59e0b',E:'#a78bfa'};
+const affinityNames={B:'Bob',C:'Carol',D:'David',E:'Eve'};
+function affinityLog(m,c='#5a6a85'){const el=document.getElementById('affinity-log');if(!el)return;el.innerHTML+=`<div style="color:${c};margin-bottom:2px">${m}</div>`;el.scrollTop=el.scrollHeight;}
+function affinityRenderBoard(){
+  const el=document.getElementById('affinity-board');if(!el)return;
+  const sorted=Object.entries(affinityScores).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML=sorted.map(([k,v],i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted);width:14px">${i+1}</span><span style="font-size:16px">${['🥇','🥈','🥉',''][i]||''}</span><span style="color:${affinityColors[k]};font-weight:700;width:60px">${affinityNames[k]}</span><div style="flex:1;background:var(--border);border-radius:3px;height:6px;overflow:hidden"><div style="width:${Math.min(100,v/5)}%;height:100%;background:${affinityColors[k]};transition:width .4s"></div></div><span style="color:var(--text);width:50px;text-align:right">${v.toFixed(1)}</span></div>`).join('');
+}
+function randUser(){const users=Object.keys(affinityScores);return users[Math.floor(Math.random()*users.length)];}
+function affinityFollow(){const u=randUser();affinityScores[u]+=100;affinityLog(`A → ${affinityNames[u]}: FOLLOWED (+100)`,'var(--green)');affinityRenderBoard();}
+function affinityLike(){const u=randUser();affinityScores[u]+=1;affinityLog(`A → ${affinityNames[u]}: liked a post (+1)`,'var(--muted)');affinityRenderBoard();}
+function affinityDM(){const u=randUser();affinityScores[u]+=50;affinityLog(`A → ${affinityNames[u]}: sent a DM (+50)`,'var(--accent)');affinityRenderBoard();}
+function affinityViewStory(){const u=randUser();affinityScores[u]+=2;affinityLog(`A → ${affinityNames[u]}: viewed story (+2)`,'var(--muted)');affinityRenderBoard();}
+function affinityReset(){Object.keys(affinityScores).forEach(k=>affinityScores[k]=0);document.getElementById('affinity-log').innerHTML='';affinityRenderBoard();}
+affinityRenderBoard();
+</script>
+</body>
+</html>
