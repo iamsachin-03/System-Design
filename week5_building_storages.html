@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 5 — Building Storages</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090d15;--surf:#0e1420;--surf2:#131a2a;--surf3:#1a2236;
+  --border:#1e2d45;--accent:#00e5ff;--green:#22c55e;--amber:#f59e0b;
+  --red:#ef4444;--purple:#7c3aed;--pink:#ec4899;--teal:#14b8a6;
+  --orange:#f97316;--text:#e2e8f0;--muted:#5a6a85;--codebg:#070b12;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;display:flex;flex-direction:column}
+.hdr{height:54px;background:var(--surf);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0}
+.hdr-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent);white-space:nowrap}
+.hdr-div{width:1px;height:22px;background:var(--border)}
+.hdr-ttl{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;border:1px solid;font-weight:700;white-space:nowrap}
+.hb-c{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,.07)}
+.hb-g{color:var(--green);border-color:var(--green);background:rgba(34,197,94,.07)}
+.hb-p{color:#a78bfa;border-color:#a78bfa;background:rgba(124,58,237,.07)}
+.hb-a{color:var(--amber);border-color:var(--amber);background:rgba(245,158,11,.07)}
+.hb-t{color:var(--teal);border-color:var(--teal);background:rgba(20,184,166,.07)}
+.hb-o{color:var(--orange);border-color:var(--orange);background:rgba(249,115,22,.07)}
+
+.topicbar{height:46px;background:var(--surf2);border-bottom:2px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:2px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.topicbar::-webkit-scrollbar{display:none}
+.ttab{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:6px 6px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;user-select:none;background:transparent}
+.ttab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ttab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.tnum{font-size:9px;font-weight:700;background:rgba(0,229,255,.12);color:var(--accent);padding:1px 5px;border-radius:3px}
+
+.subtabwrap{background:var(--surf3);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 14px;gap:2px;overflow-x:auto;height:38px;flex-shrink:0;scrollbar-width:none}
+.subtabwrap::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;height:30px;padding:0 11px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .12s;user-select:none;background:transparent}
+.stab:hover{color:var(--text)}
+.stab.active{color:var(--accent);background:var(--codebg);border-color:var(--border);border-bottom-color:var(--codebg)}
+
+.topics{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topic{display:none;flex:1;flex-direction:column;overflow:hidden}
+.topic.active{display:flex}
+.subpanels{flex:1;overflow:hidden;position:relative}
+.spanel{display:none;position:absolute;inset:0;overflow-y:auto;padding:22px 26px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.spanel::-webkit-scrollbar{width:5px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.spanel.active{display:block}
+
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:5px}
+.ptitle em{color:var(--accent);font-style:normal}
+.psub{color:var(--muted);font-size:13px;margin-bottom:18px;max-width:720px;line-height:1.6}
+h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#e2e8f0;margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+h3::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin:13px 0 6px;text-transform:uppercase;letter-spacing:.1em}
+p{color:#8a9bb5;line-height:1.65;margin-bottom:10px;font-size:13.5px}
+code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c3e88d;background:rgba(195,232,141,.08);padding:1px 5px;border-radius:3px}
+strong{color:var(--text)}
+
+.g{display:grid;gap:11px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(192px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(144px,1fr))}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:15px}
+.ct-c{border-top:2px solid var(--accent)}.ct-g{border-top:2px solid var(--green)}
+.ct-p{border-top:2px solid #a78bfa}.ct-a{border-top:2px solid var(--amber)}
+.ct-r{border-top:2px solid var(--red)}.ct-t{border-top:2px solid var(--teal)}
+.ct-o{border-top:2px solid var(--orange)}
+
+.snum{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);line-height:1}
+.slbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+.rl{list-style:none}
+.rl li{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;color:#8a9bb5}
+.rl li:last-child{border-bottom:none}
+.rl li::before{content:'▸';color:var(--accent);font-size:9px;flex-shrink:0;margin-top:4px}
+.rl li strong{color:var(--text)}
+
+.call{border-left:3px solid;padding:9px 13px;border-radius:0 6px 6px 0;margin:9px 0;font-size:12.5px;line-height:1.6}
+.ci{border-color:var(--accent);background:rgba(0,229,255,.05);color:#7dd3fc}
+.cw{border-color:var(--amber);background:rgba(245,158,11,.05);color:#fcd34d}
+.cg{border-color:var(--green);background:rgba(34,197,94,.05);color:#86efac}
+.cr{border-color:var(--red);background:rgba(239,68,68,.05);color:#fca5a5}
+.cp{border-color:#a78bfa;background:rgba(124,58,237,.05);color:#c4b5fd}
+
+table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+th{background:var(--surf2);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:7px 10px;text-align:left;border:1px solid var(--border)}
+td{padding:6px 10px;border:1px solid var(--border);color:#8a9bb5;vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+
+.cwrap{margin:7px 0 14px;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.ctop{display:flex;justify-content:space-between;align-items:center;background:var(--surf3);padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ltag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;text-transform:uppercase}
+.lpy{background:rgba(59,130,246,.2);color:#60a5fa}.ljv{background:rgba(249,115,22,.2);color:#fb923c}
+.lsq{background:rgba(16,185,129,.2);color:#34d399}
+pre{background:var(--codebg);padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#e2e8f0;overflow-x:auto;margin:0}
+.kw{color:#c792ea}.fn{color:#82aaff}.str{color:#c3e88d}.num{color:#f78c6c}
+.cmt{color:#3e5060;font-style:italic}.cls{color:#ffcb6b}.dec{color:#89ddff}
+
+.ltabs{display:flex;gap:4px;margin-bottom:-1px}
+.ltab{padding:5px 12px;border:1px solid var(--border);background:var(--surf3);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;border-radius:5px 5px 0 0;cursor:pointer;transition:all .15s;border-bottom:none}
+.ltab.on{background:var(--codebg);color:var(--accent)}
+.lpanel{display:none}.lpanel.on{display:block}
+
+.diag{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0}
+.flow{display:grid;gap:0}
+.fs{display:flex;gap:11px}
+.fl{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.fc{width:28px;height:28px;border-radius:50%;background:var(--surf2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;color:var(--accent)}
+.fline{flex:1;width:2px;background:var(--border);margin:2px auto}
+.fb{padding:3px 0 14px}
+.ft{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
+.fd{font-size:12px;color:var(--muted);line-height:1.55}
+
+.tdp{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:9px 0}
+.tdc{background:var(--surf);border-radius:7px;padding:13px;border:1px solid}
+.pro{border-color:rgba(34,197,94,.25)}.con{border-color:rgba(239,68,68,.25)}
+.pro h4{color:var(--green);margin:0 0 7px}.con h4{color:var(--red);margin:0 0 7px}
+.tdc li{font-size:12px;color:#8a9bb5;margin-bottom:5px;line-height:1.5;list-style:none;padding-left:12px;position:relative}
+.tdc li::before{content:'·';position:absolute;left:0;color:var(--muted)}
+
+.demo-box{background:var(--codebg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:10px 0}
+.demo-bar{background:var(--surf2);padding:7px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dr{background:var(--red)}.dy{background:var(--amber)}.dg{background:var(--green)}
+.demo-body{padding:14px}
+.dbtn{padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;border:1px solid;transition:all .15s}
+.dbtn-c{background:rgba(0,229,255,.08);border-color:var(--accent);color:var(--accent)}
+.dbtn-g{background:rgba(34,197,94,.08);border-color:var(--green);color:var(--green)}
+.dbtn-r{background:rgba(239,68,68,.08);border-color:var(--red);color:var(--red)}
+.dbtn-a{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+.dbtn-p{background:rgba(124,58,237,.08);border-color:#a78bfa;color:#a78bfa}
+
+.ol{list-style:none;display:grid;gap:7px}
+.ol li{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:9px 12px;display:flex;gap:9px;font-size:13px;color:#8a9bb5;line-height:1.55}
+.ol li::before{content:'✦';color:var(--accent);flex-shrink:0;font-size:9px;margin-top:4px}
+.ol li strong{color:var(--text)}
+.done{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;margin-top:14px}
+
+/* LSM visualizer */
+.lsm-level{display:flex;gap:5px;align-items:center;margin:4px 0;padding:6px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.lsm-label{width:60px;color:var(--muted);flex-shrink:0}
+.sstable{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);border-radius:3px;padding:2px 7px;color:var(--accent);font-size:10px;cursor:default;transition:all .3s}
+.sstable.compacting{border-color:var(--amber);background:rgba(245,158,11,.1);color:var(--amber);animation:blink .6s ease infinite alternate}
+@keyframes blink{from{opacity:.5}to{opacity:1}}
+.memtable-vis{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:5px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:6px}
+
+/* Cache vis */
+.cache-slot{background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;margin:3px 0;display:flex;justify-content:space-between;transition:all .3s}
+.cache-slot.fresh{border-color:var(--green);background:rgba(34,197,94,.07)}
+.cache-slot.stale{border-color:var(--amber);background:rgba(245,158,11,.07);opacity:.7}
+.cache-slot.evicted{border-color:var(--red);background:rgba(239,68,68,.07);opacity:.5}
+
+/* Consistent hash ring */
+.ring-vis{position:relative;width:200px;height:200px;margin:10px auto}
+.ring-svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-brand">⬡ SD Masterclass</div>
+  <div class="hdr-div"></div>
+  <div class="hdr-ttl">Week 5 · Building Storages — All 6 Topics</div>
+  <div class="hdr-badges">
+    <span class="hbadge hb-c">Single-node Cache</span>
+    <span class="hbadge hb-g">DiceDB</span>
+    <span class="hbadge hb-p">Consistent Hashing</span>
+    <span class="hbadge hb-a">Data Migration</span>
+    <span class="hbadge hb-t">Word Dictionary</span>
+    <span class="hbadge hb-o">LSM Tree</span>
+  </div>
+</div>
+
+<div class="topicbar">
+  <div class="ttab active" data-topic="t1"><span class="tnum">01</span>Single-node Cache</div>
+  <div class="ttab"        data-topic="t2"><span class="tnum">02</span>DiceDB Internals</div>
+  <div class="ttab"        data-topic="t3"><span class="tnum">03</span>Consistent Hashing Ops</div>
+  <div class="ttab"        data-topic="t4"><span class="tnum">04</span>No-downtime Migration</div>
+  <div class="ttab"        data-topic="t5"><span class="tnum">05</span>Word Dictionary (No DB)</div>
+  <div class="ttab"        data-topic="t6"><span class="tnum">06</span>Log-Structured KV Store</div>
+</div>
+
+<div class="topics">
+
+<!-- ══════════════ T1: SINGLE-NODE CACHE ══════════════ -->
+<div class="topic active" id="t1">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t1a">Overview & Architecture</div>
+    <div class="stab" data-s="t1b">Eviction Policies</div>
+    <div class="stab" data-s="t1c">Lock-free Concurrency</div>
+    <div class="stab" data-s="t1d">TTL & Expiry</div>
+    <div class="stab" data-s="t1e">Code</div>
+    <div class="stab" data-s="t1f">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t1a">
+    <div class="ptitle">Implementing a <em>Single-node Cache</em></div>
+    <p class="psub">Before scaling to a distributed cache, you must understand the internals of a single-node cache. This is how Redis, Memcached, and DiceDB work at their core — and the foundation for every distributed caching system.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">O(1)</div><div class="slbl">GET / SET / DEL</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">O(1)</div><div class="slbl">LRU eviction (with doubly-linked list)</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">0</div><div class="slbl">Locks in single-threaded event loop</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">~1ms</div><div class="slbl">p99 latency in-process</div></div>
+    </div>
+    <h3>Core Data Structures</h3>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>Hash Map — O(1) lookup</h4>
+        <p>The primary key-value store. <code>key → {value, expiry, lru_node_ptr}</code>. Collision resolution via chaining or open addressing. Python's <code>dict</code>, Java's <code>HashMap</code>, or a custom hash table with linear probing.</p>
+        <p>Resize strategy: when load factor exceeds 0.75, double capacity and rehash. Amortized O(1) insert.</p>
+      </div>
+      <div class="card ct-g">
+        <h4>Doubly-Linked List — O(1) LRU</h4>
+        <p>Maintain access recency. Every GET/SET moves the node to the list head (MRU). Eviction removes from the tail (LRU). O(1) because we store a pointer to the node in the hash map — no search needed.</p>
+        <div class="call cg" style="font-size:12px;padding:7px">The combination of Hash Map + Doubly-Linked List = O(1) LRU cache. This is a canonical interview question — know it cold.</div>
+      </div>
+    </div>
+    <h3>Memory Layout</h3>
+    <div class="diag">
+<svg viewBox="0 0 680 140" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker>
+  <marker id="ag" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#22c55e" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="676" height="136" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <!-- Hash Map -->
+  <rect x="14" y="18" width="200" height="110" rx="5" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="114" y="36" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Hash Map</text>
+  <rect x="24" y="44" width="180" height="18" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="60" y="57" fill="#a78bfa" font-size="9">hash("user:42")</text>
+  <text x="175" y="57" fill="#5a6a85" font-size="9">→ node_ptr</text>
+  <rect x="24" y="66" width="180" height="18" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="60" y="79" fill="#a78bfa" font-size="9">hash("session:7")</text>
+  <text x="175" y="79" fill="#5a6a85" font-size="9">→ node_ptr</text>
+  <rect x="24" y="88" width="180" height="18" rx="3" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="60" y="101" fill="#a78bfa" font-size="9">hash("config:db")</text>
+  <text x="175" y="101" fill="#5a6a85" font-size="9">→ node_ptr</text>
+  <text x="114" y="118" text-anchor="middle" fill="#3a4a60" font-size="8">O(1) lookup by key</text>
+  <!-- DLL -->
+  <rect x="260" y="18" width="400" height="110" rx="5" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="460" y="36" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">Doubly-Linked List (MRU → LRU)</text>
+  <text x="280" y="48" fill="#22c55e" font-size="8">MRU (head)</text>
+  <!-- Nodes -->
+  <rect x="272" y="54" width="80" height="44" rx="4" fill="#0e1420" stroke="#00e5ff" stroke-width="1"/>
+  <text x="312" y="70" text-anchor="middle" fill="#00e5ff" font-size="8">user:42</text>
+  <text x="312" y="82" text-anchor="middle" fill="#5a6a85" font-size="7.5">"Alice"</text>
+  <text x="312" y="92" text-anchor="middle" fill="#5a6a85" font-size="7">exp:+3600s</text>
+  <rect x="362" y="54" width="80" height="44" rx="4" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="402" y="70" text-anchor="middle" fill="#8a9bb5" font-size="8">session:7</text>
+  <text x="402" y="82" text-anchor="middle" fill="#5a6a85" font-size="7.5">"tok_xyz"</text>
+  <text x="402" y="92" text-anchor="middle" fill="#5a6a85" font-size="7">exp:+300s</text>
+  <rect x="452" y="54" width="80" height="44" rx="4" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="492" y="70" text-anchor="middle" fill="#8a9bb5" font-size="8">config:db</text>
+  <text x="492" y="82" text-anchor="middle" fill="#5a6a85" font-size="7.5">"prod-url"</text>
+  <text x="492" y="92" text-anchor="middle" fill="#5a6a85" font-size="7">exp:none</text>
+  <rect x="542" y="54" width="80" height="44" rx="4" fill="#0e1420" stroke="#ef4444" stroke-width="1"/>
+  <text x="582" y="70" text-anchor="middle" fill="#ef4444" font-size="8">old:key</text>
+  <text x="582" y="82" text-anchor="middle" fill="#5a6a85" font-size="7.5">…</text>
+  <text x="582" y="92" text-anchor="middle" fill="#3a4a60" font-size="7">← EVICT FIRST</text>
+  <!-- Arrows in DLL -->
+  <line x1="352" y1="76" x2="360" y2="76" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag)" opacity=".7"/>
+  <line x1="442" y1="76" x2="450" y2="76" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag)" opacity=".7"/>
+  <line x1="532" y1="76" x2="540" y2="76" stroke="#22c55e" stroke-width="1.5" marker-end="url(#ag)" opacity=".7"/>
+  <text x="620" y="48" fill="#ef4444" font-size="8">LRU (tail)</text>
+  <!-- Arrow from hash to DLL -->
+  <line x1="216" y1="76" x2="258" y2="76" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#a)" opacity=".7"/>
+  <text x="236" y="70" fill="#00e5ff" font-size="7.5" text-anchor="middle">O(1) ptr</text>
+  <text x="460" y="118" text-anchor="middle" fill="#3a4a60" font-size="8">GET moves accessed node to head · Eviction removes tail</text>
+</svg>
+    </div>
+  </div>
+
+  <div class="spanel" id="t1b">
+    <div class="ptitle">Eviction <em>Policies</em></div>
+    <p class="psub">When the cache is full, which entry is removed to make room for a new one? The choice fundamentally affects hit rate and system behaviour.</p>
+    <h3>LRU — Least Recently Used (The Interview Standard)</h3>
+    <p>Evict the entry that was accessed least recently. Assumes temporal locality — recently accessed data is likely to be accessed again soon. Implementation: Hash Map + Doubly-Linked List = O(1) all operations.</p>
+    <div class="cwrap"><div class="ctop"><span>lru_cache.py — O(1) LRU with hash map + doubly-linked list</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> collections <span class="kw">import</span> OrderedDict
+
+<span class="kw">class</span> <span class="cls">LRUCache</span>:
+    <span class="str">"""
+    O(1) GET, PUT, DELETE with LRU eviction.
+    Uses OrderedDict (internally a dict + doubly-linked list).
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, capacity: int):
+        <span class="kw">self</span>.capacity = capacity
+        <span class="kw">self</span>.cache = <span class="cls">OrderedDict</span>()   <span class="cmt"># key → value, LRU order</span>
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        <span class="kw">if</span> key <span class="kw">not in self</span>.cache:
+            <span class="kw">return None</span>
+        <span class="kw">self</span>.cache.<span class="fn">move_to_end</span>(key)   <span class="cmt"># mark as MRU (most recently used)</span>
+        <span class="kw">return self</span>.cache[key]
+
+    <span class="kw">def</span> <span class="fn">put</span>(<span class="kw">self</span>, key: str, value):
+        <span class="kw">if</span> key <span class="kw">in self</span>.cache:
+            <span class="kw">self</span>.cache.<span class="fn">move_to_end</span>(key)
+        <span class="kw">self</span>.cache[key] = value
+        <span class="kw">if</span> <span class="fn">len</span>(<span class="kw">self</span>.cache) > <span class="kw">self</span>.capacity:
+            <span class="kw">self</span>.cache.<span class="fn">popitem</span>(last=<span class="kw">False</span>)   <span class="cmt"># remove LRU (oldest = first item)</span>
+
+    <span class="kw">def</span> <span class="fn">delete</span>(<span class="kw">self</span>, key: str) -> bool:
+        <span class="kw">return</span> <span class="kw">bool</span>(<span class="kw">self</span>.cache.<span class="fn">pop</span>(key, <span class="kw">None</span>))</pre></div>
+
+    <h3>All Eviction Policies Compared</h3>
+    <table>
+      <tr><th>Policy</th><th>Evicts</th><th>Data structure</th><th>Best For</th><th>Weakness</th></tr>
+      <tr><td><strong>LRU</strong></td><td>Least recently accessed</td><td>HashMap + DLL</td><td>General caching, session data</td><td>Scan resistance: sequential scan evicts all useful data</td></tr>
+      <tr><td><strong>LFU</strong></td><td>Least frequently accessed</td><td>HashMap + min-heap / frequency list</td><td>Skewed access (hot keys)</td><td>Frequency counts decay slowly; new keys get evicted</td></tr>
+      <tr><td><strong>FIFO</strong></td><td>Oldest inserted</td><td>Queue</td><td>Simple, fair expiry</td><td>Ignores access pattern; evicts popular old items</td></tr>
+      <tr><td><strong>Random</strong></td><td>Random entry</td><td>Array + random index</td><td>Uniform access distribution</td><td>Unpredictable; may evict hot items</td></tr>
+      <tr><td><strong>CLOCK (2nd chance)</strong></td><td>First not recently used</td><td>Circular array + reference bit</td><td>OS page replacement</td><td>Slightly worse than LRU, but simpler</td></tr>
+      <tr><td><strong>ARC (Adaptive)</strong></td><td>Adapts between LRU and LFU</td><td>4 lists</td><td>Unknown/variable workloads</td><td>More complex implementation</td></tr>
+    </table>
+    <div class="call ci"><strong>Redis uses</strong> approximated LRU — it samples 5 random keys and evicts the least recently used among them. This avoids the overhead of a full LRU list while maintaining ~95% of LRU effectiveness. Also supports LFU (lfu-log-factor, lfu-decay-time tunable).</div>
+  </div>
+
+  <div class="spanel" id="t1c">
+    <div class="ptitle">Lock-free <em>Concurrency</em></div>
+    <p class="psub">How do you handle thousands of concurrent requests on a single-node cache without locks degrading throughput? Two approaches dominate production caches.</p>
+    <h3>Approach 1: Single-threaded Event Loop (Redis model)</h3>
+    <div class="g g2">
+      <div class="card ct-g">
+        <h4>How Redis Does It</h4>
+        <ul class="rl">
+          <li>Single thread processes ALL commands sequentially</li>
+          <li>No locks needed — only one thread accesses data structures</li>
+          <li>I/O multiplexing (epoll/kqueue) handles thousands of client connections</li>
+          <li>Non-blocking I/O: accept → read command → process → write response → next</li>
+          <li>Throughput: ~1M ops/sec on a modern CPU core</li>
+        </ul>
+      </div>
+      <div class="card ct-a">
+        <h4>Why It Works</h4>
+        <ul class="rl">
+          <li>Cache operations are CPU-bound, not I/O-bound (data in RAM)</li>
+          <li>Each operation is microseconds — no value in parallelizing</li>
+          <li>No context switching, no lock contention, no cache coherence overhead</li>
+          <li>Simple programming model — linearizable by construction</li>
+        </ul>
+        <div class="call cg" style="font-size:12px;padding:7px">1 thread × 1M ops/sec > 4 threads × 200K ops/sec each (lock overhead). Single-threaded wins for in-memory operations.</div>
+      </div>
+    </div>
+
+    <h3>Approach 2: Sharded Lock (Java ConcurrentHashMap model)</h3>
+    <p>Divide the hash map into N segments (shards). Each shard has its own lock. A key maps to one shard. Operations on different shards run in parallel — only same-shard operations contend.</p>
+    <div class="cwrap"><div class="ctop"><span>sharded_cache.py — segment-level locking for multi-threaded access</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> threading, hashlib
+
+<span class="kw">class</span> <span class="cls">ShardedCache</span>:
+    <span class="str">"""
+    N independent LRU caches, each with its own lock.
+    Contention = 1/N of a single global lock.
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, total_capacity: int, num_shards: int = <span class="num">16</span>):
+        <span class="kw">self</span>.num_shards = num_shards
+        shard_cap = max(<span class="num">1</span>, total_capacity // num_shards)
+        <span class="kw">self</span>.shards = [<span class="cls">LRUCache</span>(shard_cap) <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(num_shards)]
+        <span class="kw">self</span>.locks  = [threading.<span class="cls">Lock</span>()    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(num_shards)]
+
+    <span class="kw">def</span> <span class="fn">_shard</span>(<span class="kw">self</span>, key: str) -> int:
+        <span class="kw">return</span> <span class="fn">int</span>(hashlib.<span class="fn">md5</span>(key.<span class="fn">encode</span>()).<span class="fn">hexdigest</span>(), <span class="num">16</span>) % <span class="kw">self</span>.num_shards
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        idx = <span class="kw">self</span>.<span class="fn">_shard</span>(key)
+        <span class="kw">with self</span>.locks[idx]:          <span class="cmt"># only lock one shard</span>
+            <span class="kw">return self</span>.shards[idx].<span class="fn">get</span>(key)
+
+    <span class="kw">def</span> <span class="fn">put</span>(<span class="kw">self</span>, key: str, value):
+        idx = <span class="kw">self</span>.<span class="fn">_shard</span>(key)
+        <span class="kw">with self</span>.locks[idx]:
+            <span class="kw">self</span>.shards[idx].<span class="fn">put</span>(key, value)</pre></div>
+
+    <h3>Approach 3: Lock-free with CAS (Compare-And-Swap)</h3>
+    <p>Use atomic hardware primitives (CAS, fetch-and-add) to update data structures without acquiring a mutex. More complex to implement correctly but eliminates lock contention entirely. Used in Caffeine (Java's state-of-the-art cache).</p>
+    <div class="call ci">Caffeine (Java) uses W-TinyLFU — a lock-free cache with frequency sketch for policy decisions and ring buffers for read/write admission. It achieves 10× higher throughput than ConcurrentHashMap + LRU at high concurrency. This is what Guava Cache was replaced with.</div>
+  </div>
+
+  <div class="spanel" id="t1d">
+    <div class="ptitle">TTL &amp; <em>Expiry Mechanisms</em></div>
+    <p class="psub">TTL (Time-To-Live) is a first-class feature of any production cache. Understanding how expiry is implemented affects both correctness and memory efficiency.</p>
+    <h3>Three Expiry Strategies</h3>
+    <div class="g g3">
+      <div class="card ct-c">
+        <h4>Lazy Expiry (Passive)</h4>
+        <p>Check expiry at read time only. <code>GET key → if expired: delete and return nil</code>. No background work. Simple. Problem: expired keys occupy memory until next access. If keys are never accessed again, memory leaks.</p>
+        <div class="call cg" style="font-size:11.5px;padding:6px">CPU efficient. Memory inefficient. Good for low-TTL, high-access keys.</div>
+      </div>
+      <div class="card ct-g">
+        <h4>Active Expiry (Background sweep)</h4>
+        <p>Background thread periodically scans and deletes expired keys. Redis does this every 100ms — samples 20 random volatile keys, deletes expired ones, repeats if >25% were expired.</p>
+        <div class="call cg" style="font-size:11.5px;padding:6px">Memory efficient. CPU cost bounded. Slightly delayed reclamation.</div>
+      </div>
+      <div class="card ct-p">
+        <h4>Min-Heap / Priority Queue</h4>
+        <p>Maintain a min-heap ordered by expiry time. Background thread wakes exactly when the next key expires. Precise expiry, efficient for large TTL variance. Used in DiceDB.</p>
+        <div class="call cp" style="font-size:11.5px;padding:6px">Precise timing. O(log N) per insert/delete. Memory overhead for heap.</div>
+      </div>
+    </div>
+    <div class="cwrap"><div class="ctop"><span>ttl_cache.py — lazy + active expiry combination</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> time, threading, heapq
+
+<span class="kw">class</span> <span class="cls">TTLCache</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, capacity: int):
+        <span class="kw">self</span>.capacity = capacity
+        <span class="kw">self</span>._store: dict = {}              <span class="cmt"># key → (value, expires_at)</span>
+        <span class="kw">self</span>._heap:  list = []              <span class="cmt"># min-heap: (expires_at, key)</span>
+        <span class="kw">self</span>._lock = threading.<span class="cls">Lock</span>()
+        threading.<span class="cls">Thread</span>(target=<span class="kw">self</span>._sweep, daemon=<span class="kw">True</span>).<span class="fn">start</span>()
+
+    <span class="kw">def</span> <span class="fn">set</span>(<span class="kw">self</span>, key: str, value, ttl_seconds: float = <span class="kw">None</span>):
+        <span class="kw">with self</span>._lock:
+            exp = time.<span class="fn">time</span>() + ttl_seconds <span class="kw">if</span> ttl_seconds <span class="kw">else None</span>
+            <span class="kw">self</span>._store[key] = (value, exp)
+            <span class="kw">if</span> exp:
+                heapq.<span class="fn">heappush</span>(<span class="kw">self</span>._heap, (exp, key))
+            <span class="kw">if</span> <span class="fn">len</span>(<span class="kw">self</span>._store) > <span class="kw">self</span>.capacity:
+                <span class="kw">self</span>.<span class="fn">_evict_one</span>()
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        <span class="kw">with self</span>._lock:
+            entry = <span class="kw">self</span>._store.<span class="fn">get</span>(key)
+            <span class="kw">if not</span> entry: <span class="kw">return None</span>
+            value, exp = entry
+            <span class="kw">if</span> exp <span class="kw">and</span> time.<span class="fn">time</span>() > exp:   <span class="cmt"># lazy expiry check</span>
+                <span class="kw">del self</span>._store[key]
+                <span class="kw">return None</span>
+            <span class="kw">return</span> value
+
+    <span class="kw">def</span> <span class="fn">_sweep</span>(<span class="kw">self</span>):
+        <span class="str">"""Background thread: active expiry using min-heap."""</span>
+        <span class="kw">while True</span>:
+            now = time.<span class="fn">time</span>()
+            <span class="kw">with self</span>._lock:
+                <span class="kw">while self</span>._heap <span class="kw">and self</span>._heap[<span class="num">0</span>][<span class="num">0</span>] <= now:
+                    exp, key = heapq.<span class="fn">heappop</span>(<span class="kw">self</span>._heap)
+                    entry = <span class="kw">self</span>._store.<span class="fn">get</span>(key)
+                    <span class="kw">if</span> entry <span class="kw">and</span> entry[<span class="num">1</span>] == exp:  <span class="cmt"># not re-set with new TTL</span>
+                        <span class="kw">del self</span>._store[key]
+                sleep_until = <span class="kw">self</span>._heap[<span class="num">0</span>][<span class="num">0</span>] - now <span class="kw">if self</span>._heap <span class="kw">else</span> <span class="num">1.0</span>
+            time.<span class="fn">sleep</span>(<span class="fn">max</span>(<span class="num">0.001</span>, <span class="fn">min</span>(sleep_until, <span class="num">1.0</span>)))</pre></div>
+  </div>
+
+  <div class="spanel" id="t1e">
+    <div class="ptitle">Code — <em>Full Production Cache</em></div>
+    <div class="cwrap"><div class="ctop"><span>production_cache.py — thread-safe LRU+TTL cache</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> time, threading
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Optional, Any
+<span class="kw">from</span> collections <span class="kw">import</span> OrderedDict
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">CacheEntry</span>:
+    value:      <span class="cls">Any</span>
+    expires_at: Optional[float] = <span class="kw">None</span>   <span class="cmt"># None = no TTL</span>
+
+    <span class="kw">def</span> <span class="fn">is_expired</span>(<span class="kw">self</span>) -> bool:
+        <span class="kw">return self</span>.expires_at <span class="kw">is not None and</span> time.<span class="fn">time</span>() > <span class="kw">self</span>.expires_at
+
+<span class="kw">class</span> <span class="cls">Cache</span>:
+    <span class="str">"""
+    Thread-safe LRU cache with TTL support.
+    Commands: GET, SET, DEL, TTL, KEYS, FLUSHALL
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, max_size: int = <span class="num">1000</span>):
+        <span class="kw">self</span>._max_size = max_size
+        <span class="kw">self</span>._cache: OrderedDict[str, <span class="cls">CacheEntry</span>] = <span class="cls">OrderedDict</span>()
+        <span class="kw">self</span>._lock  = threading.<span class="cls">RLock</span>()   <span class="cmt"># reentrant — same thread can re-acquire</span>
+        <span class="kw">self</span>._stats = {<span class="str">"hits"</span>: <span class="num">0</span>, <span class="str">"misses"</span>: <span class="num">0</span>, <span class="str">"evictions"</span>: <span class="num">0</span>}
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str) -> Optional[<span class="cls">Any</span>]:
+        <span class="kw">with self</span>._lock:
+            entry = <span class="kw">self</span>._cache.<span class="fn">get</span>(key)
+            <span class="kw">if</span> entry <span class="kw">is None</span>:
+                <span class="kw">self</span>._stats[<span class="str">"misses"</span>] += <span class="num">1</span>; <span class="kw">return None</span>
+            <span class="kw">if</span> entry.<span class="fn">is_expired</span>():
+                <span class="kw">del self</span>._cache[key]
+                <span class="kw">self</span>._stats[<span class="str">"misses"</span>] += <span class="num">1</span>; <span class="kw">return None</span>
+            <span class="kw">self</span>._cache.<span class="fn">move_to_end</span>(key)   <span class="cmt"># promote to MRU</span>
+            <span class="kw">self</span>._stats[<span class="str">"hits"</span>] += <span class="num">1</span>
+            <span class="kw">return</span> entry.value
+
+    <span class="kw">def</span> <span class="fn">set</span>(<span class="kw">self</span>, key: str, value, ttl: Optional[float] = <span class="kw">None</span>):
+        <span class="kw">with self</span>._lock:
+            exp = time.<span class="fn">time</span>() + ttl <span class="kw">if</span> ttl <span class="kw">else None</span>
+            <span class="kw">self</span>._cache[key] = <span class="cls">CacheEntry</span>(value, exp)
+            <span class="kw">self</span>._cache.<span class="fn">move_to_end</span>(key)
+            <span class="kw">if</span> <span class="fn">len</span>(<span class="kw">self</span>._cache) > <span class="kw">self</span>._max_size:
+                evicted = <span class="kw">self</span>._cache.<span class="fn">popitem</span>(last=<span class="kw">False</span>)  <span class="cmt"># remove LRU</span>
+                <span class="kw">self</span>._stats[<span class="str">"evictions"</span>] += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn">delete</span>(<span class="kw">self</span>, key: str) -> bool:
+        <span class="kw">with self</span>._lock:
+            <span class="kw">return bool</span>(<span class="kw">self</span>._cache.<span class="fn">pop</span>(key, <span class="kw">None</span>))
+
+    <span class="kw">def</span> <span class="fn">hit_rate</span>(<span class="kw">self</span>) -> float:
+        total = <span class="kw">self</span>._stats[<span class="str">"hits"</span>] + <span class="kw">self</span>._stats[<span class="str">"misses"</span>]
+        <span class="kw">return self</span>._stats[<span class="str">"hits"</span>] / total <span class="kw">if</span> total > <span class="num">0</span> <span class="kw">else</span> <span class="num">0.0</span></pre></div>
+  </div>
+
+  <div class="spanel" id="t1f">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">LRU Cache (capacity: 5)</span>
+        <button class="dbtn dbtn-c" onclick="cacheSet()" style="margin-left:auto">SET random key</button>
+        <button class="dbtn dbtn-g" onclick="cacheGet()" style="margin-left:6px">GET random key</button>
+        <button class="dbtn dbtn-a" onclick="cacheExpire()" style="margin-left:6px">SET with TTL=3s</button>
+        <button class="dbtn dbtn-r" onclick="cacheReset()" style="margin-left:6px">↺ Reset</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Cache State (MRU → LRU)</h4>
+            <div id="cache-slots"></div>
+          </div>
+          <div>
+            <h4>Stats</h4>
+            <div id="cache-stats" style="font-family:'JetBrains Mono',monospace;font-size:12px;display:grid;gap:4px;margin-bottom:8px"></div>
+            <div id="cache-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:100px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>HashMap + Doubly-Linked List = O(1) LRU</strong> — the canonical data structure combination. HashMap provides O(1) key lookup; DLL provides O(1) MRU promotion and LRU eviction. Pointer from map entry to DLL node makes this possible.</li>
+      <li><strong>Single-threaded event loop = lock-free at scale</strong> — Redis serves 1M ops/sec without a single mutex. The single thread removes all lock contention, context switching, and cache coherence overhead.</li>
+      <li><strong>Lazy + active expiry is the production combination</strong> — lazy expiry handles the common case (accessed keys get checked); active sweep handles orphaned keys. Together they bound both CPU and memory cost.</li>
+      <li><strong>Sharded locking scales multi-threaded access</strong> — 16 shards → 16× less contention than a single global lock. 1/shard_count probability of two threads contending on the same lock.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T2: DICEDB INTERNALS ══════════════ -->
+<div class="topic" id="t2">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t2a">What is DiceDB</div>
+    <div class="stab" data-s="t2b">Single-node Performance</div>
+    <div class="stab" data-s="t2c">Multithreading Model</div>
+    <div class="stab" data-s="t2d">Query Subscriptions</div>
+    <div class="stab" data-s="t2e">Multi-tiered Storage</div>
+    <div class="stab" data-s="t2f">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t2a">
+    <div class="ptitle">DiceDB — <em>Maximising Single-node Performance</em></div>
+    <p class="psub">DiceDB is Arpit Bhayani's open-source fork of Valkey (Redis fork) with two killer features: Query Subscriptions (reactive queries) and Multi-tiered Storage. Understanding DiceDB teaches you how to squeeze maximum performance from a single node before going distributed.</p>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>What DiceDB Adds Over Redis</h4>
+        <ul class="rl">
+          <li><strong>Query Subscriptions</strong> — subscribe to a query, get pushed updates when the result changes. Like a reactive materialized view.</li>
+          <li><strong>Multi-tiered Storage</strong> — hot data in RAM, warm data on NVMe SSD, cold data on object storage (S3). Transparent to client.</li>
+          <li><strong>Multi-threaded command execution</strong> — Go goroutines instead of Redis's single thread. Scales across CPU cores.</li>
+          <li><strong>RESP2/RESP3 compatible</strong> — drop-in Redis replacement for most use cases.</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Why These Matter Architecturally</h4>
+        <ul class="rl">
+          <li>Query subscriptions eliminate polling — instead of <code>GET counter</code> every 100ms, subscribe once and receive push when it changes.</li>
+          <li>Multi-tier storage lets you have a 10 TB "hot" dataset on a single node — most data on cheaper storage, hot data in expensive RAM.</li>
+          <li>Multi-threading unlocks all CPU cores — a 32-core server runs 32× concurrent commands, not serialized on one thread.</li>
+        </ul>
+      </div>
+    </div>
+    <h3>DiceDB vs Redis Architecture</h3>
+    <table>
+      <tr><th>Feature</th><th>Redis</th><th>DiceDB</th></tr>
+      <tr><td>Execution model</td><td>Single-threaded event loop</td><td>Multi-threaded (Go goroutines)</td></tr>
+      <tr><td>Concurrency</td><td>No parallelism on commands</td><td>Parallel command execution across cores</td></tr>
+      <tr><td>Reactive queries</td><td>❌ (requires polling or keyspace notifications)</td><td>✅ QWATCH — subscribe to query results</td></tr>
+      <tr><td>Storage tiers</td><td>RAM only (RDB/AOF for persistence)</td><td>RAM → NVMe SSD → S3 (transparent tiering)</td></tr>
+      <tr><td>Write throughput</td><td>~1M ops/s (single thread)</td><td>~4M+ ops/s (multi-core)</td></tr>
+      <tr><td>Memory efficiency</td><td>Limited to RAM</td><td>~10× more data with same RAM cost</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t2b">
+    <div class="ptitle">Single-node <em>Performance Maximisation</em></div>
+    <h3>How Redis Maximises Single-node Throughput</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">I/O Multiplexing (epoll / kqueue)</div><div class="fd">A single thread monitors thousands of socket file descriptors simultaneously. When data is readable, it's processed inline. Zero thread context switching per request.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Simple, flat data structures</div><div class="fd">Redis uses int-encoded strings, ziplist (for small hashes/lists), and skiplist (for sorted sets). Each chosen to minimize memory and maximize CPU cache efficiency.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">RESP protocol — minimal parsing overhead</div><div class="fd">Redis Serialization Protocol: simple text-based framing. Commands like <code>*3\r\n$3\r\nSET\r\n$5\r\nhello\r\n$5\r\nworld\r\n</code>. Minimal parsing — no JSON overhead.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Pipelining</div><div class="fd">Client sends multiple commands without waiting for responses. Server processes in batch. Reduces RTT overhead by N× for N pipelined commands.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Kernel bypass (DiceDB future)</div><div class="fd">io_uring on Linux lets the application bypass the kernel for I/O operations — submitting and completing I/O in userspace. 10–50% throughput improvement for I/O-heavy workloads.</div></div></div>
+    </div>
+    <h3>Memory Optimization Techniques</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Integer Encoding</h4><p>Strings that are integers (e.g., <code>"12345"</code>) are stored as 8-byte integers instead of string objects with pointer + length. Saves 16+ bytes per key.</p></div>
+      <div class="card ct-g"><h4>Ziplist / Listpack</h4><p>For small hashes and lists (&lt;128 entries, &lt;64 bytes per value), Redis uses a flat byte array instead of pointer-linked nodes. 4–10× more memory efficient.</p></div>
+      <div class="card ct-p"><h4>Shared Objects</h4><p>Integers 0–9999 are pre-allocated and shared. Multiple keys referencing the value "1" point to the same object — no duplication.</p></div>
+      <div class="card ct-a"><h4>jemalloc</h4><p>Redis uses jemalloc (not system malloc) for memory allocation. Better fragmentation characteristics, explicit arena control, and per-thread caching reduce allocation overhead.</p></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t2c">
+    <div class="ptitle">DiceDB <em>Multithreading Model</em></div>
+    <p class="psub">DiceDB's core innovation over Redis: running commands truly in parallel across CPU cores without sacrificing correctness.</p>
+    <h3>The Challenge: Concurrency + Correctness</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>The problem with naive multi-threading</h4><p>If two goroutines concurrently modify the same key: Thread A reads value 5, Thread B reads value 5. Thread A writes 6. Thread B writes 6. Expected: 7. Actual: 6 (lost update). Need serialization for conflicting operations.</p></div>
+      <div class="card ct-g"><h4>DiceDB's approach: Key-level locking</h4><p>Lock at the key level, not the entire store. Operations on different keys run in parallel. Operations on the same key are serialized. Hash key → lock shard. Lock only before modifying, release immediately after.</p></div>
+    </div>
+    <h3>Go Goroutine per Command</h3>
+    <div class="cwrap"><div class="ctop"><span>DiceDB-style concurrent command execution (pseudocode)</span><span class="ltag lpy">Python (Go-like)</span></div>
+    <pre><span class="cmt"># Simplified DiceDB command dispatcher</span>
+<span class="cmt"># Each incoming command gets its own goroutine</span>
+<span class="cmt"># Key-level sharded locks prevent data races</span>
+
+<span class="kw">class</span> <span class="cls">DiceDBCore</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="kw">self</span>.store      = {}                     <span class="cmt"># global key-value store</span>
+        <span class="kw">self</span>.key_locks  = <span class="cls">ShardedLockManager</span>(<span class="num">64</span>)  <span class="cmt"># 64 key-level lock shards</span>
+        <span class="kw">self</span>.executor   = <span class="cls">ThreadPoolExecutor</span>(max_workers=<span class="fn">os.cpu_count</span>())
+
+    <span class="kw">def</span> <span class="fn">handle_command</span>(<span class="kw">self</span>, conn, command: str, args: list):
+        <span class="str">"""Each command dispatched to thread pool — true parallelism."""</span>
+        future = <span class="kw">self</span>.executor.<span class="fn">submit</span>(<span class="kw">self</span>._execute, conn, command, args)
+        future.<span class="fn">add_done_callback</span>(<span class="kw">lambda</span> f: conn.<span class="fn">send_response</span>(f.<span class="fn">result</span>()))
+
+    <span class="kw">def</span> <span class="fn">_execute</span>(<span class="kw">self</span>, conn, command: str, args: list):
+        key = args[<span class="num">0</span>] <span class="kw">if</span> args <span class="kw">else None</span>
+        <span class="kw">with self</span>.key_locks.<span class="fn">lock_for</span>(key):    <span class="cmt"># key-level lock, not global</span>
+            <span class="kw">if</span>   command == <span class="str">"GET"</span>: <span class="kw">return self</span>.store.<span class="fn">get</span>(key)
+            <span class="kw">elif</span> command == <span class="str">"SET"</span>: <span class="kw">self</span>.store[key] = args[<span class="num">1</span>]; <span class="kw">return</span> <span class="str">"OK"</span>
+            <span class="kw">elif</span> command == <span class="str">"INCR"</span>:
+                <span class="kw">self</span>.store[key] = <span class="fn">int</span>(<span class="kw">self</span>.store.<span class="fn">get</span>(key, <span class="num">0</span>)) + <span class="num">1</span>
+                <span class="kw">return self</span>.store[key]</pre></div>
+    <div class="call ci"><strong>Result:</strong> On a 32-core server, DiceDB can process 32 non-conflicting commands simultaneously. For a social network workload (random key distribution), conflict rate is ~1/N where N = unique keys → near-linear scaling with cores.</div>
+  </div>
+
+  <div class="spanel" id="t2d">
+    <div class="ptitle">Query <em>Subscriptions (QWATCH)</em></div>
+    <p class="psub">The most innovative DiceDB feature: subscribe to a query and receive push notifications when the result changes. Eliminates polling entirely.</p>
+    <h3>The Problem QWATCH Solves</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Without QWATCH (polling)</h4><p>Client polls <code>GET leaderboard:top10</code> every 100ms to detect changes. 10 clients × 10 polls/sec = 100 reads/sec even when nothing changes. Latency = poll interval (up to 100ms stale).</p></div>
+      <div class="card ct-g"><h4>With QWATCH (reactive)</h4><p>Client subscribes once: <code>QWATCH "SELECT * FROM leaderboard ORDER BY score DESC LIMIT 10"</code>. Server pushes update only when the result set changes. Zero polling, real-time updates, zero wasted reads.</p></div>
+    </div>
+    <h3>How QWATCH Works Internally</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Client sends QWATCH with a query</div><div class="fd"><code>QWATCH "SELECT * FROM users WHERE active=1 ORDER BY score DESC LIMIT 10"</code>. Server evaluates it immediately and sends current result.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Server parses the query → identifies dependent keys</div><div class="fd">Determines which keys/patterns can affect this query result. Registers interest in those keys.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Any SET/INCR/DEL on a dependent key → re-evaluate</div><div class="fd">If the new result differs from the last pushed result, push an update to the subscribed client. If result is unchanged, no push — smart deduplication.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Client receives updates as they happen</div><div class="fd">WebSocket or persistent connection. Latency = time for write to propagate → negligible. Client never polls.</div></div></div>
+    </div>
+    <div class="call ci"><strong>Real-world use case:</strong> Leaderboard. Instead of 1000 players polling the top-10 every second (1000 reads/sec), they all subscribe once. Every score update triggers one re-evaluation and one push to all subscribers. 1000× less read load.</div>
+  </div>
+
+  <div class="spanel" id="t2e">
+    <div class="ptitle">Multi-tiered <em>Storage</em></div>
+    <p class="psub">DiceDB's multi-tier storage lets a single node hold 10× more data than would fit in RAM by transparently spilling to faster/cheaper storage tiers.</p>
+    <h3>Storage Hierarchy</h3>
+    <div class="g g3">
+      <div class="card ct-c" style="text-align:center">
+        <div style="font-size:24px">⚡</div>
+        <h4>Tier 1: RAM</h4>
+        <p>Hot data. Sub-microsecond access. Most expensive per GB. Holds the working set — data accessed in the last few minutes.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px">~$5/GB · &lt;1µs</div>
+      </div>
+      <div class="card ct-g" style="text-align:center">
+        <div style="font-size:24px">💾</div>
+        <h4>Tier 2: NVMe SSD</h4>
+        <p>Warm data. ~100µs access. 10× cheaper than RAM. Data evicted from RAM but still accessed occasionally. DiceDB uses RocksDB on NVMe.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px">~$0.10/GB · ~100µs</div>
+      </div>
+      <div class="card ct-a" style="text-align:center">
+        <div style="font-size:24px">☁️</div>
+        <h4>Tier 3: Object Storage (S3)</h4>
+        <p>Cold data. ~10ms access. 100× cheaper than RAM. Data rarely accessed. Unlimited capacity. Fetched on demand into RAM.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px">~$0.023/GB · ~10ms</div>
+      </div>
+    </div>
+    <h3>Eviction & Promotion</h3>
+    <div class="g g2">
+      <div class="card"><h4>Eviction (RAM → SSD)</h4><p>When RAM exceeds threshold, LRU keys are serialized and written to RocksDB on NVMe. A "spill" pointer replaces the value in RAM. TTLs are preserved — keys still expire correctly even on SSD tier.</p></div>
+      <div class="card"><h4>Promotion (SSD → RAM)</h4><p>On access, if key is on SSD, fetch from RocksDB into RAM (~100µs). If key is on S3, fetch from object storage into RAM (~10ms). Transparent to client — slightly higher latency on first access.</p></div>
+    </div>
+    <div class="call cg"><strong>Business impact:</strong> A workload with 1 TB total dataset but 10 GB working set: with Redis (RAM only) = $5,000/TB RAM. With DiceDB multi-tier = $5/GB × 10 GB + $0.10/GB × 1 TB = $50 + $100 = $150. 33× cost reduction.</div>
+  </div>
+
+  <div class="spanel" id="t2f">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Single-threaded event loop = no locks needed</strong> — Redis's architecture insight: for in-memory operations, one fast thread beats many slow locked threads. Context switching and mutex overhead dominate at microsecond scale.</li>
+      <li><strong>DiceDB's key-level locking enables true CPU parallelism</strong> — 32 cores can run 32 non-conflicting commands simultaneously. For random key distributions, near-linear throughput scaling with CPU cores.</li>
+      <li><strong>QWATCH eliminates polling anti-pattern</strong> — subscribe once, receive updates on change. Reduces read load by orders of magnitude for reactive use cases (leaderboards, live dashboards, notifications).</li>
+      <li><strong>Multi-tier storage = 33× cost reduction for large datasets</strong> — keep working set in RAM, spill to NVMe, archive to S3. Transparent to the client. TTLs preserved across tiers.</li>
+      <li><strong>Memory encoding tricks multiply effective capacity</strong> — integer encoding, ziplist/listpack for small collections, shared objects for common values. Together these can reduce Redis memory usage by 2–10× for real workloads.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T3: CONSISTENT HASHING OPS ══════════════ -->
+<div class="topic" id="t3">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t3a">The Algorithm</div>
+    <div class="stab" data-s="t3b">Virtual Nodes</div>
+    <div class="stab" data-s="t3c">Operational Complexity</div>
+    <div class="stab" data-s="t3d">Code</div>
+    <div class="stab" data-s="t3e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t3a">
+    <div class="ptitle">Consistent Hashing — <em>Operational Complexities</em></div>
+    <p class="psub">We covered consistent hashing in Week 3. Here we go deeper: the operational challenges of adding/removing nodes, rebalancing data, handling failures, and the real-world nuances that make it harder than theory suggests.</p>
+    <h3>The Core Problem with Modular Hashing</h3>
+    <div class="g g2">
+      <div class="card ct-r">
+        <h4>Standard: key % N</h4>
+        <p>Add 1 node to a cluster of N=5 → N becomes 6 → <strong>all keys rehash</strong>. Every key potentially moves to a different node. During rehash: massive data migration, cache cold start, potential downtime.</p>
+        <div class="call cr" style="font-size:12px;padding:7px">At 1 TB data, adding one node = migrate ~833 GB. Days of rebalancing. Revenue impact.</div>
+      </div>
+      <div class="card ct-g">
+        <h4>Consistent Hashing</h4>
+        <p>Add 1 node → only the keys between the new node and its predecessor on the ring move. With N nodes, adding one moves approximately <strong>K/N keys</strong> (K = total keys). At 5 nodes: only ~20% of data moves, not 100%.</p>
+        <div class="call cg" style="font-size:12px;padding:7px">At 1 TB data with 5 nodes: adding one node = migrate ~200 GB. 4× less disruption.</div>
+      </div>
+    </div>
+    <h3>The Ring</h3>
+    <p>Hash the key space (0 to 2³² or 2⁶⁴) into a circular ring. Hash each server to a position on the ring. A key belongs to the first server clockwise from its hash position.</p>
+    <div class="diag">
+<svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <defs><marker id="ar" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0L0,6L6,3z" fill="#00e5ff" opacity=".8"/></marker></defs>
+  <rect x="2" y="2" width="396" height="196" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <circle cx="160" cy="100" r="70" fill="none" stroke="#1e2d45" stroke-width="2" stroke-dasharray="4,3"/>
+  <!-- Server nodes -->
+  <circle cx="230" cy="55" r="16" fill="#131a2a" stroke="#00e5ff" stroke-width="2"/>
+  <text x="230" y="59" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">S1</text>
+  <circle cx="222" cy="155" r="16" fill="#131a2a" stroke="#22c55e" stroke-width="2"/>
+  <text x="222" y="159" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="700">S2</text>
+  <circle cx="92" cy="155" r="16" fill="#131a2a" stroke="#a78bfa" stroke-width="2"/>
+  <text x="92" y="159" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">S3</text>
+  <circle cx="90" cy="55" r="16" fill="#131a2a" stroke="#f59e0b" stroke-width="2"/>
+  <text x="90" y="59" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">S4</text>
+  <!-- Keys on ring -->
+  <circle cx="192" cy="32" r="7" fill="#1e2d45" stroke="#5a6a85"/>
+  <text x="192" y="36" text-anchor="middle" fill="#8a9bb5" font-size="8">K1</text>
+  <text x="205" y="24" fill="#5a6a85" font-size="7.5">→ S1</text>
+  <circle cx="240" cy="105" r="7" fill="#1e2d45" stroke="#5a6a85"/>
+  <text x="240" y="109" text-anchor="middle" fill="#8a9bb5" font-size="8">K2</text>
+  <text x="256" y="103" fill="#5a6a85" font-size="7.5">→ S2</text>
+  <circle cx="155" cy="168" r="7" fill="#1e2d45" stroke="#5a6a85"/>
+  <text x="155" y="172" text-anchor="middle" fill="#8a9bb5" font-size="8">K3</text>
+  <text x="140" y="182" fill="#5a6a85" font-size="7.5">→ S3</text>
+  <!-- Labels -->
+  <text x="280" y="30" fill="#5a6a85" font-size="8.5">Hash ring (0 → 2^32)</text>
+  <text x="280" y="44" fill="#3a4a60" font-size="7.5">Keys → first clockwise server</text>
+  <text x="280" y="80" fill="#22c55e" font-size="8.5" font-weight="700">Add S5 between S1-S2:</text>
+  <text x="280" y="94" fill="#5a6a85" font-size="7.5">Only K2 (and others in that</text>
+  <text x="280" y="106" fill="#5a6a85" font-size="7.5">range) move to S5.</text>
+  <text x="280" y="120" fill="#5a6a85" font-size="7.5">~20% of keys move.</text>
+  <text x="280" y="145" fill="#ef4444" font-size="8.5" font-weight="700">Remove S2:</text>
+  <text x="280" y="159" fill="#5a6a85" font-size="7.5">S2's keys migrate to S1.</text>
+  <text x="280" y="171" fill="#5a6a85" font-size="7.5">~20% of keys move.</text>
+</svg>
+    </div>
+  </div>
+
+  <div class="spanel" id="t3b">
+    <div class="ptitle">Virtual <em>Nodes</em></div>
+    <p class="psub">A single server mapped to one ring position creates uneven distribution. With 4 servers at random positions, one might own 40% of the ring and another only 10%. Virtual nodes fix this.</p>
+    <h3>The Skew Problem</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Without Virtual Nodes</h4><p>4 servers hashed to random positions. Server B happens to own a large arc (40% of ring). Server A owns a small arc (10%). Load is uneven by 4×. Adding a new server helps the neighbor, but skew remains.</p></div>
+      <div class="card ct-g"><h4>With Virtual Nodes (vnodes)</h4><p>Each physical server maps to 150 ring positions (virtual nodes). Server A owns positions: hash("S-A-0"), hash("S-A-1"), ..., hash("S-A-149"). Load distribution converges to uniform. Each server owns ~1/N of the ring.</p></div>
+    </div>
+    <h3>How Many Virtual Nodes?</h3>
+    <table>
+      <tr><th>VNodes per server</th><th>Load imbalance (coefficient of variation)</th><th>Memory overhead</th></tr>
+      <tr><td>1 (no vnodes)</td><td>~50–200% depending on hash luck</td><td>Minimal</td></tr>
+      <tr><td>10</td><td>~30%</td><td>~10× ring entries</td></tr>
+      <tr><td>100</td><td>~10%</td><td>~100× ring entries</td></tr>
+      <tr><td>150 (Cassandra default)</td><td>~5–8%</td><td>~150× ring entries</td></tr>
+      <tr><td>1000</td><td>~1%</td><td>~1000× ring entries (expensive)</td></tr>
+    </table>
+    <div class="call ci"><strong>Cassandra uses 256 vnodes by default</strong> (configurable). Redis Cluster uses 16,384 hash slots pre-assigned to nodes — a discrete ring with fixed granularity rather than continuous consistent hashing with vnodes.</div>
+  </div>
+
+  <div class="spanel" id="t3c">
+    <div class="ptitle">Operational <em>Complexities</em></div>
+    <p class="psub">The theory is elegant. Production operation is hard. Here's what actually happens when you add/remove nodes from a consistent hash ring.</p>
+    <h3>Adding a Node</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">New node joins the ring at position P</div><div class="fd">It becomes responsible for all keys between its predecessor and P. These keys currently live on the successor node.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Migrate data from successor → new node</div><div class="fd">Identify all keys in the new node's range on the successor. Copy them to the new node. During copy: both nodes serve reads from their copy (dual read phase).</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Switch ring to route to new node</div><div class="fd">Update the ring so clients route to the new node. Old keys on successor will be accessed at new node going forward.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Delete migrated keys from successor</div><div class="fd">Once new node is serving traffic, delete the migrated range from successor. Free the memory. Verify no requests are still going to old node.</div></div></div>
+    </div>
+    <h3>Real Operational Challenges</h3>
+    <div class="g g2">
+      <div class="card ct-r"><h4>Split-brain during migration</h4><p>While migrating: a write to key K arrives during migration. Which node gets it — old or new? Solution: "migration lock" on the key range being migrated. Writes queue; drain after node switch. Complex to implement correctly.</p></div>
+      <div class="card ct-a"><h4>Hotspots during migration</h4><p>The successor node serves its normal load + migration read I/O simultaneously. This can push it to CPU/disk saturation. Solution: rate-limit the migration stream. Accepts slower migration in exchange for stable production traffic.</p></div>
+      <div class="card ct-p"><h4>Replication factor</h4><p>In production, each key has replication factor RF=3 (Cassandra, Redis Cluster). A new node must receive not just the primary copy but also become a replica for adjacent ranges. Data movement = 3× naive estimate.</p></div>
+      <div class="card ct-t"><h4>Client routing updates</h4><p>Clients must know the updated ring configuration. During transition, old clients may route to wrong node. Solution: nodes redirect misrouted requests (MOVED error in Redis Cluster), or use a proxy layer. Gossip protocol propagates ring changes.</p></div>
+    </div>
+    <div class="call cw"><strong>Operational reality:</strong> A full cluster rebalance (adding 1 node to 5-node cluster with 1 TB data) typically takes 4–8 hours with rate limiting. During this window, monitoring, manual verification of key distribution, and rollback planning are essential. Never do this during peak traffic.</div>
+  </div>
+
+  <div class="spanel" id="t3d">
+    <div class="ptitle">Code — <em>Consistent Hash Ring</em></div>
+    <div class="cwrap"><div class="ctop"><span>consistent_hash.py — ring with virtual nodes</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> hashlib, bisect
+<span class="kw">from</span> collections <span class="kw">import</span> defaultdict
+
+<span class="kw">class</span> <span class="cls">ConsistentHashRing</span>:
+    <span class="str">"""
+    Consistent hash ring with virtual nodes.
+    Thread-safe for concurrent reads (ring is immutable between changes).
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, vnodes_per_server: int = <span class="num">150</span>):
+        <span class="kw">self</span>.vnodes_per_server = vnodes_per_server
+        <span class="kw">self</span>._ring:   <span class="fn">dict</span>[int, str] = {}    <span class="cmt"># hash_position → server_id</span>
+        <span class="kw">self</span>._sorted: <span class="fn">list</span>[int]      = []    <span class="cmt"># sorted hash positions (for bisect)</span>
+        <span class="kw">self</span>._servers: <span class="fn">set</span>[str]       = <span class="fn">set</span>()
+
+    <span class="kw">def</span> <span class="fn">_hash</span>(<span class="kw">self</span>, key: str) -> int:
+        <span class="str">"""Consistent 32-bit hash."""</span>
+        <span class="kw">return</span> <span class="fn">int</span>(hashlib.<span class="fn">md5</span>(key.<span class="fn">encode</span>()).<span class="fn">hexdigest</span>(), <span class="num">16</span>) % (<span class="num">2</span> ** <span class="num">32</span>)
+
+    <span class="kw">def</span> <span class="fn">add_server</span>(<span class="kw">self</span>, server_id: str) -> <span class="fn">list</span>[tuple]:
+        <span class="str">"""Add server. Returns list of (start, end) hash ranges now owned by it."""</span>
+        <span class="kw">self</span>._servers.<span class="fn">add</span>(server_id)
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="kw">self</span>.vnodes_per_server):
+            pos = <span class="kw">self</span>.<span class="fn">_hash</span>(<span class="str">f"{server_id}#{i}"</span>)
+            <span class="kw">self</span>._ring[pos] = server_id
+            bisect.<span class="fn">insort</span>(<span class="kw">self</span>._sorted, pos)   <span class="cmt"># O(log N) insertion</span>
+
+    <span class="kw">def</span> <span class="fn">remove_server</span>(<span class="kw">self</span>, server_id: str):
+        <span class="str">"""Remove server and its vnodes from ring."""</span>
+        <span class="kw">self</span>._servers.<span class="fn">discard</span>(server_id)
+        positions_to_remove = [pos <span class="kw">for</span> pos, srv <span class="kw">in self</span>._ring.<span class="fn">items</span>() <span class="kw">if</span> srv == server_id]
+        <span class="kw">for</span> pos <span class="kw">in</span> positions_to_remove:
+            <span class="kw">del self</span>._ring[pos]
+            idx = bisect.<span class="fn">bisect_left</span>(<span class="kw">self</span>._sorted, pos)
+            <span class="kw">del self</span>._sorted[idx]
+
+    <span class="kw">def</span> <span class="fn">get_server</span>(<span class="kw">self</span>, key: str) -> str:
+        <span class="str">"""Route key to its responsible server — O(log N)."""</span>
+        <span class="kw">if not self</span>._ring:
+            <span class="kw">raise</span> <span class="cls">ValueError</span>(<span class="str">"No servers in ring"</span>)
+        key_hash = <span class="kw">self</span>.<span class="fn">_hash</span>(key)
+        idx = bisect.<span class="fn">bisect</span>(<span class="kw">self</span>._sorted, key_hash) % <span class="fn">len</span>(<span class="kw">self</span>._sorted)
+        pos = <span class="kw">self</span>._sorted[idx]
+        <span class="kw">return self</span>._ring[pos]
+
+    <span class="kw">def</span> <span class="fn">get_servers_for_replication</span>(<span class="kw">self</span>, key: str, rf: int = <span class="num">3</span>) -> <span class="fn">list</span>[str]:
+        <span class="str">"""Return RF unique servers for replication (walk ring clockwise)."""</span>
+        key_hash = <span class="kw">self</span>.<span class="fn">_hash</span>(key)
+        start    = bisect.<span class="fn">bisect</span>(<span class="kw">self</span>._sorted, key_hash) % <span class="fn">len</span>(<span class="kw">self</span>._sorted)
+        servers, seen = [], <span class="fn">set</span>()
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(<span class="kw">self</span>._sorted)):
+            pos = <span class="kw">self</span>._sorted[(start + i) % <span class="fn">len</span>(<span class="kw">self</span>._sorted)]
+            srv = <span class="kw">self</span>._ring[pos]
+            <span class="kw">if</span> srv <span class="kw">not in</span> seen:
+                servers.<span class="fn">append</span>(srv); seen.<span class="fn">add</span>(srv)
+            <span class="kw">if</span> <span class="fn">len</span>(servers) == rf: <span class="kw">break</span>
+        <span class="kw">return</span> servers</pre></div>
+  </div>
+
+  <div class="spanel" id="t3e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Consistent Hash Ring — 4 servers, 10 vnodes each</span>
+        <button class="dbtn dbtn-c" onclick="chRoute()" style="margin-left:auto">Route key</button>
+        <button class="dbtn dbtn-g" onclick="chAddServer()" style="margin-left:6px">Add Server</button>
+        <button class="dbtn dbtn-r" onclick="chRemoveServer()" style="margin-left:6px">Remove Server</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Ring Distribution</h4>
+            <div id="ch-dist" style="font-family:'JetBrains Mono',monospace;font-size:11px;display:grid;gap:4px"></div>
+          </div>
+          <div>
+            <h4>Routing Log</h4>
+            <div id="ch-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:140px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Only ~1/N keys move when a node joins/leaves</strong> — vs 100% for modular hashing. This is the killer advantage of consistent hashing. Essential for live cluster changes without bulk data migration.</li>
+      <li><strong>Virtual nodes are mandatory for uniform distribution</strong> — 150+ vnodes per server keeps load imbalance below 10%. Without vnodes, skew can reach 200% depending on hash luck.</li>
+      <li><strong>Data migration during node add/remove is the operational risk</strong> — it takes hours, saturates the replaced node, and requires careful rate limiting, monitoring, and rollback planning. Never during peak traffic.</li>
+      <li><strong>Replication factor multiplies migration cost</strong> — RF=3 means 3× more data moves than you calculate from first principles. Budget for this in capacity planning.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T4: NO-DOWNTIME DATA MIGRATION ══════════════ -->
+<div class="topic" id="t4">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t4a">Why It's Hard</div>
+    <div class="stab" data-s="t4b">Dual-write Pattern</div>
+    <div class="stab" data-s="t4c">Strategies</div>
+    <div class="stab" data-s="t4d">Code</div>
+    <div class="stab" data-s="t4e">Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t4a">
+    <div class="ptitle">No-downtime <em>Data Migration</em></div>
+    <p class="psub">Moving data from one storage system to another (schema change, engine change, shard rebalance) while production traffic continues — without losing writes or serving stale data. This is one of the hardest operational problems in engineering.</p>
+    <div class="g g2">
+      <div class="card ct-r">
+        <h4>The Problem</h4>
+        <ul class="rl">
+          <li>Old system has existing data. New system is empty.</li>
+          <li>Traffic continues during migration — new writes arrive constantly.</li>
+          <li>You can't stop writes ("maintenance window") at scale — 5 min downtime for 100M users = headlines.</li>
+          <li>You can't read from new system until it has all data — reads would miss migrated keys.</li>
+          <li>Migration itself takes hours/days — it's not atomic.</li>
+        </ul>
+      </div>
+      <div class="card ct-c">
+        <h4>The Requirements</h4>
+        <ul class="rl">
+          <li><strong>Zero downtime</strong> — no service interruption</li>
+          <li><strong>Zero data loss</strong> — no write dropped</li>
+          <li><strong>Correctness</strong> — reads return consistent, up-to-date data</li>
+          <li><strong>Rollbackable</strong> — must be able to abort and revert to old system</li>
+          <li><strong>Progressive</strong> — cut over a small % of traffic first, verify, then increase</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Migration Scenarios</h3>
+    <table>
+      <tr><th>Scenario</th><th>Example</th><th>Complexity</th></tr>
+      <tr><td>Schema migration</td><td>Add column, rename table, change data type</td><td>Medium — use gh-ost or pt-online-schema-change</td></tr>
+      <tr><td>Storage engine change</td><td>MySQL → Cassandra, Redis → DiceDB</td><td>High — different data models</td></tr>
+      <tr><td>Shard rebalance</td><td>4-shard → 8-shard (double the cluster)</td><td>High — data movement + routing change</td></tr>
+      <tr><td>Region migration</td><td>US-East → EU-West primary</td><td>Very high — replication lag + DNS change</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t4b">
+    <div class="ptitle">The <em>Dual-write Pattern</em></div>
+    <p class="psub">The canonical strategy for zero-downtime migration: write to both old and new systems simultaneously, then gradually shift reads to the new system.</p>
+    <h3>5-Phase Migration Protocol</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Phase 1: Shadow write (both systems)</div><div class="fd">Enable dual-write: every write goes to OLD (primary) AND NEW (shadow). Reads still come from OLD. NEW builds up current state. No user impact.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Phase 2: Backfill historical data</div><td><div class="fd">Bulk copy all existing data from OLD to NEW. Rate-limited to avoid overloading OLD. NEW now has: backfill + live writes. Duration: hours to days.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Phase 3: Verify (shadow read)</div><div class="fd">For a sample of reads, query BOTH old and new. Compare results. Alert on divergence. Fix discrepancies. Only proceed if match rate ≥ 99.9%.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Phase 4: Gradual read cutover</div><div class="fd">Route 1% → 5% → 25% → 50% → 100% of reads to NEW. Monitor error rate and latency at each step. Roll back immediately if anomalies detected.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Phase 5: Decommission OLD</div><div class="fd">After 100% reads on NEW and verified stability for 72h+: stop dual-writes to OLD. Delete OLD data. Done. Total migration: zero downtime, zero data loss.</div></div></div>
+    </div>
+    <div class="call cg">This is the pattern Facebook, Google, and Stripe use for every major storage migration. The key insight: reads and writes are migrated independently, with reads always lagging writes to ensure the new system is always at least as fresh as the old.</div>
+  </div>
+
+  <div class="spanel" id="t4c">
+    <div class="ptitle">Migration <em>Strategies</em></div>
+    <h3>Online Schema Change (MySQL)</h3>
+    <p>gh-ost (GitHub Online Schema Change) alters MySQL tables without locking:</p>
+    <div class="cwrap"><div class="ctop"><span>gh-ost — online ALTER TABLE without locks</span><span class="ltag lsq">Shell</span></div>
+    <pre><span class="cmt"># gh-ost: online schema change for MySQL</span>
+<span class="cmt"># Creates a shadow table, applies changes, replays binlog, atomically swaps</span>
+gh-ost \
+  --host=mysql-primary \
+  --database=mydb \
+  --table=users \
+  --alter=<span class="str">"ADD COLUMN display_name VARCHAR(200)"</span> \
+  --throttle-control-replicas=mysql-replica \
+  --max-load=Threads_running=25 \
+  --critical-load=Threads_running=1000 \
+  --chunk-size=1000 \         <span class="cmt"># copy N rows at a time</span>
+  --throttle-additional-flag-file=/tmp/gh-ost.throttle \
+  --execute
+
+<span class="cmt"># gh-ost process:
+# 1. CREATE TABLE users_ghc (shadow table with new schema)
+# 2. Copy rows in chunks: INSERT INTO users_ghc SELECT ... LIMIT 1000
+# 3. Tail binlog: apply DELs/UPDs from users → users_ghc in real-time
+# 4. When shadow catches up: atomic RENAME TABLE users → users_old, users_ghc → users
+# 5. Total time: proportional to table size, not locking duration</span></pre></div>
+
+    <h3>Blue-Green Deployment</h3>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Pattern</h4><p>Maintain two identical environments: Blue (live) and Green (idle). Deploy new version to Green. Shift traffic via LB. Blue becomes standby. Rollback = redirect LB back to Blue. Zero-downtime, instant rollback.</p></div>
+      <div class="card ct-a"><h4>Database Challenge</h4><p>Blue-green works for stateless app servers. For databases: both Blue and Green share the same DB. Schema changes must be backward-compatible — app v1 and v2 must both work against the same schema during cutover window.</p></div>
+    </div>
+    <h3>Expand-Contract (Parallel Change) Pattern</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">E</div><div class="fline"></div></div><div class="fb"><div class="ft">Expand: add new column/table without removing old</div><div class="fd">App writes to BOTH old and new columns. Reads from OLD. Backward compatible — v1 of app ignores new column.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">M</div><div class="fline"></div></div><div class="fb"><div class="ft">Migrate: backfill old data into new structure</div><div class="fd">Background job copies old column values to new column. Verify completeness.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">C</div><div class="fline"></div></div><div class="fb"><div class="ft">Contract: switch reads to new column, drop old</div><div class="fd">App v2 reads from new column. After all instances updated, drop old column. Atomic, safe.</div></div></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t4d">
+    <div class="ptitle">Code — <em>Dual-write Implementation</em></div>
+    <div class="cwrap"><div class="ctop"><span>dual_write.py — shadow write + gradual read cutover</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> asyncio, random, logging
+<span class="kw">from</span> enum <span class="kw">import</span> Enum
+
+<span class="kw">class</span> <span class="cls">MigrationPhase</span>(Enum):
+    OLD_ONLY        = <span class="str">"old_only"</span>         <span class="cmt"># reads + writes to OLD</span>
+    DUAL_WRITE      = <span class="str">"dual_write"</span>       <span class="cmt"># writes to both, reads from OLD</span>
+    SHADOW_READ     = <span class="str">"shadow_read"</span>      <span class="cmt"># dual write + compare reads</span>
+    GRADUAL_CUTOVER = <span class="str">"gradual_cutover"</span>  <span class="cmt"># % of reads from NEW</span>
+    NEW_ONLY        = <span class="str">"new_only"</span>         <span class="cmt"># all traffic to NEW</span>
+
+<span class="kw">class</span> <span class="cls">MigrationProxy</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, old_store, new_store):
+        <span class="kw">self</span>.old           = old_store
+        <span class="kw">self</span>.new           = new_store
+        <span class="kw">self</span>.phase         = <span class="cls">MigrationPhase</span>.OLD_ONLY
+        <span class="kw">self</span>.new_read_pct  = <span class="num">0</span>     <span class="cmt"># 0–100: % of reads from NEW</span>
+        <span class="kw">self</span>.divergence_cnt = <span class="num">0</span>   <span class="cmt"># count of read mismatches</span>
+
+    <span class="kw">async def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        <span class="kw">if</span> <span class="kw">self</span>.phase == <span class="cls">MigrationPhase</span>.OLD_ONLY:
+            <span class="kw">return await self</span>.old.<span class="fn">get</span>(key)
+
+        <span class="kw">if</span> <span class="kw">self</span>.phase == <span class="cls">MigrationPhase</span>.SHADOW_READ:
+            <span class="cmt"># Read from both, compare, return OLD result</span>
+            old_val, new_val = <span class="kw">await</span> asyncio.<span class="fn">gather</span>(
+                <span class="kw">self</span>.old.<span class="fn">get</span>(key), <span class="kw">self</span>.new.<span class="fn">get</span>(key)
+            )
+            <span class="kw">if</span> old_val != new_val:
+                <span class="kw">self</span>.divergence_cnt += <span class="num">1</span>
+                logging.<span class="fn">warning</span>(<span class="str">f"Divergence on {key}: old={old_val} new={new_val}"</span>)
+            <span class="kw">return</span> old_val   <span class="cmt"># always return OLD during shadow phase</span>
+
+        <span class="kw">if</span> <span class="kw">self</span>.phase == <span class="cls">MigrationPhase</span>.GRADUAL_CUTOVER:
+            <span class="cmt"># Route new_read_pct% of reads to NEW</span>
+            <span class="kw">if</span> random.<span class="fn">randint</span>(<span class="num">1</span>, <span class="num">100</span>) <= <span class="kw">self</span>.new_read_pct:
+                <span class="kw">return await self</span>.new.<span class="fn">get</span>(key)
+            <span class="kw">return await self</span>.old.<span class="fn">get</span>(key)
+
+        <span class="kw">return await self</span>.new.<span class="fn">get</span>(key)   <span class="cmt"># NEW_ONLY phase</span>
+
+    <span class="kw">async def</span> <span class="fn">set</span>(<span class="kw">self</span>, key: str, value):
+        <span class="kw">if</span> <span class="kw">self</span>.phase == <span class="cls">MigrationPhase</span>.OLD_ONLY:
+            <span class="kw">return await self</span>.old.<span class="fn">set</span>(key, value)
+
+        <span class="kw">if</span> <span class="kw">self</span>.phase == <span class="cls">MigrationPhase</span>.NEW_ONLY:
+            <span class="kw">return await self</span>.new.<span class="fn">set</span>(key, value)
+
+        <span class="cmt"># Dual-write phases: write to both, return OLD result</span>
+        old_res, new_res = <span class="kw">await</span> asyncio.<span class="fn">gather</span>(
+            <span class="kw">self</span>.old.<span class="fn">set</span>(key, value),
+            <span class="kw">self</span>.new.<span class="fn">set</span>(key, value)
+        )
+        <span class="kw">return</span> old_res   <span class="cmt"># old is authoritative during transition</span>
+
+    <span class="kw">def</span> <span class="fn">advance_phase</span>(<span class="kw">self</span>, phase: <span class="cls">MigrationPhase</span>, new_read_pct: int = <span class="num">0</span>):
+        <span class="kw">self</span>.phase = phase
+        <span class="kw">self</span>.new_read_pct = new_read_pct
+        logging.<span class="fn">info</span>(<span class="str">f"Migration phase → {phase.value} ({new_read_pct}% new reads)"</span>)</pre></div>
+  </div>
+
+  <div class="spanel" id="t4e">
+    <div class="ptitle">Out<em>come</em></div>
+    <ul class="ol">
+      <li><strong>Dual-write is the foundation of every live migration</strong> — writes to both systems, reads from old, gradually cut reads over to new. This decouples write migration from read migration, enabling safe progressive rollout.</li>
+      <li><strong>Shadow reads are the validation gate</strong> — never advance to gradual cutover until shadow reads show &lt;0.1% divergence. Divergences reveal bugs in data transformation logic before they affect users.</li>
+      <li><strong>gh-ost makes online schema changes possible</strong> — creates shadow table, copies rows, tails binlog for live changes, then performs an atomic swap. No table-level locks, no downtime for even billion-row tables.</li>
+      <li><strong>Expand-Contract eliminates the need for synchronized deploys</strong> — add new column before switching logic, drop old column after. Both v1 and v2 of the app work during the transition window.</li>
+      <li><strong>Rollback must be planned before starting migration</strong> — define the rollback procedure (re-enable old reads, stop dual-write) and test it in staging. A migration without a practiced rollback is an incident waiting to happen.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T5: WORD DICTIONARY ══════════════ -->
+<div class="topic" id="t5">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t5a">Problem & Trie</div>
+    <div class="stab" data-s="t5b">Bloom Filter</div>
+    <div class="stab" data-s="t5c">Disk Storage (no DB)</div>
+    <div class="stab" data-s="t5d">Code</div>
+    <div class="stab" data-s="t5e">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t5a">
+    <div class="ptitle">Design a Word Dictionary <em>Without a DB</em></div>
+    <p class="psub">Store 500K English words with support for: exact lookup (is "serendipity" a valid word?), prefix search (all words starting with "ser"), definition storage, and offline operation. No database allowed.</p>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>Requirements</h4>
+        <ul class="rl">
+          <li><strong>Exact lookup</strong>: O(L) where L = word length</li>
+          <li><strong>Prefix search</strong>: return all words with a given prefix</li>
+          <li><strong>Persistence</strong>: survive restarts without a database</li>
+          <li><strong>Efficient storage</strong>: 500K words × avg 10 chars = 5 MB minimum</li>
+          <li><strong>Definition storage</strong>: arbitrary text per word</li>
+          <li><strong>Spell check</strong>: is this word valid?</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Why No DB?</h4>
+        <ul class="rl">
+          <li>Forces you to understand data structure tradeoffs from first principles</li>
+          <li>Teaches disk-based data structure design</li>
+          <li>Applicable to: embedded devices, edge computing, CLI tools</li>
+          <li>The techniques used here are the same ones real DBs are built on</li>
+        </ul>
+      </div>
+    </div>
+    <h3>The Trie — Core Data Structure</h3>
+    <p>A trie (prefix tree) stores words character by character. Each node represents one character; paths from root to marked nodes represent words. Perfect for prefix search.</p>
+    <div class="g g2">
+      <div class="card ct-c"><h4>Properties</h4><ul class="rl"><li>Exact lookup: O(L) — L = word length. Just traverse character by character.</li><li>Prefix search: O(P + K) — P = prefix length, K = results. Find prefix node, then DFS.</li><li>Memory: shared prefixes stored once. "sea", "seal", "search" share "sea" nodes.</li><li>26 children per node (English alphabet) or 128 (ASCII)</li></ul></div>
+      <div class="card ct-a"><h4>Drawbacks</h4><ul class="rl"><li>Memory: each node = 26 pointers × 8 bytes + metadata = ~200 bytes. 500K words × avg depth 8 = millions of nodes = GBs in worst case.</li><li>Fix: Compressed Trie (Patricia/Radix trie) — merge single-child nodes into edges. Reduces node count by 10×.</li></ul></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t5b">
+    <div class="ptitle">Bloom Filter for <em>Spell Check</em></div>
+    <p class="psub">For "is this word valid?" queries, a Bloom filter gives a probabilistic answer in O(k) time with O(n × k / ln2) bits of memory — vastly less than a trie or hash set.</p>
+    <h3>Bloom Filter Properties</h3>
+    <div class="g g2">
+      <div class="card ct-c">
+        <h4>How it works</h4>
+        <ul class="rl">
+          <li>Bit array of size m, initialized to 0</li>
+          <li>k hash functions, each maps a word to one bit position</li>
+          <li>Add word: set bits at all k hash positions to 1</li>
+          <li>Query word: if ALL k positions = 1 → "possibly in set" (no false negatives)</li>
+          <li>Query word: if ANY position = 0 → "definitely not in set" (no false positives)</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>For 500K words, 1% false positive rate</h4>
+        <ul class="rl">
+          <li>Optimal bit array size: m = -n × ln(p) / (ln2)² = <strong>~5 MB</strong></li>
+          <li>Optimal hash functions: k = m/n × ln2 = <strong>7 hash functions</strong></li>
+          <li>False positive rate: ~1% (1 in 100 non-words passes)</li>
+          <li>For spell check: acceptable! Users see "not a word" → check trie for confirmation</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Two-level Lookup Strategy</h3>
+    <div class="call ci"><strong>Optimal pattern for spell check:</strong><br>
+    1. Bloom filter query → O(k=7) hash ops, ~5 MB memory<br>
+    2. If Bloom says NO → return "invalid word" immediately (definitely not in dictionary)<br>
+    3. If Bloom says MAYBE → confirm with Trie/HashSet lookup<br>
+    This eliminates 99%+ of full trie lookups (most random strings fail the Bloom filter).</div>
+    <div class="cwrap"><div class="ctop"><span>bloom_filter.py — word dictionary spell check</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> hashlib, math
+
+<span class="kw">class</span> <span class="cls">BloomFilter</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, n_words: int, fp_rate: float = <span class="num">0.01</span>):
+        <span class="kw">self</span>.m = <span class="fn">int</span>(-n_words * math.<span class="fn">log</span>(fp_rate) / (math.<span class="fn">log</span>(<span class="num">2</span>))**<span class="num">2</span>)  <span class="cmt"># bits</span>
+        <span class="kw">self</span>.k = <span class="fn">int</span>(<span class="kw">self</span>.m / n_words * math.<span class="fn">log</span>(<span class="num">2</span>))               <span class="cmt"># hash fns</span>
+        <span class="kw">self</span>._bits = bytearray(<span class="kw">self</span>.m // <span class="num">8</span> + <span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn">_hashes</span>(<span class="kw">self</span>, word: str) -> list[int]:
+        <span class="str">"""Generate k independent hash positions using double hashing."""</span>
+        h1 = <span class="fn">int</span>(hashlib.<span class="fn">md5</span>(word.<span class="fn">encode</span>()).<span class="fn">hexdigest</span>(), <span class="num">16</span>)
+        h2 = <span class="fn">int</span>(hashlib.<span class="fn">sha1</span>(word.<span class="fn">encode</span>()).<span class="fn">hexdigest</span>(), <span class="num">16</span>)
+        <span class="kw">return</span> [(h1 + i * h2) % <span class="kw">self</span>.m <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="kw">self</span>.k)]
+
+    <span class="kw">def</span> <span class="fn">add</span>(<span class="kw">self</span>, word: str):
+        <span class="kw">for</span> pos <span class="kw">in self</span>.<span class="fn">_hashes</span>(word):
+            <span class="kw">self</span>._bits[pos // <span class="num">8</span>] |= (<span class="num">1</span> << (pos % <span class="num">8</span>))
+
+    <span class="kw">def</span> <span class="fn">contains</span>(<span class="kw">self</span>, word: str) -> bool:
+        <span class="str">"""True = possibly in set. False = definitely not in set."""</span>
+        <span class="kw">return all</span>(
+            <span class="kw">self</span>._bits[pos // <span class="num">8</span>] & (<span class="num">1</span> << (pos % <span class="num">8</span>))
+            <span class="kw">for</span> pos <span class="kw">in self</span>.<span class="fn">_hashes</span>(word)
+        )</pre></div>
+  </div>
+
+  <div class="spanel" id="t5c">
+    <div class="ptitle">Disk Storage — <em>No Database</em></div>
+    <p class="psub">How do you persist 500K words with definitions on disk without a database? Build a simple file-based storage with an index — the same approach real databases use internally.</p>
+    <h3>Approach 1: Sorted Flat File + Binary Search</h3>
+    <p>Store all words alphabetically in a flat file. Each line: <code>word\tdefinition\n</code>. For lookup: binary search on the file using file offsets — O(log N × disk seek) time.</p>
+    <div class="cwrap"><div class="ctop"><span>flat_file_dict.py — binary search on sorted word file</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">class</span> <span class="cls">FlatFileDictionary</span>:
+    <span class="str">"""Words stored sorted in flat file. Binary search by file offset."""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, filepath: str):
+        <span class="kw">self</span>.filepath = filepath
+        <span class="kw">self</span>._build_index()
+
+    <span class="kw">def</span> <span class="fn">_build_index</span>(<span class="kw">self</span>):
+        <span class="str">"""Build sparse index: every 1000th word → file offset."""</span>
+        <span class="kw">self</span>.index = []   <span class="cmt"># [(word, file_offset)]</span>
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="kw">self</span>.filepath, <span class="str">'rb'</span>) <span class="kw">as</span> f:
+            offset, line_num = <span class="num">0</span>, <span class="num">0</span>
+            <span class="kw">for</span> line <span class="kw">in</span> f:
+                <span class="kw">if</span> line_num % <span class="num">1000</span> == <span class="num">0</span>:
+                    word = line.<span class="fn">split</span>(<span class="str">b'\t'</span>)[<span class="num">0</span>].<span class="fn">decode</span>()
+                    <span class="kw">self</span>.index.<span class="fn">append</span>((word, offset))
+                offset += <span class="fn">len</span>(line); line_num += <span class="num">1</span>
+        <span class="kw">self</span>.total_words = line_num
+
+    <span class="kw">def</span> <span class="fn">lookup</span>(<span class="kw">self</span>, word: str) -> str | <span class="kw">None</span>:
+        <span class="str">"""O(log N + page_size) — sparse index + sequential scan in block."""</span>
+        <span class="cmt"># Binary search in sparse index to find nearest offset</span>
+        lo, hi = <span class="num">0</span>, <span class="fn">len</span>(<span class="kw">self</span>.index) - <span class="num">1</span>
+        <span class="kw">while</span> lo < hi - <span class="num">1</span>:
+            mid = (lo + hi) // <span class="num">2</span>
+            <span class="kw">if self</span>.index[mid][<span class="num">0</span>] <= word: lo = mid
+            <span class="kw">else</span>: hi = mid
+        start_offset = <span class="kw">self</span>.index[lo][<span class="num">1</span>]
+
+        <span class="cmt"># Sequential scan from nearest index entry</span>
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="kw">self</span>.filepath, <span class="str">'rb'</span>) <span class="kw">as</span> f:
+            f.<span class="fn">seek</span>(start_offset)
+            <span class="kw">for</span> line <span class="kw">in</span> f:
+                parts = line.<span class="fn">decode</span>().<span class="fn">strip</span>().<span class="fn">split</span>(<span class="str">'\t'</span>, <span class="num">1</span>)
+                <span class="kw">if</span> parts[<span class="num">0</span>] == word: <span class="kw">return</span> parts[<span class="num">1</span>] <span class="kw">if</span> <span class="fn">len</span>(parts) > <span class="num">1</span> <span class="kw">else</span> <span class="str">""</span>
+                <span class="kw">if</span> parts[<span class="num">0</span>] > word: <span class="kw">return None</span>   <span class="cmt"># gone past — word not found</span>
+        <span class="kw">return None</span></pre></div>
+
+    <h3>Approach 2: Trie + Binary Data File</h3>
+    <p>Trie in memory for structure + word validity. Separate binary file for definitions, indexed by word offset. Load trie at startup (~50 MB for 500K words). Definitions fetched on demand.</p>
+    <table>
+      <tr><th>Approach</th><th>Startup time</th><th>Lookup latency</th><th>Memory</th><th>Prefix search</th></tr>
+      <tr><td>Flat file + sparse index</td><td>O(N/1000) — fast</td><td>O(log N + 1000 lines)</td><td>Minimal (just index)</td><td>Sequential scan only</td></tr>
+      <tr><td>Trie in memory</td><td>O(N × L) — slower</td><td>O(L) — fastest</td><td>~50 MB</td><td>✅ Native</td></tr>
+      <tr><td>Bloom filter (spell check)</td><td>O(N × k) — fast</td><td>O(k) — constant</td><td>~5 MB</td><td>❌ (only existence)</td></tr>
+    </table>
+  </div>
+
+  <div class="spanel" id="t5d">
+    <div class="ptitle">Code — <em>Complete Dictionary System</em></div>
+    <div class="cwrap"><div class="ctop"><span>word_dictionary.py — Trie + Bloom filter + flat file</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">TrieNode</span>:
+    children: dict = <span class="fn">field</span>(default_factory=dict)
+    is_word:  bool = <span class="kw">False</span>
+    def_offset: Optional[int] = <span class="kw">None</span>   <span class="cmt"># byte offset in definition file</span>
+
+<span class="kw">class</span> <span class="cls">WordDictionary</span>:
+    <span class="str">"""
+    Three-layer word lookup:
+    1. Bloom filter  → O(k) quick existence check (reject obviously invalid)
+    2. Trie          → O(L) exact lookup + prefix search
+    3. Definition file → O(1) definition fetch by offset
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="kw">self</span>.root      = <span class="cls">TrieNode</span>()
+        <span class="kw">self</span>.bloom     = <span class="cls">BloomFilter</span>(<span class="num">500_000</span>, fp_rate=<span class="num">0.001</span>)  <span class="cmt"># 0.1% FP</span>
+        <span class="kw">self</span>.def_file  = <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">add_word</span>(<span class="kw">self</span>, word: str, definition: str, def_offset: int):
+        <span class="kw">self</span>.bloom.<span class="fn">add</span>(word)
+        node = <span class="kw">self</span>.root
+        <span class="kw">for</span> ch <span class="kw">in</span> word.<span class="fn">lower</span>():
+            node = node.children.<span class="fn">setdefault</span>(ch, <span class="cls">TrieNode</span>())
+        node.is_word    = <span class="kw">True</span>
+        node.def_offset = def_offset
+
+    <span class="kw">def</span> <span class="fn">search</span>(<span class="kw">self</span>, word: str) -> Optional[str]:
+        <span class="str">"""Fast two-layer lookup: Bloom → Trie → definition file."""</span>
+        word = word.<span class="fn">lower</span>()
+        <span class="kw">if not self</span>.bloom.<span class="fn">contains</span>(word):
+            <span class="kw">return None</span>   <span class="cmt"># definitely not a word</span>
+        node = <span class="kw">self</span>.root
+        <span class="kw">for</span> ch <span class="kw">in</span> word:
+            node = node.children.<span class="fn">get</span>(ch)
+            <span class="kw">if not</span> node: <span class="kw">return None</span>
+        <span class="kw">if not</span> node.is_word: <span class="kw">return None</span>
+        <span class="cmt"># Fetch definition from flat file</span>
+        <span class="kw">return self</span>.<span class="fn">_fetch_definition</span>(node.def_offset)
+
+    <span class="kw">def</span> <span class="fn">prefix_search</span>(<span class="kw">self</span>, prefix: str) -> list[str]:
+        <span class="str">"""All words with given prefix — DFS from prefix node."""</span>
+        node = <span class="kw">self</span>.root
+        <span class="kw">for</span> ch <span class="kw">in</span> prefix.<span class="fn">lower</span>():
+            node = node.children.<span class="fn">get</span>(ch)
+            <span class="kw">if not</span> node: <span class="kw">return</span> []
+        results = []
+        <span class="kw">self</span>.<span class="fn">_dfs</span>(node, <span class="fn">list</span>(prefix), results)
+        <span class="kw">return</span> results
+
+    <span class="kw">def</span> <span class="fn">_dfs</span>(<span class="kw">self</span>, node, current, results, max_results=<span class="num">20</span>):
+        <span class="kw">if</span> node.is_word:
+            results.<span class="fn">append</span>(<span class="str">""</span>.<span class="fn">join</span>(current))
+        <span class="kw">if</span> <span class="fn">len</span>(results) >= max_results: <span class="kw">return</span>
+        <span class="kw">for</span> ch, child <span class="kw">in sorted</span>(node.children.<span class="fn">items</span>()):
+            <span class="kw">self</span>.<span class="fn">_dfs</span>(child, current + [ch], results, max_results)</pre></div>
+  </div>
+
+  <div class="spanel" id="t5e">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">Word Dictionary — Trie + Bloom Filter</span>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>Lookup</h4>
+            <input id="dict-input" type="text" placeholder="Type a word..." style="width:100%;background:var(--surf2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:6px" oninput="dictSearch(this.value)"/>
+            <div id="dict-result" style="font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;min-height:40px"></div>
+          </div>
+          <div>
+            <h4>Prefix Suggestions</h4>
+            <div id="dict-prefix" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>Trie gives O(L) lookup and native prefix search</strong> — where L = word length. For 10-character words, that's 10 comparisons regardless of dictionary size (500K words). B-trees would be O(log N × L) comparisons.</li>
+      <li><strong>Bloom filter = zero-cost rejection</strong> — 99.9% of random strings fail the Bloom check in O(k=7) hash ops. Only valid words or false positives need to traverse the trie. Saves 99%+ of trie lookups for spell-check workloads.</li>
+      <li><strong>Sparse index makes file-based lookup practical</strong> — storing one pointer every 1000 words reduces index memory from 4 MB (full index) to 4 KB, while lookup cost is at most 1000 sequential line reads.</li>
+      <li><strong>These techniques are how real DBs work</strong> — MySQL's InnoDB uses a B+ tree (like trie but branching factor 1024). RocksDB uses a Bloom filter per SSTable. SQLite uses a B-tree over flat file pages. The fundamentals are the same.</li>
+    </ul>
+  </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ T6: LOG-STRUCTURED KV STORE (LSM TREE) ══════════════ -->
+<div class="topic" id="t6">
+  <div class="subtabwrap">
+    <div class="stab active" data-s="t6a">Why LSM Trees</div>
+    <div class="stab" data-s="t6b">Write Path</div>
+    <div class="stab" data-s="t6c">Read Path</div>
+    <div class="stab" data-s="t6d">Compaction</div>
+    <div class="stab" data-s="t6e">Code</div>
+    <div class="stab" data-s="t6f">Demo & Outcome</div>
+  </div>
+  <div class="subpanels">
+
+  <div class="spanel active" id="t6a">
+    <div class="ptitle">Log-Structured <em>KV Store (LSM Tree)</em></div>
+    <p class="psub">The storage engine behind RocksDB, LevelDB, Cassandra, HBase, and ScyllaDB. LSM trees trade read amplification for dramatically better write throughput by converting random writes into sequential disk I/O.</p>
+    <div class="g g4">
+      <div class="card ct-c" style="text-align:center"><div class="snum">10×</div><div class="slbl">Better write throughput vs B-tree</div></div>
+      <div class="card ct-a" style="text-align:center"><div class="snum">3–10×</div><div class="slbl">Read amplification (tradeoff)</div></div>
+      <div class="card ct-g" style="text-align:center"><div class="snum">~1ms</div><div class="slbl">Write latency (in-memory)</div></div>
+      <div class="card ct-p" style="text-align:center"><div class="snum">∞</div><div class="slbl">Scales to petabytes (RocksDB, Cassandra)</div></div>
+    </div>
+    <h3>Why Not B-Trees for Write-heavy Workloads?</h3>
+    <div class="tdp">
+      <div class="tdc con">
+        <h4>B-Tree (InnoDB, PostgreSQL)</h4>
+        <ul>
+          <li>Updates modify data in-place → random writes to disk pages</li>
+          <li>Random write = seek time + latency on HDD, write amplification on SSD</li>
+          <li>Page splits on insert → read-modify-write the page → expensive</li>
+          <li>Write throughput: ~50K–100K rows/sec per node</li>
+          <li>✅ Excellent for reads (O(log N)), range scans</li>
+        </ul>
+      </div>
+      <div class="tdc pro">
+        <h4>LSM Tree (RocksDB, Cassandra)</h4>
+        <ul>
+          <li>All writes go to an in-memory buffer (MemTable) → sequential disk flush</li>
+          <li>Sequential writes = no seek time, full disk bandwidth utilization</li>
+          <li>Disk writes are immutable (append-only) → no in-place modification</li>
+          <li>Write throughput: 500K–5M rows/sec per node</li>
+          <li>❌ Reads may check multiple SSTables → read amplification</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="spanel" id="t6b">
+    <div class="ptitle">Write <em>Path</em></div>
+    <p class="psub">Every write in an LSM tree is a sequential operation — never modifies data in place. This is the fundamental insight that makes write throughput so much higher than B-trees.</p>
+    <h3>Write Flow</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Write to WAL (Write-Ahead Log)</div><div class="fd">Before modifying memory, append the operation to the WAL on disk. Sequential append = fast. If crash: replay WAL to recover MemTable. Guarantees durability.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Write to MemTable (in-memory sorted structure)</div><div class="fd">Insert key-value pair into MemTable — an in-memory balanced BST (Red-Black tree) or Skip List. Maintained in sorted key order. O(log M) insert where M = MemTable size.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">When MemTable is full → flush to SSTable</div><div class="fd">MemTable becomes immutable. A background thread writes it to disk as an SSTable (Sorted String Table). Keys already sorted in memory → one sequential write to disk = maximum I/O throughput.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">New MemTable starts for incoming writes</div><div class="fd">While flushing, a new empty MemTable accepts writes. No blocking. Flush is fully asynchronous.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Delete = tombstone write</div><div class="fd">No key is ever deleted in place. Instead, a tombstone marker (<code>key → DELETED</code>) is written. Old versions persist until compaction removes them.</div></div></div>
+    </div>
+    <h3>SSTable Format</h3>
+    <div class="diag">
+<svg viewBox="0 0 680 130" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono" font-size="11">
+  <rect x="2" y="2" width="676" height="126" rx="6" fill="#0e1420" stroke="#1e2d45"/>
+  <text x="340" y="18" text-anchor="middle" fill="#5a6a85" font-size="8" letter-spacing="1">SSTABLE FILE FORMAT</text>
+  <!-- Sections -->
+  <rect x="14" y="26" width="130" height="80" rx="4" fill="#131a2a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="79" y="44" text-anchor="middle" fill="#86efac" font-size="10" font-weight="700">Data Blocks</text>
+  <text x="79" y="59" text-anchor="middle" fill="#5a6a85" font-size="8">Sorted key-value pairs</text>
+  <text x="79" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">Compressed (snappy/lz4)</text>
+  <text x="79" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">Immutable once written</text>
+  <text x="79" y="97" text-anchor="middle" fill="#3a4a60" font-size="7.5">anchor:alice, anchor:bob…</text>
+
+  <rect x="154" y="26" width="130" height="80" rx="4" fill="#131a2a" stroke="#00e5ff" stroke-width="1.5"/>
+  <text x="219" y="44" text-anchor="middle" fill="#00e5ff" font-size="10" font-weight="700">Index Block</text>
+  <text x="219" y="59" text-anchor="middle" fill="#5a6a85" font-size="8">Sparse index</text>
+  <text x="219" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">key → data block offset</text>
+  <text x="219" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">Every ~16KB boundary</text>
+  <text x="219" y="97" text-anchor="middle" fill="#3a4a60" font-size="7.5">binary search → block</text>
+
+  <rect x="294" y="26" width="130" height="80" rx="4" fill="#131a2a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="359" y="44" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">Filter Block</text>
+  <text x="359" y="59" text-anchor="middle" fill="#5a6a85" font-size="8">Bloom filter per SST</text>
+  <text x="359" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">Quick "key not here"</text>
+  <text x="359" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">~10 bits per key</text>
+  <text x="359" y="97" text-anchor="middle" fill="#3a4a60" font-size="7.5">skips disk read on miss</text>
+
+  <rect x="434" y="26" width="130" height="80" rx="4" fill="#131a2a" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="499" y="44" text-anchor="middle" fill="#fcd34d" font-size="10" font-weight="700">Stats Block</text>
+  <text x="499" y="59" text-anchor="middle" fill="#5a6a85" font-size="8">Key range: min/max</text>
+  <text x="499" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">Entry count</text>
+  <text x="499" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">Creation timestamp</text>
+  <text x="499" y="97" text-anchor="middle" fill="#3a4a60" font-size="7.5">used to skip irrelevant SSTables</text>
+
+  <rect x="574" y="26" width="96" height="80" rx="4" fill="#131a2a" stroke="#1e2d45"/>
+  <text x="622" y="44" text-anchor="middle" fill="#8a9bb5" font-size="10">Footer</text>
+  <text x="622" y="59" text-anchor="middle" fill="#5a6a85" font-size="8">Offsets to</text>
+  <text x="622" y="72" text-anchor="middle" fill="#5a6a85" font-size="8">other blocks</text>
+  <text x="622" y="85" text-anchor="middle" fill="#5a6a85" font-size="8">Magic number</text>
+  <text x="622" y="97" text-anchor="middle" fill="#3a4a60" font-size="7.5">checksum</text>
+</svg>
+    </div>
+  </div>
+
+  <div class="spanel" id="t6c">
+    <div class="ptitle">Read <em>Path</em></div>
+    <p class="psub">The price of LSM's write performance: reads must potentially check multiple SSTables. Multiple layers of optimization reduce this cost dramatically.</p>
+    <h3>Read Algorithm</h3>
+    <div class="flow">
+      <div class="fs"><div class="fl"><div class="fc">1</div><div class="fline"></div></div><div class="fb"><div class="ft">Check MemTable (newest data, O(log M))</div><div class="fd">Key found in MemTable → return immediately. This is the common case for recently written keys.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">2</div><div class="fline"></div></div><div class="fb"><div class="ft">Check Bloom filter for each SSTable (newest → oldest)</div><div class="fd">For each SSTable, the Bloom filter answers: "Is this key possibly in this file?" If NO → skip entire file. If YES → check index. Bloom filter eliminates 99%+ of unnecessary disk reads.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">3</div><div class="fline"></div></div><div class="fb"><div class="ft">Check SSTable range (min/max key in footer)</div><div class="fd">SSTable stores min and max key in metadata. If the target key is outside [min, max] → skip this SSTable entirely. Additional pruning before disk I/O.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">4</div><div class="fline"></div></div><div class="fb"><div class="ft">Binary search index block → fetch data block</div><div class="fd">Sparse index → find the data block containing the key. Read that block from disk. Binary search within block. O(log N) disk operations.</div></div></div>
+      <div class="fs"><div class="fl"><div class="fc">5</div><div class="fline"></div></div><div class="fb"><div class="ft">Block cache</div><div class="fd">Frequently accessed data blocks are cached in a block cache (LRU). Hot data serves reads in microseconds. Cold data requires disk I/O.</div></div></div>
+    </div>
+    <h3>Read Amplification</h3>
+    <div class="call cw"><strong>Worst case:</strong> Key doesn't exist. Must check every SSTable (Bloom filter + range check). With 100 SSTables: 100 Bloom filter lookups (fast, in memory) + potentially many disk reads if Bloom has false positives. This is why compaction is essential — it reduces SSTable count.</div>
+    <div class="call cg"><strong>With leveled compaction (RocksDB):</strong> At each level, SSTables have non-overlapping key ranges. A read at Level N only checks ONE SSTable per level. Total disk reads = number of levels (typically 5–7). Read amplification bounded to O(levels).</div>
+  </div>
+
+  <div class="spanel" id="t6d">
+    <div class="ptitle"><em>Compaction</em></div>
+    <p class="psub">Compaction merges multiple SSTables, removes obsolete versions, removes tombstones, and reduces the number of SSTables — trading write amplification for better read performance.</p>
+    <h3>Why Compaction is Necessary</h3>
+    <p>Without compaction: 1000 SSTables after 1M writes. Every read checks 1000 files. Space is wasted on old versions and tombstones. Compaction is the background "cleanup" that keeps LSM trees efficient.</p>
+    <h3>Compaction Strategies</h3>
+    <div class="g g3">
+      <div class="card ct-c">
+        <h4>Size-Tiered (STCS)</h4>
+        <p>Group SSTables of similar size, merge them. New merged SSTable goes to next tier. Multiple SSTables per level → some key range overlap.</p>
+        <ul class="rl">
+          <li>✅ Lower write amplification (good for writes)</li>
+          <li>❌ Higher read amplification (overlapping key ranges)</li>
+          <li><strong>Used by:</strong> Cassandra (default), ScyllaDB</li>
+        </ul>
+      </div>
+      <div class="card ct-g">
+        <h4>Leveled (LCS) ✓ RocksDB default</h4>
+        <p>Each level has one merged SSTable with non-overlapping key ranges. A key exists in exactly one file per level. Guarantees O(levels) read amplification.</p>
+        <ul class="rl">
+          <li>✅ Lower read amplification</li>
+          <li>❌ Higher write amplification (more merging)</li>
+          <li><strong>Used by:</strong> RocksDB, LevelDB, TiKV</li>
+        </ul>
+      </div>
+      <div class="card ct-a">
+        <h4>FIFO (time-series)</h4>
+        <p>Oldest SSTables deleted when capacity reached. No merging. For time-series data where old data is simply expired.</p>
+        <ul class="rl">
+          <li>✅ Lowest write amplification</li>
+          <li>❌ No deduplication</li>
+          <li><strong>Used by:</strong> InfluxDB, Prometheus (tsdb)</li>
+        </ul>
+      </div>
+    </div>
+    <h3>Write Amplification</h3>
+    <div class="call cr"><strong>The dark side of compaction:</strong> A single user write may be physically written to disk many times as it gets compacted through levels. With 5 levels and 10× size ratio: write amplification = 1 (WAL) + 1 (L0 flush) + 10 (L0→L1) + 10 (L1→L2) + ... ≈ <strong>30–50× write amplification</strong> for leveled compaction. This accelerates SSD wear. RocksDB tuning is largely about controlling this trade-off.</div>
+  </div>
+
+  <div class="spanel" id="t6e">
+    <div class="ptitle">Code — <em>Minimal LSM Tree Implementation</em></div>
+    <div class="cwrap"><div class="ctop"><span>lsm_tree.py — MemTable + SSTable + compaction</span><span class="ltag lpy">Python</span></div>
+    <pre><span class="kw">import</span> os, json, time, bisect
+<span class="kw">from</span> sortedcontainers <span class="kw">import</span> SortedDict  <span class="cmt"># Red-Black tree equivalent</span>
+
+<span class="cls">TOMBSTONE</span>   = <span class="str">"__DELETED__"</span>
+<span class="cls">MEMTABLE_MAX</span> = <span class="num">1000</span>   <span class="cmt"># flush when MemTable hits this size</span>
+
+<span class="kw">class</span> <span class="cls">SSTable</span>:
+    <span class="str">"""Immutable sorted file on disk."""</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, filepath: str, data: <span class="cls">SortedDict</span>):
+        <span class="kw">self</span>.filepath = filepath
+        <span class="kw">self</span>.min_key  = data.<span class="fn">peekitem</span>(<span class="num">0</span>)[<span class="num">0</span>]    <span class="cmt"># for range pruning</span>
+        <span class="kw">self</span>.max_key  = data.<span class="fn">peekitem</span>(-<span class="num">1</span>)[<span class="num">0</span>]
+        <span class="kw">self</span>._bloom   = <span class="cls">BloomFilter</span>(<span class="fn">len</span>(data))
+        <span class="cmt"># Write sorted data to disk</span>
+        <span class="kw">with</span> <span class="fn">open</span>(filepath, <span class="str">"w"</span>) <span class="kw">as</span> f:
+            <span class="kw">for</span> key, val <span class="kw">in</span> data.<span class="fn">items</span>():
+                f.<span class="fn">write</span>(<span class="fn">json</span>.<span class="fn">dumps</span>({<span class="str">"k"</span>: key, <span class="str">"v"</span>: val}) + <span class="str">"\n"</span>)
+                <span class="kw">self</span>._bloom.<span class="fn">add</span>(key)
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        <span class="kw">if</span> key < <span class="kw">self</span>.min_key <span class="kw">or</span> key > <span class="kw">self</span>.max_key: <span class="kw">return None</span>
+        <span class="kw">if not self</span>._bloom.<span class="fn">contains</span>(key): <span class="kw">return None</span>   <span class="cmt"># Bloom filter skip</span>
+        <span class="kw">with</span> <span class="fn">open</span>(<span class="kw">self</span>.filepath) <span class="kw">as</span> f:           <span class="cmt"># linear scan (simplified)</span>
+            <span class="kw">for</span> line <span class="kw">in</span> f:
+                entry = <span class="fn">json</span>.<span class="fn">loads</span>(line)
+                <span class="kw">if</span> entry[<span class="str">"k"</span>] == key: <span class="kw">return</span> entry[<span class="str">"v"</span>]
+                <span class="kw">if</span> entry[<span class="str">"k"</span>]  > key: <span class="kw">return None</span>
+        <span class="kw">return None</span>
+
+<span class="kw">class</span> <span class="cls">LSMTree</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>, data_dir: str = <span class="str">"/tmp/lsm"</span>):
+        os.<span class="fn">makedirs</span>(data_dir, exist_ok=<span class="kw">True</span>)
+        <span class="kw">self</span>.data_dir  = data_dir
+        <span class="kw">self</span>.memtable  = <span class="cls">SortedDict</span>()   <span class="cmt"># active MemTable</span>
+        <span class="kw">self</span>.sstables  = []              <span class="cmt"># newest first</span>
+        <span class="kw">self</span>._wal      = <span class="fn">open</span>(<span class="str">f"{data_dir}/wal.log"</span>, <span class="str">"a"</span>)
+
+    <span class="kw">def</span> <span class="fn">set</span>(<span class="kw">self</span>, key: str, value: str):
+        <span class="kw">self</span>._wal.<span class="fn">write</span>(<span class="fn">json</span>.<span class="fn">dumps</span>({<span class="str">"op"</span>:<span class="str">"set"</span>,<span class="str">"k"</span>:key,<span class="str">"v"</span>:value}) + <span class="str">"\n"</span>)
+        <span class="kw">self</span>._wal.<span class="fn">flush</span>()   <span class="cmt"># WAL must be flushed before MemTable update</span>
+        <span class="kw">self</span>.memtable[key] = value
+        <span class="kw">if</span> <span class="fn">len</span>(<span class="kw">self</span>.memtable) >= MEMTABLE_MAX:
+            <span class="kw">self</span>.<span class="fn">_flush_memtable</span>()
+
+    <span class="kw">def</span> <span class="fn">delete</span>(<span class="kw">self</span>, key: str):
+        <span class="kw">self</span>.<span class="fn">set</span>(key, TOMBSTONE)   <span class="cmt"># deletion = tombstone write</span>
+
+    <span class="kw">def</span> <span class="fn">get</span>(<span class="kw">self</span>, key: str):
+        <span class="cmt"># 1. Check MemTable (most recent)</span>
+        val = <span class="kw">self</span>.memtable.<span class="fn">get</span>(key)
+        <span class="kw">if</span> val <span class="kw">is not None</span>:
+            <span class="kw">return None if</span> val == TOMBSTONE <span class="kw">else</span> val
+        <span class="cmt"># 2. Check SSTables newest → oldest</span>
+        <span class="kw">for</span> sst <span class="kw">in</span> <span class="kw">self</span>.sstables:
+            val = sst.<span class="fn">get</span>(key)
+            <span class="kw">if</span> val <span class="kw">is not None</span>:
+                <span class="kw">return None if</span> val == TOMBSTONE <span class="kw">else</span> val
+        <span class="kw">return None</span>   <span class="cmt"># key not found</span>
+
+    <span class="kw">def</span> <span class="fn">_flush_memtable</span>(<span class="kw">self</span>):
+        <span class="str">"""Flush MemTable to disk as SSTable (sequential write)."""</span>
+        path = <span class="str">f"{self.data_dir}/sst_{int(time.time()*1000)}.sst"</span>
+        sst  = <span class="cls">SSTable</span>(path, <span class="kw">self</span>.memtable)
+        <span class="kw">self</span>.sstables.<span class="fn">insert</span>(<span class="num">0</span>, sst)     <span class="cmt"># newest first</span>
+        <span class="kw">self</span>.memtable = <span class="cls">SortedDict</span>()     <span class="cmt"># fresh MemTable</span>
+        <span class="kw">if</span> <span class="fn">len</span>(<span class="kw">self</span>.sstables) > <span class="num">4</span>:       <span class="cmt"># compact when too many files</span>
+            <span class="kw">self</span>.<span class="fn">_compact</span>()</pre></div>
+  </div>
+
+  <div class="spanel" id="t6f">
+    <div class="ptitle">Interactive Demo &amp; <em>Outcome</em></div>
+    <div class="demo-box">
+      <div class="demo-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+        <span style="margin-left:8px">LSM Tree Visualiser</span>
+        <button class="dbtn dbtn-c" onclick="lsmSet()" style="margin-left:auto">SET key</button>
+        <button class="dbtn dbtn-g" onclick="lsmGet()" style="margin-left:6px">GET key</button>
+        <button class="dbtn dbtn-r" onclick="lsmDelete()" style="margin-left:6px">DEL key (tombstone)</button>
+        <button class="dbtn dbtn-a" onclick="lsmFlush()" style="margin-left:6px">Flush MemTable</button>
+        <button class="dbtn dbtn-p" onclick="lsmCompact()" style="margin-left:6px">Compact</button>
+      </div>
+      <div class="demo-body">
+        <div class="g2 g" style="gap:10px">
+          <div>
+            <h4>MemTable (in-memory, sorted)</h4>
+            <div class="memtable-vis" id="lsm-mem" style="min-height:50px;color:var(--muted)">Empty</div>
+            <h4 style="margin-top:8px">SSTables (on disk, newest first)</h4>
+            <div id="lsm-levels"></div>
+          </div>
+          <div>
+            <h4>Operations Log</h4>
+            <div id="lsm-log" style="background:var(--surf2);border:1px solid var(--border);border-radius:5px;padding:7px;height:200px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ul class="ol" style="margin-top:10px">
+      <li><strong>All writes are sequential appends</strong> — WAL first (durability), then MemTable (speed). When MemTable is full, one sequential disk write creates an SSTable. No random I/O until compaction.</li>
+      <li><strong>Bloom filters prevent 99%+ of unnecessary disk reads</strong> — for a key not in an SSTable, the Bloom filter answers "definitely not" in O(k) hash operations, skipping the disk read entirely.</li>
+      <li><strong>Tombstones are the deletion mechanism</strong> — never delete in place. Write a special marker. Old versions and tombstones persist until compaction sweeps them away. Critical for understanding "deleted" keys reappearing after crash-recovery.</li>
+      <li><strong>Leveled compaction bounds read amplification to O(levels)</strong> — non-overlapping key ranges at each level mean at most one SSTable per level is checked. Size-tiered compaction is faster to write but slower to read.</li>
+      <li><strong>Write amplification is the LSM tax</strong> — data is written once (WAL), once more (L0 flush), then rewritten at each compaction level. Total amplification = 30–50× for leveled compaction. SSD endurance is the practical constraint.</li>
+      <li><strong>Used in production everywhere</strong> — RocksDB (Facebook/Meta, Kafka, TiKV), LevelDB (Chrome), Cassandra, HBase, ScyllaDB. The LSM tree is the dominant storage engine for write-heavy distributed systems.</li>
+    </ul>
+    <div class="done">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:19px;color:#fff;margin-bottom:8px">Week 5 — Building Storages Complete ✦</div>
+      <p style="font-size:13px;color:var(--muted)">All 6 storage topics covered. Next: <strong>Week 6 — High Throughput Systems</strong> · S3 Design · Multi-tiered Orders · LSM Trees Ground Up · Ads in Live Streaming · Privacy & HA in Live Streaming</p>
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="hbadge hb-c">Week 5 of 8 Complete</span>
+        <span class="hbadge hb-g">6/6 Topics Done</span>
+        <span class="hbadge hb-a">Week 6 → High Throughput</span>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</div><!-- /topics -->
+
+<script>
+// ── TAB WIRING ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.ttab').forEach(t => {
+  t.addEventListener('click', () => {
+    const id = t.dataset.topic;
+    document.querySelectorAll('.ttab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.topic').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active'); document.getElementById(id).classList.add('active');
+    t.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.stab').forEach(s => {
+  s.addEventListener('click', () => {
+    const sid = s.dataset.s;
+    s.closest('.subtabwrap').querySelectorAll('.stab').forEach(x=>x.classList.remove('active'));
+    s.closest('.topic').querySelectorAll('.spanel').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active'); document.getElementById(sid).classList.add('active');
+    s.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+});
+document.querySelectorAll('.ltab').forEach(lt => {
+  lt.addEventListener('click', () => {
+    const l = lt.dataset.l; if(!l) return;
+    lt.closest('.ltabs').querySelectorAll('.ltab').forEach(x=>x.classList.remove('on'));
+    lt.classList.add('on');
+    lt.parentElement.querySelectorAll('.lpanel').forEach(p=>p.classList.toggle('on',p.id===l));
+  });
+});
+
+// ── CACHE DEMO ───────────────────────────────────────────────────────────────
+const cap=5; let cmap=new Map(); let stats={hits:0,misses:0,evictions:0};
+const KEYS=['user:42','user:7','config:db','session:99','post:123','user:201','cache:warm','token:abc'];
+function cacheLog(m,c='#5a6a85'){const el=document.getElementById('cache-log');if(!el)return;el.innerHTML+=`<div style="color:${c};margin-bottom:2px">${m}</div>`;el.scrollTop=el.scrollHeight;}
+function cacheRender(){
+  const el=document.getElementById('cache-slots');if(!el)return;
+  const entries=[...cmap.entries()].reverse();
+  if(!entries.length){el.innerHTML='<div class="cache-slot" style="color:var(--muted)">Empty cache</div>';return;}
+  el.innerHTML=entries.map(([k,v],i)=>`<div class="cache-slot ${i===0?'fresh':i>=cap-1?'stale':''}">${i===0?'MRU':'   '} <span style="color:var(--accent)">${k}</span> → <span style="color:var(--green)">${v}</span>${v.ttl?` <span style="color:var(--amber)">TTL:${Math.max(0,Math.round(v.ttl-Date.now()/1000))}s</span>`:''}</div>`).join('');
+  const st=document.getElementById('cache-stats');if(st)st.innerHTML=`<div>Hits: <span style="color:var(--green)">${stats.hits}</span></div><div>Misses: <span style="color:var(--red)">${stats.misses}</span></div><div>Evictions: <span style="color:var(--amber)">${stats.evictions}</span></div><div>Hit rate: <span style="color:var(--accent)">${stats.hits+stats.misses?((stats.hits/(stats.hits+stats.misses))*100).toFixed(1)+'%':'—'}</span></div>`;
+}
+function cacheSet(){
+  const k=KEYS[Math.floor(Math.random()*KEYS.length)], v='val_'+Math.floor(Math.random()*1000);
+  if(cmap.has(k))cmap.delete(k);
+  if(cmap.size>=cap){const lru=cmap.keys().next().value;cmap.delete(lru);stats.evictions++;cacheLog(`EVICT ${lru}`, 'var(--red)');}
+  cmap.set(k,{str:v});cacheLog(`SET ${k} = ${v}`,'var(--accent)');cacheRender();
+}
+function cacheGet(){
+  const k=KEYS[Math.floor(Math.random()*KEYS.length)];
+  if(cmap.has(k)){stats.hits++;const v=cmap.get(k);cmap.delete(k);cmap.set(k,v);cacheLog(`HIT ${k}`,'var(--green)');}
+  else{stats.misses++;cacheLog(`MISS ${k}`,'var(--red)');}
+  cacheRender();
+}
+function cacheExpire(){
+  const k=KEYS[Math.floor(Math.random()*KEYS.length)];
+  if(cmap.has(k))cmap.delete(k);
+  if(cmap.size>=cap){const lru=cmap.keys().next().value;cmap.delete(lru);stats.evictions++;}
+  cmap.set(k,{str:'ttl_val',ttl:Date.now()/1000+3});
+  cacheLog(`SET ${k} TTL=3s`,'var(--amber)');
+  setTimeout(()=>{if(cmap.has(k)&&cmap.get(k).ttl){cmap.delete(k);cacheLog(`EXPIRED ${k}`,'var(--muted)');cacheRender();}},3100);
+  cacheRender();
+}
+function cacheReset(){cmap=new Map();stats={hits:0,misses:0,evictions:0};document.getElementById('cache-log').innerHTML='';cacheRender();}
+cacheRender();
+
+// ── CONSISTENT HASH DEMO ─────────────────────────────────────────────────────
+const chServers=['S1','S2','S3','S4']; const chColors={'S1':'#00e5ff','S2':'#22c55e','S3':'#a78bfa','S4':'#f59e0b','S5':'#ec4899'};
+function simplehash(s){let h=0;for(let c of s){h=(h*31+c.charCodeAt(0))%100;}return h;}
+function getServer(key){const h=simplehash(key),sorted=chServers.map(s=>({s,h:simplehash(s)})).sort((a,b)=>a.h-b.h);for(let n of sorted)if(n.h>=h)return n.s;return sorted[0].s;}
+function chRender(){
+  const el=document.getElementById('ch-dist');if(!el)return;
+  const dist={};chServers.forEach(s=>dist[s]=0);
+  const testKeys=['user:1','user:2','user:3','user:4','user:5','user:6','user:7','user:8','session:a','session:b','post:1','post:2'];
+  testKeys.forEach(k=>dist[getServer(k)]++);
+  el.innerHTML=chServers.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span style="color:${chColors[s]||'#5a6a85'};width:30px;font-weight:700">${s}</span><div style="flex:1;background:var(--border);border-radius:3px;height:8px"><div style="width:${Math.min(100,dist[s]*8)}%;height:100%;background:${chColors[s]||'#5a6a85'};border-radius:3px"></div></div><span style="color:var(--muted);font-size:11px">${dist[s]} keys</span></div>`).join('');
+}
+function chLog(m){const el=document.getElementById('ch-log');if(!el)return;el.innerHTML+=`<div style="margin-bottom:2px;color:#5a6a85">${m}</div>`;el.scrollTop=el.scrollHeight;}
+function chRoute(){const k='key:'+Math.floor(Math.random()*1000);const s=getServer(k);chLog(`${k} → <span style="color:${chColors[s]||'#5a6a85'}">${s}</span>`);chRender();}
+function chAddServer(){const name='S'+(chServers.length+1);chServers.push(name);chLog(`Added ${name} — ring rebalanced (~${Math.round(100/(chServers.length))}% keys migrated)`);chRender();}
+function chRemoveServer(){if(chServers.length<=1)return;const rem=chServers.pop();chLog(`Removed ${rem} — its keys migrated to successor`);chRender();}
+chRender();
+
+// ── WORD DICT DEMO ──────────────────────────────────────────────────────────
+const WORDS={'hello':'A greeting or expression of goodwill','world':'The earth or universe; all human beings','system':'An organized set of connected things or parts','design':'A plan or drawing produced to show the look of something','database':'An organized collection of structured information','cache':'A hardware or software component that stores data','algorithm':'A process or set of rules to be followed in calculations','network':'A group of interconnected things','server':'A computer that manages access to a centralized resource','storage':'The process of storing data','index':'An alphabetical list used to locate items','hash':'A function converting data of arbitrary size to fixed-size output','tree':'A hierarchical data structure','bloom':'A probabilistic data structure for set membership','lsm':'Log-Structured Merge tree storage engine','shard':'A horizontal partition of data in a database','replica':'A copy of data maintained for redundancy','kafka':'A distributed event streaming platform','redis':'An in-memory data structure store','trie':'A tree data structure for locating keys in a dataset'};
+function dictSearch(val){
+  const word=val.trim().toLowerCase();
+  const res=document.getElementById('dict-result');
+  const pre=document.getElementById('dict-prefix');
+  if(!res||!pre)return;
+  if(!word){res.innerHTML='<span style="color:var(--muted)">Start typing…</span>';pre.innerHTML='';return;}
+  const def=WORDS[word];
+  if(def)res.innerHTML=`<span style="color:var(--green)">✓ Valid word</span><br><span style="color:#8a9bb5;font-size:12px">${def}</span>`;
+  else res.innerHTML=`<span style="color:var(--red)">✗ Not found</span>`;
+  const matches=Object.keys(WORDS).filter(w=>w.startsWith(word)&&w!==word).slice(0,8);
+  pre.innerHTML=matches.map(m=>`<span style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer" onclick="document.getElementById('dict-input').value='${m}';dictSearch('${m}')">${m}</span>`).join('');
+}
+
+// ── LSM DEMO ─────────────────────────────────────────────────────────────────
+let lsmMem={}, lsmSSTables=[], lsmSeq=0;
+const lsmKeys=['user:42','user:7','post:1','session:x','config:db','user:99','tag:travel','counter:views'];
+function lsmLog(m,c='#5a6a85'){const el=document.getElementById('lsm-log');if(!el)return;el.innerHTML+=`<div style="margin-bottom:2px;color:${c}">${m}</div>`;el.scrollTop=el.scrollHeight;}
+function lsmRender(){
+  const me=document.getElementById('lsm-mem');if(me){const entries=Object.entries(lsmMem);me.innerHTML=entries.length?entries.map(([k,v])=>`<span style="color:${v==='__DEL__'?'var(--red)':'var(--accent)'};">${k}=${v==='__DEL__'?'<tombstone>':v}</span>`).join(' | '):'<span style="color:var(--muted)">Empty (capacity: '+lsmKeys.length+')</span>';}
+  const lv=document.getElementById('lsm-levels');if(!lv)return;
+  lv.innerHTML=lsmSSTables.length?lsmSSTables.map((sst,i)=>`<div class="lsm-level"><span class="lsm-label">SST-${sst.id}</span>${Object.entries(sst.data).map(([k,v])=>`<span class="sstable" title="${k}=${v}">${k.split(':')[0]}:${k.split(':')[1]?.slice(0,3)||''}</span>`).join('')}</div>`).join(''):
+    '<div style="color:var(--muted);font-family:JetBrains Mono,monospace;font-size:11px">No SSTables yet</div>';
+}
+function lsmSet(){
+  const k=lsmKeys[Math.floor(Math.random()*lsmKeys.length)],v='v'+Math.floor(Math.random()*100);
+  lsmMem[k]=v;lsmLog(`SET ${k} = ${v} → WAL + MemTable`,'var(--accent)');
+  if(Object.keys(lsmMem).length>=5)lsmFlush();
+  lsmRender();
+}
+function lsmGet(){
+  const k=lsmKeys[Math.floor(Math.random()*lsmKeys.length)];
+  if(lsmMem[k]){const v=lsmMem[k];lsmLog(`GET ${k} → MemTable HIT: ${v}`,'var(--green)');return;}
+  for(const sst of lsmSSTables){if(sst.data[k]){lsmLog(`GET ${k} → SST-${sst.id} HIT: ${sst.data[k]}`,'var(--green)');return;}}
+  lsmLog(`GET ${k} → MISS (checked MemTable + ${lsmSSTables.length} SSTables)`,'var(--red)');
+}
+function lsmDelete(){
+  const k=lsmKeys[Math.floor(Math.random()*lsmKeys.length)];
+  lsmMem[k]='__DEL__';lsmLog(`DEL ${k} → tombstone written`,'var(--amber)');lsmRender();
+}
+function lsmFlush(){
+  if(!Object.keys(lsmMem).length){lsmLog('MemTable is empty','var(--muted)');return;}
+  lsmSeq++;
+  lsmSSTables.unshift({id:lsmSeq,data:{...lsmMem}});
+  lsmLog(`FLUSH → SST-${lsmSeq} written to disk (${Object.keys(lsmMem).length} entries)`,'var(--teal)');
+  lsmMem={};lsmRender();
+}
+function lsmCompact(){
+  if(lsmSSTables.length<2){lsmLog('Need ≥2 SSTables to compact','var(--muted)');return;}
+  // Mark as compacting
+  document.querySelectorAll('.sstable').forEach(s=>s.classList.add('compacting'));
+  setTimeout(()=>{
+    const merged={};
+    for(const sst of [...lsmSSTables].reverse()){Object.assign(merged,sst.data);}
+    // Remove tombstones
+    Object.keys(merged).forEach(k=>{if(merged[k]==='__DEL__')delete merged[k];});
+    lsmSeq++;
+    lsmSSTables=[{id:lsmSeq,data:merged}];
+    lsmLog(`COMPACT → merged ${lsmSSTables.length} SSTables → SST-${lsmSeq} (tombstones removed)`,'var(--purple)');
+    lsmRender();
+  },800);
+}
+lsmRender();
+</script>
+</body>
+</html>
