@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #29 — E-Commerce Search</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#f97316;--a2:#ea580c;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fed7aa;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#0f0a07 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(249,115,22,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ffedd5 0%,#f97316 50%,#9a3412 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(249,115,22,.07);color:#fed7aa;border:1px solid rgba(249,115,22,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(249,115,22,.1);color:var(--ecolor);border:1.5px solid rgba(249,115,22,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(249,115,22,.08);color:var(--accent);border:1px solid rgba(249,115,22,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fed7aa;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(249,115,22,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(249,115,22,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#f97316;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › E-Commerce › <span>29 / Search</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔍</div>
+    <div>
+      <div class="h-title">E-Commerce Search (Amazon/Shopify)</div>
+      <div class="h-desc">Design product search for an e-commerce platform with 500M products — full-text search with relevance ranking, faceted filters (brand, price, rating, category), spell correction, personalised result re-ranking, and near-real-time product index updates from a catalog of constantly changing prices and inventory.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Elasticsearch</span>
+        <span class="badge b-tag">Inverted Index</span>
+        <span class="badge b-tag">Faceted Filters</span>
+        <span class="badge b-tag">BM25 Ranking</span>
+        <span class="badge b-tag">Personalisation</span>
+        <span class="badge b-tag">Near-realtime Index</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('indexing',this)">📑 Indexing</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Search is deceptively hard at e-commerce scale.</strong> The inverted index gives you relevance matching. Facets filter results. Personalisation re-ranks for each user. Near-realtime index updates require decoupling catalog changes from search availability. All this must happen in &lt;100ms.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Full-text keyword search across product title, description, brand, category</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Faceted filters: price range, brand, rating, in-stock, category</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Spell correction ("iphone" → suggested "iPhone 15")</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Personalised ranking: boost products user has viewed/bought in past</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Autocomplete / typeahead for search bar</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Near-realtime catalog updates (new products, price changes) visible in &lt;30s</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>500M products in the index</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>50K search queries/sec peak</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Search latency: &lt;100ms p99</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Index update lag: &lt;30s from catalog change to searchable</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>99.9% availability — search must stay up during indexing</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Inverted Index & Relevance</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · SEARCH FUNDAMENTALS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>User searches "wireless headphones under $50". Walk me through exactly what happens.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Step 1 — Query analysis:</b> Tokenise and analyse the query. "wireless headphones" → tokens: ["wireless", "headphone" (stemmed)]. The price filter "under $50" is extracted as a structured filter: <code>price &lt; 50</code>. Stop words ("under") are dropped.<br><br>
+      <b>Step 2 — Inverted index lookup:</b> For each token, the inverted index maps <code>token → [doc_id, frequency, field, positions]</code>. "wireless" → [prod_1234, prod_5678, ...]. "headphone" → [prod_5678, prod_9012, ...]. The intersection gives candidate products containing both tokens. Elasticsearch handles this automatically.<br><br>
+      <b>Step 3 — Relevance scoring (BM25):</b> BM25 is Elasticsearch's default. Score depends on: (a) term frequency in this document (TF), (b) inverse document frequency — rare words in the corpus get higher weight (IDF), (c) field length normalization — a short title match outscores a long description match. "wireless headphones" in the product title scores much higher than in a long description.<br><br>
+      <b>Step 4 — Filter application:</b> Apply <code>filter: price &lt; 50 AND in_stock: true</code>. Filters don't affect score — they simply include/exclude documents. Elasticsearch evaluates filters before scoring for efficiency (cached as bitsets).<br><br>
+      <b>Step 5 — Return top-K with facets:</b> Return top 20 results plus facet counts: "brand: {Sony: 142, JBL: 87, ...}", "rating: {4+stars: 234, ...}". User can now drill down.
+    </div></div>
+    <div class="tip-box"><strong>💡 BM25 vs TF-IDF:</strong> BM25 is BM (Best Matching) 25. It improves on TF-IDF by adding term saturation (doubling occurrences doesn't double the score — useful for spam prevention) and document length normalization. It's been the gold standard since 1994 and is still what Elasticsearch uses by default.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🎯 Phase 2 — Facets & Personalisation</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · FACETS + RANKING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you show brand filters with counts like "Sony (142), JBL (87)" without a separate query per brand?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Aggregation queries (Elasticsearch Aggs):</b> In a single query, alongside the main search, attach an aggregation on the <code>brand</code> field: <code>"aggs": {"brands": {"terms": {"field": "brand.keyword", "size": 20}}}</code>. Elasticsearch runs the full-text search AND counts per-brand simultaneously — one round-trip. The result includes both the top-20 product hits AND the brand distribution for all matching products. Same for price ranges (histogram aggregation) and ratings (range aggregation).<br><br>
+      <b>Filter vs Post-filter:</b> A subtle but important distinction. A "filter" applied to the query excludes documents from both results and aggregation counts. A "post_filter" filters the result documents but the aggregation still counts ALL matching documents before the filter. This gives the "showing results for Sony, but here's how many other brands also match" behaviour — standard on Amazon.
+    </div></div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>User A bought Sony headphones 3 times. User B bought Apple AirPods. Same search "wireless headphones" — should they see the same results?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      No — personalisation should re-rank results. Two approaches:<br><br>
+      <b>1. Score boosting at query time:</b> Extend the Elasticsearch query with a <code>function_score</code> block that adds a personalisation boost. For user A: brands they've purchased from get +2.0 boost. For user B: Apple gets +3.0 boost. This is computed per-request from a user preference profile stored in a fast KV store (Redis). Adds ~5ms to query time.<br><br>
+      <b>2. Two-phase retrieval + re-ranking:</b> Phase 1: Elasticsearch returns top-200 by BM25 relevance. Phase 2: A ranking service re-orders those 200 using an ML model with user features, item features, and interaction history. Show top-20 to user. More expensive but better quality. Used by Amazon and ASOS for their ranking models.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 3 — Near-realtime Index Updates</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · INDEX FRESHNESS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A seller changes a price. How quickly does this appear in search, and how do you ensure indexing doesn't degrade search performance?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Catalog changes → Kafka topic → Elasticsearch indexer service. The indexer consumes events and calls <code>PUT /products/_doc/{product_id}</code> on Elasticsearch. Elasticsearch's default refresh interval is 1 second — new documents become searchable within 1s of being written. End-to-end: catalog change → Kafka (sub-100ms) → indexer → ES refresh (~1s) = <b>under 5 seconds</b>.<br><br>
+      <b>Protecting search during heavy indexing:</b> Bulk indexing (e.g., adding 10M new products) uses the Bulk API and runs against a separate indexing thread pool. Elasticsearch separates read (search) and write (indexing) thread pools, so heavy indexing doesn't block search queries. Additionally: index new documents to a "write alias" while search uses a "read alias" — during a full re-index, the new index is built in the background, then aliases are atomically swapped. Zero-downtime re-indexing.<br><br>
+      <b>Routing:</b> Price and inventory change extremely frequently (millions of updates/day). To avoid re-indexing the full document, use <b>partial updates</b>: <code>POST /products/_update/{id} {"doc": {"price": 49.99}}</code>. Elasticsearch merges this into the existing document. Much cheaper than full document re-index.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="indexing" class="panel">
+  <div class="sec"><div class="sec-head">📑 Index Design & Mapping</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:340px">
+<defs>
+<marker id="oa" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f97316"/></marker>
+<marker id="og" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+</defs>
+<!-- Index schema -->
+<text x="10" y="18" font-family="JetBrains Mono" font-size="9" fill="#f97316" font-weight="700">ELASTICSEARCH DOCUMENT MAPPING</text>
+<rect x="10" y="26" width="380" height="270" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(249,115,22,.1)"/>
+<text x="20" y="46" font-family="JetBrains Mono" font-size="8" fill="#f97316">PUT /products/_mapping</text>
+<text x="20" y="62" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">title:         text (analyzed, BM25)   + keyword</text>
+<text x="20" y="76" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">description:   text (analyzed)         boost: 0.3</text>
+<text x="20" y="90" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">brand:         keyword (exact match)   + text</text>
+<text x="20" y="104" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">category_path: keyword (hierarchical)  e.g. Electronics/Audio</text>
+<text x="20" y="118" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">price:         float (filterable, facetable)</text>
+<text x="20" y="132" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">rating_avg:    float (sort + facet)</text>
+<text x="20" y="146" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">review_count:  integer</text>
+<text x="20" y="160" font-family="JetBrains Mono" font-size="8" fill="#34d399">in_stock:      boolean (filter)</text>
+<text x="20" y="174" font-family="JetBrains Mono" font-size="8" fill="#34d399">seller_rating: float (boost signal)</text>
+<text x="20" y="188" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">popularity_score: float (pre-computed, daily)</text>
+<text x="20" y="202" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">image_url:     keyword (not indexed, stored only)</text>
+<text x="20" y="220" font-family="JetBrains Mono" font-size="8" fill="#4e6070">--- Why multi-field (text + keyword)? ---</text>
+<text x="20" y="234" font-family="JetBrains Mono" font-size="8" fill="#4e6070">brand.text: "Sony" → analyzed → "sony" (search match)</text>
+<text x="20" y="248" font-family="JetBrains Mono" font-size="8" fill="#4e6070">brand.keyword: "Sony" → exact (facet count, sort)</text>
+<text x="20" y="262" font-family="JetBrains Mono" font-size="8" fill="#f97316">Inverted index built on text fields.</text>
+<text x="20" y="276" font-family="JetBrains Mono" font-size="8" fill="#f97316">doc_values (columnar) on keyword/numeric for facets.</text>
+<text x="20" y="290" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Doc values: off-heap, memory-mapped; fast aggregation without loading all docs.</text>
+
+<!-- Query example -->
+<text x="405" y="18" font-family="JetBrains Mono" font-size="9" fill="#10b981" font-weight="700">SEARCH QUERY (abbreviated)</text>
+<rect x="405" y="26" width="425" height="270" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(16,185,129,.1)"/>
+<text x="415" y="46" font-family="JetBrains Mono" font-size="8" fill="#10b981">POST /products/_search</text>
+<text x="415" y="62" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">query:</text>
+<text x="415" y="76" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  function_score:</text>
+<text x="415" y="90" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">    query: bool:</text>
+<text x="415" y="104" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">      must: multi_match "wireless headphones"</text>
+<text x="415" y="118" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">        fields: [title^3, brand^2, description]</text>
+<text x="415" y="132" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">      filter:</text>
+<text x="415" y="146" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">        range: price: {lte: 50}</text>
+<text x="415" y="160" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">        term:  in_stock: true</text>
+<text x="415" y="174" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">    functions:</text>
+<text x="415" y="188" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">      field_value_factor: popularity_score</text>
+<text x="415" y="202" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">      gauss decay: rating_avg (prefer 4.5+)</text>
+<text x="415" y="218" font-family="JetBrains Mono" font-size="8" fill="#f97316">aggs:</text>
+<text x="415" y="232" font-family="JetBrains Mono" font-size="8" fill="#f97316">  brands: terms: brand.keyword (size: 20)</text>
+<text x="415" y="246" font-family="JetBrains Mono" font-size="8" fill="#f97316">  price_ranges: histogram: price (interval: 10)</text>
+<text x="415" y="260" font-family="JetBrains Mono" font-size="8" fill="#f97316">  avg_rating: range: rating_avg</text>
+<text x="415" y="278" font-family="JetBrains Mono" font-size="8" fill="#4e6070">title^3 = title field boosted 3×, brand^2 = brand boosted 2×</text>
+<text x="415" y="292" font-family="JetBrains Mono" font-size="8" fill="#4e6070">function_score multiplies BM25 score by popularity, quality signals</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Index size:</span>
+  <span class="label">500M products × avg 2KB per ES document                = </span><span class="val">1 TB</span>  <span class="label">raw index</span>
+  <span class="label">Inverted index overhead ~3×                             = </span><span class="val">3 TB</span>  <span class="label">total storage per shard copy</span>
+  <span class="label">3 replicas: 3 TB × 3                                    = </span><span class="val">9 TB</span>  <span class="label">total cluster storage</span>
+
+<span class="label">Shard count:</span>
+  <span class="label">Target: &lt;50 GB per shard (ES best practice)             = </span><span class="val">3TB ÷ 50GB = 60 shards</span>
+  <span class="label">With 1 replica: 60 primary + 60 replica                 = </span><span class="val">120 shards total</span>
+
+<span class="label">Query throughput:</span>
+  <span class="label">50K queries/sec × avg 20ms ES CPU time per query        = </span><span class="val">1,000 CPU-seconds/sec</span>
+  <span class="label">40-core nodes: 1,000 ÷ 40                               = </span><span class="val">25 data nodes minimum</span>
+
+<span class="label">Indexing throughput:</span>
+  <span class="label">100K catalog updates/day = 1.2 updates/sec              → </span><span class="val">trivial</span>
+  <span class="label">Peak: 1M updates/day = 12/sec                           → </span><span class="val">trivial</span>
+  <span class="label">Full re-index: 500M × 2KB ÷ 100MB/s indexing           = </span><span class="val">~10,000s = 2.8 hours</span>
+
+<span class="result">→ ES cluster: 25+ data nodes, 120 shards, 9 TB storage. Caching top queries in Redis saves 80% load.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>ES data nodes</td><td class="hi">25+ nodes</td><td>40 cores each; 50 GB per shard</td></tr>
+      <tr><td>Shards</td><td class="hi">60 primary × 3 rep</td><td>3TB ÷ 50GB; 3 replicas for HA + read throughput</td></tr>
+      <tr><td>Query cache</td><td class="hi">Redis (top 10K queries)</td><td>80% cache hit; 20ms → 1ms for cached</td></tr>
+      <tr><td>Indexing lag</td><td class="hi">&lt;5s</td><td>Kafka → indexer → ES 1s refresh cycle</td></tr>
+      <tr><td>Search latency</td><td class="hi">&lt;50ms p50</td><td>Cached: &lt;5ms; uncached: 20-50ms</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:320px">
+<defs>
+<marker id="oma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f97316"/></marker>
+<marker id="omg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="omb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="omy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+
+<!-- Search clients -->
+<rect x="10" y="100" width="90" height="60" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="55" y="126" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🛒 Buyers</text>
+<text x="55" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">search queries</text>
+<text x="55" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">50K req/sec</text>
+
+<!-- Search API -->
+<rect x="120" y="80" width="140" height="100" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="2"/>
+<text x="190" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">🔍 Search API</text>
+<text x="190" y="119" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">parse query</text>
+<text x="190" y="133" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">spell correct</text>
+<text x="190" y="147" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">personalise boost</text>
+<text x="190" y="161" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">check Redis cache</text>
+<text x="190" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f97316">→ ES or cache</text>
+
+<!-- Redis cache -->
+<rect x="120" y="200" width="140" height="60" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="190" y="224" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">Redis Cache</text>
+<text x="190" y="238" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">top 10K queries</text>
+<text x="190" y="250" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">TTL: 60s</text>
+
+<!-- ES Cluster -->
+<rect x="280" y="60" width="200" height="140" rx="8" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="380" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">ELASTICSEARCH CLUSTER</text>
+<rect x="290" y="88" width="180" height="100" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="380" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">25 Data Nodes</text>
+<text x="380" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">60 primary shards</text>
+<text x="380" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">60 replica shards × 2</text>
+<text x="380" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">BM25 + aggs + function_score</text>
+<text x="380" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">&lt;50ms p50 query</text>
+
+<!-- Catalog DB -->
+<rect x="500" y="80" width="150" height="70" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="575" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">📦 Catalog DB</text>
+<text x="575" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">PostgreSQL</text>
+<text x="575" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">500M products</text>
+<text x="575" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">source of truth</text>
+
+<!-- Kafka -->
+<rect x="500" y="170" width="150" height="60" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="575" y="194" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">Kafka</text>
+<text x="575" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">catalog-changes</text>
+<text x="575" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">CDC from Postgres</text>
+
+<!-- Indexer Service -->
+<rect x="670" y="120" width="150" height="80" rx="7" fill="#131c2e" stroke="#f97316" stroke-width="1.5"/>
+<text x="745" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fed7aa">Indexer Service</text>
+<text x="745" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">consume Kafka</text>
+<text x="745" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">partial updates</text>
+<text x="745" y="185" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f97316">→ ES Bulk API</text>
+
+<!-- Full re-index -->
+<rect x="10" y="265" width="830" height="45" rx="6" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="20" y="282" font-family="JetBrains Mono" font-size="8" fill="#f97316">ZERO-DOWNTIME RE-INDEX: Build new index → atomic alias swap (alias: products → points to new index). Old index still serves search during build.</text>
+<text x="20" y="296" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Scroll API exports old → transform → bulk import to new. RENAME alias atomically. Delete old. 2.8 hours for 500M products.</text>
+
+<!-- Arrows -->
+<line x1="100" y1="130" x2="118" y2="130" stroke="#f97316" stroke-width="1.5" marker-end="url(#oma)"/>
+<line x1="260" y1="130" x2="278" y2="130" stroke="#f97316" stroke-width="1.5" marker-end="url(#oma)"/>
+<line x1="190" y1="180" x2="190" y2="198" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#oma)"/>
+<line x1="500" y1="115" x2="478" y2="115" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#omy)"/>
+<line x1="575" y1="150" x2="575" y2="168" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#omb)"/>
+<line x1="650" y1="200" x2="668" y2="175" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#oma)"/>
+<line x1="670" y1="155" x2="480" y2="130" stroke="#f97316" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#oma)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// E-Commerce Search — Java (Elasticsearch client)
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">SearchService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">ElasticsearchClient</span> esClient;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">Object</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">UserProfileService</span> userProfiles;
+
+    <span class="kw">public</span> <span class="cls">SearchResult</span> <span class="fn2">search</span>(<span class="cls">SearchRequest</span> req) {
+        <span class="cm">// 1. Check cache for common queries</span>
+        <span class="cls">String</span> cacheKey = <span class="str">"search:"</span> + req.getCacheKey();
+        <span class="cls">SearchResult</span> cached = (<span class="cls">SearchResult</span>) redis.opsForValue().get(cacheKey);
+        <span class="kw">if</span> (cached != <span class="kw">null</span>) <span class="kw">return</span> cached;
+
+        <span class="cm">// 2. Get user preference profile for personalisation</span>
+        <span class="cls">UserProfile</span> profile = userProfiles.get(req.getUserId());
+
+        <span class="cm">// 3. Build ES query</span>
+        <span class="cls">SearchResponse</span>&lt;<span class="cls">Product</span>&gt; response = esClient.search(s -> s
+            .index(<span class="str">"products"</span>)
+            .size(<span class="num">20</span>)
+            .query(q -> q
+                .functionScore(fs -> fs
+                    .query(inner -> inner
+                        .bool(b -> b
+                            .must(m -> m.multiMatch(mm -> mm
+                                .query(req.getQuery())
+                                .fields(<span class="str">"title^3"</span>, <span class="str">"brand^2"</span>, <span class="str">"description"</span>)
+                                .type(<span class="cls">TextQueryType</span>.BestFields)
+                                .fuzziness(<span class="str">"AUTO"</span>))) <span class="cm">// spell correction</span>
+                            .filter(f -> f
+                                .range(r -> r
+                                    .field(<span class="str">"price"</span>)
+                                    .lte(<span class="cls">JsonData</span>.of(req.getMaxPrice())))
+                                .filter(f2 -> f2
+                                    .term(t -> t.field(<span class="str">"in_stock"</span>).value(<span class="kw">true</span>))))
+                        )
+                    )
+                    <span class="cm">// Popularity boost from pre-computed score</span>
+                    .functions(fn -> fn.fieldValueFactor(fvf -> fvf
+                        .field(<span class="str">"popularity_score"</span>).modifier(<span class="cls">FieldValueFactorModifier</span>.Log1p).factor(<span class="num">1.5</span>)))
+                    <span class="cm">// Personalisation: boost brands user has purchased</span>
+                    .functions(fn -> <span class="fn2">buildPersonalBoosts</span>(fn, profile))
+                    .scoreMode(<span class="cls">FunctionScoreMode</span>.Sum)
+                )
+            )
+            <span class="cm">// Facet aggregations</span>
+            .aggregations(<span class="str">"brands"</span>, a -> a.terms(t -> t.field(<span class="str">"brand.keyword"</span>).size(<span class="num">20</span>)))
+            .aggregations(<span class="str">"price_hist"</span>, a -> a.histogram(h -> h.field(<span class="str">"price"</span>).interval(<span class="num">10.0</span>)))
+            .aggregations(<span class="str">"avg_rating"</span>, a -> a.range(r -> r
+                .field(<span class="str">"rating_avg"</span>)
+                .ranges(rv -> rv.from(<span class="str">"4.0"</span>).to(<span class="str">"5.0"</span>), rv -> rv.from(<span class="str">"3.0"</span>).to(<span class="str">"4.0"</span>))))
+            , <span class="cls">Product</span>.<span class="kw">class</span>);
+
+        <span class="cls">SearchResult</span> result = <span class="fn2">toSearchResult</span>(response);
+
+        <span class="cm">// 4. Cache results for 60s (only for non-personalised queries)</span>
+        <span class="kw">if</span> (!req.isPersonalised()) {
+            redis.opsForValue().set(cacheKey, result, <span class="num">60</span>, <span class="cls">TimeUnit</span>.SECONDS);
+        }
+        <span class="kw">return</span> result;
+    }
+
+    <span class="kw">private</span> <span class="cls">FunctionScoreQuery</span>.<span class="cls">Builder</span> <span class="fn2">buildPersonalBoosts</span>(<span class="cls">FunctionScoreQuery</span>.<span class="cls">Builder</span> b, <span class="cls">UserProfile</span> p) {
+        p.getFavouriteBrands().forEach(brand ->
+            b.functions(fn -> fn
+                .filter(f -> f.term(t -> t.field(<span class="str">"brand.keyword"</span>).value(brand)))
+                .weight(<span class="num">2.0</span>)));  <span class="cm">// 2× weight for preferred brands</span>
+        <span class="kw">return</span> b;
+    }
+}
+
+<span class="cm">// ── Catalog change indexer ────────────────────────────</span>
+<span class="ann">@KafkaListener</span>(topics = <span class="str">"catalog-changes"</span>)
+<span class="kw">public void</span> <span class="fn2">indexProduct</span>(<span class="cls">CatalogEvent</span> event) {
+    <span class="kw">switch</span> (event.getType()) {
+        <span class="kw">case</span> CREATED, UPDATED -> esClient.index(i -> i
+            .index(<span class="str">"products"</span>)
+            .id(event.getProductId())
+            .document(event.getProduct()));
+        <span class="kw">case</span> PRICE_CHANGED -> esClient.update(u -> u
+            .index(<span class="str">"products"</span>)
+            .id(event.getProductId())
+            .doc(<span class="cls">Map</span>.of(<span class="str">"price"</span>, event.getNewPrice()))); <span class="cm">// partial update</span>
+        <span class="kw">case</span> DELETED -> esClient.delete(d -> d
+            .index(<span class="str">"products"</span>).id(event.getProductId()));
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# E-Commerce Search — Python (elasticsearch-py client)
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">from</span> elasticsearch <span class="kw">import</span> Elasticsearch
+<span class="kw">import</span> redis, json
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Optional, List
+
+es = Elasticsearch([<span class="str">\'http://es-cluster:9200\'</span>])
+r  = redis.Redis()
+
+
+<span class="kw">def</span> <span class="fn2">search_products</span>(query: str, max_price: float, user_id: str = <span class="kw">None</span>,
+                    brands: List[str] = <span class="kw">None</span>, min_rating: float = <span class="num">0</span>,
+                    page: int = <span class="num">0</span>, page_size: int = <span class="num">20</span>) -> dict:
+    <span class="str">"""Full e-commerce search with facets, filters, personalisation."""</span>
+
+    <span class="cm"># 1. Check Redis cache</span>
+    cache_key = f<span class="str">\'search:{query}:{max_price}:{brands}:{min_rating}:{page}\'</span>
+    cached = r.get(cache_key)
+    <span class="kw">if</span> cached:
+        <span class="kw">return</span> json.loads(cached)
+
+    <span class="cm"># 2. Build filters (cached as bitsets by ES — very fast)</span>
+    filters = [
+        {<span class="str">\'range\'</span>: {<span class="str">\'price\'</span>: {<span class="str">\'lte\'</span>: max_price}}},
+        {<span class="str">\'term\'</span>:  {<span class="str">\'in_stock\'</span>: True}},
+    ]
+    <span class="kw">if</span> brands:
+        filters.append({<span class="str">\'terms\'</span>: {<span class="str">\'brand.keyword\'</span>: brands}})
+    <span class="kw">if</span> min_rating > <span class="num">0</span>:
+        filters.append({<span class="str">\'range\'</span>: {<span class="str">\'rating_avg\'</span>: {<span class="str">\'gte\'</span>: min_rating}}})
+
+    <span class="cm"># 3. Personalisation boosts</span>
+    personal_functions = []
+    <span class="kw">if</span> user_id:
+        fav_brands = get_user_favourite_brands(user_id)  <span class="cm"># from Redis</span>
+        <span class="kw">for</span> brand <span class="kw">in</span> fav_brands:
+            personal_functions.append({
+                <span class="str">\'filter\'</span>: {<span class="str">\'term\'</span>: {<span class="str">\'brand.keyword\'</span>: brand}},
+                <span class="str">\'weight\'</span>: <span class="num">2.0</span>
+            })
+
+    <span class="cm"># 4. Build ES query</span>
+    body = {
+        <span class="str">\'from\'</span>: page * page_size, <span class="str">\'size\'</span>: page_size,
+        <span class="str">\'query\'</span>: {
+            <span class="str">\'function_score\'</span>: {
+                <span class="str">\'query\'</span>: {<span class="str">\'bool\'</span>: {
+                    <span class="str">\'must\'</span>: {<span class="str">\'multi_match\'</span>: {
+                        <span class="str">\'query\'</span>: query,
+                        <span class="str">\'fields\'</span>: [<span class="str">\'title^3\'</span>, <span class="str">\'brand^2\'</span>, <span class="str">\'description\'</span>],
+                        <span class="str">\'fuzziness\'</span>: <span class="str">\'AUTO\'</span>  <span class="cm"># spell correction</span>
+                    }},
+                    <span class="str">\'filter\'</span>: filters
+                }},
+                <span class="str">\'functions\'</span>: [
+                    {<span class="str">\'field_value_factor\'</span>: {<span class="str">\'field\'</span>: <span class="str">\'popularity_score\'</span>,
+                                            <span class="str">\'modifier\'</span>: <span class="str">\'log1p\'</span>, <span class="str">\'factor\'</span>: <span class="num">1.5</span>}},
+                    *personal_functions
+                ],
+                <span class="str">\'score_mode\'</span>: <span class="str">\'sum\'</span>
+            }
+        },
+        <span class="cm"># Facet aggregations</span>
+        <span class="str">\'aggs\'</span>: {
+            <span class="str">\'brands\'</span>:     {<span class="str">\'terms\'</span>: {<span class="str">\'field\'</span>: <span class="str">\'brand.keyword\'</span>, <span class="str">\'size\'</span>: <span class="num">20</span>}},
+            <span class="str">\'price_hist\'</span>: {<span class="str">\'histogram\'</span>: {<span class="str">\'field\'</span>: <span class="str">\'price\'</span>, <span class="str">\'interval\'</span>: <span class="num">10</span>}},
+            <span class="str">\'ratings\'</span>:    {<span class="str">\'range\'</span>: {<span class="str">\'field\'</span>: <span class="str">\'rating_avg\'</span>,
+                <span class="str">\'ranges\'</span>: [{<span class="str">\'from\'</span>: <span class="num">4</span>}, {<span class="str">\'from\'</span>: <span class="num">3</span>, <span class="str">\'to\'</span>: <span class="num">4</span>}, {<span class="str">\'to\'</span>: <span class="num">3</span>}]}}
+        }
+    }
+
+    resp   = es.search(index=<span class="str">\'products\'</span>, body=body)
+    result = _format_result(resp)
+
+    <span class="cm"># 5. Cache non-personalised results 60s</span>
+    <span class="kw">if not</span> user_id:
+        r.setex(cache_key, <span class="num">60</span>, json.dumps(result))
+
+    <span class="kw">return</span> result
+
+
+<span class="kw">def</span> <span class="fn2">index_product</span>(product: dict):
+    <span class="str">"""Full document index on create/update."""</span>
+    es.index(index=<span class="str">\'products\'</span>, id=product[<span class="str">\'id\'</span>], body=product)
+
+
+<span class="kw">def</span> <span class="fn2">update_price</span>(product_id: str, new_price: float):
+    <span class="str">"""Partial update — only re-indexes the price field."""</span>
+    es.update(index=<span class="str">\'products\'</span>, id=product_id,
+              body={<span class="str">\'doc\'</span>: {<span class="str">\'price\'</span>: new_price}})
+
+
+<span class="kw">def</span> <span class="fn2">_format_result</span>(resp: dict) -> dict:
+    hits   = resp[<span class="str">\'hits\'</span>][<span class="str">\'hits\'</span>]
+    total  = resp[<span class="str">\'hits\'</span>][<span class="str">\'total\'</span>][<span class="str">\'value\'</span>]
+    brands = resp[<span class="str">\'aggregations\'</span>][<span class="str">\'brands\'</span>][<span class="str">\'buckets\'</span>]
+    <span class="kw">return</span> {
+        <span class="str">\'total\'</span>:   total,
+        <span class="str">\'results\'</span>: [h[<span class="str">\'_source\'</span>] <span class="kw">for</span> h <span class="kw">in</span> hits],
+        <span class="str">\'facets\'</span>:  {<span class="str">\'brands\'</span>: [{<span class="str">\'key\'</span>: b[<span class="str">\'key\'</span>], <span class="str">\'count\'</span>: b[<span class="str">\'doc_count\'</span>]} <span class="kw">for</span> b <span class="kw">in</span> brands]}
+    }
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🔍 Search Engine: Elasticsearch vs Solr vs Typesense vs Custom</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Elasticsearch (chosen)</div><p>Industry standard for e-commerce search. Rich query DSL, aggregations, function_score for personalisation. Cloud-managed (Elastic Cloud, AWS OpenSearch). 500M documents: well within Elasticsearch's capability. Used by eBay, Shopify, Etsy, Netflix.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Typesense / Algolia</div><p>Easier to operate, great DX, fast for &lt;100M documents. Algolia is fully managed. Both lack the depth of Elasticsearch's aggregation and function_score capabilities. Algolia is very expensive at scale (per-search pricing). Good for startups, not 500M products at 50K QPS.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Custom inverted index</div><p>Amazon, Google built their own. Gives maximum control over ranking, indexing speed, cost. 18+ months to match Elasticsearch's feature set. Only justified at >1B products or when standard tools' limitations block business objectives. Not appropriate for this scale.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🎯 Ranking: BM25 vs ML-based (LambdaMART) vs Hybrid</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">BM25 only</div><p>Elasticsearch default. Excellent for textual relevance. No learning from user behaviour — treats all users equally. Misses signals like purchase history, seasonal trends, inventory. Good starting point; inadequate for a mature e-commerce search at Amazon scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ BM25 + function_score</div><p>Layer signals (popularity, rating, recency) on top of BM25 via function_score. Add personalisation boosts per user. 80% of the ML benefit with 20% of the complexity. Works in Elasticsearch natively. Appropriate for 1M-500M products.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Two-stage (BM25 + LTR)</div><p>Phase 1: BM25 retrieves top-200. Phase 2: Learning-to-Rank (LambdaMART, XGBoost) model re-ranks using 200+ features (user/item/context). Amazon, JD.com, eBay use this. 20-30% conversion rate improvement over BM25 alone. Requires A/B testing infrastructure and offline feature pipelines. Worth it at scale.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

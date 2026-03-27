@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #23 — Key-Value Store (Redis/DynamoDB Internals)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#f43f5e;--a2:#e11d48;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fecdd3;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#0f0709 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(244,63,94,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ffe4e6 0%,#f43f5e 50%,#9f1239 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(244,63,94,.07);color:#fecdd3;border:1px solid rgba(244,63,94,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(244,63,94,.1);color:var(--ecolor);border:1.5px solid rgba(244,63,94,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(244,63,94,.08);color:var(--accent);border:1px solid rgba(244,63,94,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.info-box{background:rgba(244,63,94,.05);border:1px solid rgba(244,63,94,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fecdd3;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(244,63,94,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(244,63,94,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Storage Engines › <span>23 / Key-Value Store</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🗃</div>
+    <div>
+      <div class="h-title">Key-Value Store (Internals)</div>
+      <div class="h-desc">Design a distributed key-value store from scratch — LSM tree vs B-tree storage engines, Write-Ahead Log for durability, memtable in-memory writes, SSTable flushing, compaction strategies, Bloom filters to skip negative reads, and replication. Understand how Redis and RocksDB work under the hood.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">LSM Tree</span>
+        <span class="badge b-tag">WAL</span>
+        <span class="badge b-tag">Memtable</span>
+        <span class="badge b-tag">SSTable</span>
+        <span class="badge b-tag">Bloom Filter</span>
+        <span class="badge b-tag">Compaction</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('lsm',this)">🌲 LSM Tree</button>
+  <button class="nbtn" onclick="show('btree',this)">🔵 B-Tree vs LSM</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>"Design Redis" or "Design a distributed KV store"</strong> is a common Staff+ interview question. The key is knowing the storage engine internals — not just the distributed layer. Most candidates get the network layer right but can't explain how data is actually stored and retrieved.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>GET(key) → value:</strong> Returns current value or null if not found</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>PUT(key, value):</strong> Upsert — insert or overwrite</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>DELETE(key):</strong> Remove key (tombstone, not immediate)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>SCAN(startKey, endKey):</strong> Range query over sorted keys</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>TTL:</strong> Keys expire after configurable duration</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>GET: &lt;1ms p99 (in-memory path)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>PUT: &lt;5ms p99 (WAL + memtable write)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Durability: WAL ensures no data loss on crash</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Horizontal scaling via consistent hashing</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>1 TB of data, 500K ops/sec</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — LSM Tree Write Path</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · WRITE PATH</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does a write (PUT) work? Take me from the API call to the data being durably stored.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      The LSM (Log-Structured Merge) write path has three stages:<br><br>
+      <b>1. Write-Ahead Log (WAL):</b> Before anything else, the write is appended to a WAL file on disk. The WAL is an append-only log — sequential disk writes, extremely fast (&gt;500 MB/s). Only a single <code>fsync()</code> call is needed. If the server crashes after the WAL write but before the next step, the WAL lets us replay and recover the write. Durability guaranteed.<br><br>
+      <b>2. Memtable (in-memory write):</b> After WAL, the key-value pair is written to the memtable — an in-memory sorted data structure (typically a red-black tree or skip list). The memtable is ordered by key, enabling O(log N) inserts and range queries. Reads check the memtable first — it has the freshest data. Memory: the memtable is typically 64MB–256MB per shard.<br><br>
+      <b>3. SSTable flush (when memtable full):</b> When the memtable reaches capacity, it's flushed to disk as an SSTable (Sorted String Table) — an immutable, sorted file. The memtable is then cleared. A new empty memtable + WAL segment is created. The SSTable is never modified — only compacted (merged with other SSTables). This makes writes fast because we're always appending, never doing random I/O.
+    </div></div>
+    <div class="tip-box"><strong>💡 The LSM tree insight:</strong> Writes are fast because they're sequential (WAL) + in-memory (memtable). We trade write performance (fast) for read performance (must check multiple SSTables). Compaction is the background process that reclaims space and improves read performance.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔍 Phase 2 — Read Path + Bloom Filters</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · READ PATH</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does a GET work? There are multiple SSTables on disk — do you check all of them?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      The read path checks data sources in order from newest to oldest:<br><br>
+      <b>1. Memtable:</b> Check in-memory sorted tree first. O(log N). If found: return immediately. (freshest data)<br><br>
+      <b>2. Immutable memtables:</b> Recently flushed but not yet written to SSTable. O(log N).<br><br>
+      <b>3. SSTables (newest to oldest):</b> Each SSTable must be checked in reverse chronological order because newer SSTables may have overwritten values in older ones.<br><br>
+      <b>The problem:</b> With many SSTables, a "not found" key would require checking every single one. At 1,000 SSTables, that's 1,000 disk reads for a missing key. Catastrophic.<br><br>
+      <b>Bloom Filters to the rescue:</b> Each SSTable has a Bloom filter — a compact probabilistic data structure (bit array) that answers "is this key definitely NOT in this SSTable?" with zero false negatives. If the Bloom filter says NO: skip this SSTable entirely. If YES: the key might be here (false positive rate ~1%), so actually check.<br><br>
+      With Bloom filters: a missing key check costs 1 Bloom filter query per SSTable (in memory, &lt;1µs each) instead of 1 disk seek per SSTable (4-10ms each). A 1,000-SSTable lookup goes from 10 seconds to 1 millisecond.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🗜 Phase 3 — Compaction</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · COMPACTION</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Over time you accumulate thousands of SSTables. What is compaction and why is it necessary?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-i">YOU</div>
+      Without compaction, three problems compound over time:<br>
+      <ul>
+        <li>Read amplification: more SSTables to check per read</li>
+        <li>Space amplification: deleted keys and overwritten values still occupy space in older SSTables</li>
+        <li>Too many file handles</li>
+      </ul>
+      <b>Compaction process:</b> A background job merges multiple SSTables into one. During merge, it:<br>
+      <ul>
+        <li>Keeps only the newest value for each key (older overwrites discarded)</li>
+        <li>Removes tombstones (DELETE markers) that are older than all other data</li>
+        <li>Produces one sorted, de-duplicated SSTable from N input SSTables</li>
+      </ul>
+      <b>Two main compaction strategies:</b><br>
+      <b>Size-tiered:</b> When N SSTables of similar size accumulate, merge them into one larger SSTable. Simple, fast writes. But: temporary space amplification (you need 2× space during compaction) and reads can still hit many levels.<br><br>
+      <b>Leveled:</b> SSTables organised into levels (L0, L1, L2...). Each level has a size budget (e.g., 10MB, 100MB, 1GB, 10GB). When L0 is full, compact into L1. Non-overlapping key ranges in L1+. Better read performance (1 SSTable per level per key). Higher write amplification (data written and rewritten through levels). RocksDB, LevelDB use leveled compaction.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="lsm" class="panel">
+  <div class="sec"><div class="sec-head">🌲 LSM Tree — Complete Write + Read + Compaction</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:420px">
+<defs>
+<marker id="ra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="rg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="rb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="ro" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+<!-- Write path header -->
+<text x="10" y="20" font-family="JetBrains Mono" font-size="10" fill="#f43f5e" font-weight="700">WRITE PATH →</text>
+<!-- Client PUT -->
+<rect x="10" y="30" width="80" height="40" rx="6" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="50" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fecdd3">PUT(k,v)</text>
+<text x="50" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">client</text>
+<!-- WAL -->
+<rect x="110" y="30" width="120" height="40" rx="6" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="170" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fecdd3">📝 WAL</text>
+<text x="170" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">append to disk, sync</text>
+<!-- Memtable -->
+<rect x="250" y="30" width="130" height="40" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="315" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🧠 Memtable</text>
+<text x="315" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">sorted tree in RAM</text>
+<!-- Flush -->
+<text x="400" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">when full ↓</text>
+<!-- SSTable L0 -->
+<rect x="420" y="22" width="90" height="26" rx="4" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="465" y="36" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">SST-0a</text>
+<rect x="516" y="22" width="90" height="26" rx="4" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="561" y="36" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">SST-0b</text>
+<rect x="612" y="22" width="90" height="26" rx="4" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="657" y="36" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">SST-0c</text>
+<text x="410" y="15" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">L0 (may overlap)</text>
+<!-- SSTable L1 -->
+<rect x="420" y="72" width="180" height="26" rx="4" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="510" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#c4b5fd">SST-1a (non-overlapping)</text>
+<rect x="608" y="72" width="180" height="26" rx="4" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="698" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#c4b5fd">SST-1b (non-overlapping)</text>
+<text x="410" y="65" font-family="JetBrains Mono" font-size="8" fill="#a78bfa">L1 (10× larger, no overlap)</text>
+<!-- SSTable L2 -->
+<rect x="420" y="118" width="360" height="26" rx="4" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="600" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">SST-2a (100× capacity)</text>
+<text x="410" y="111" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">L2 (100× larger)</text>
+<!-- Bloom filter annotation -->
+<rect x="795" y="10" width="80" height="140" rx="6" fill="rgba(16,185,129,.06)" stroke="rgba(16,185,129,.2)" stroke-width="1"/>
+<text x="835" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#10b981">🌸 Bloom</text>
+<text x="835" y="38" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">Filters</text>
+<text x="835" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">per SSTable</text>
+<text x="835" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">in memory</text>
+<text x="835" y="85" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#6ee7b7">0 false</text>
+<text x="835" y="97" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#6ee7b7">negatives</text>
+<text x="835" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">~1% false</text>
+<text x="835" y="126" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">positives</text>
+<text x="835" y="143" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">skip disk!</text>
+<!-- Read path header -->
+<text x="10" y="180" font-family="JetBrains Mono" font-size="10" fill="#38bdf8" font-weight="700">READ PATH →</text>
+<!-- Read sequence -->
+<rect x="10" y="192" width="70" height="35" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="45" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#bfdbfe">GET(k)</text>
+<rect x="100" y="192" width="100" height="35" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="150" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">1. Memtable</text>
+<text x="150" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">O(log N), fastest</text>
+<rect x="220" y="192" width="100" height="35" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="270" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7dd3fc">2. L0 SSTs</text>
+<text x="270" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">bloom → disk</text>
+<rect x="340" y="192" width="100" height="35" rx="5" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="390" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">3. L1 SSTs</text>
+<text x="390" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">binary search</text>
+<rect x="460" y="192" width="100" height="35" rx="5" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="510" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">4. L2 SSTs</text>
+<text x="510" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">binary search</text>
+<rect x="580" y="192" width="80" height="35" rx="5" fill="rgba(16,185,129,.1)" stroke="#10b981" stroke-width="1.5"/>
+<text x="620" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">FOUND</text>
+<text x="620" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">return newest</text>
+<rect x="680" y="192" width="80" height="35" rx="5" fill="rgba(244,63,94,.08)" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="720" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb7185">NOT FOUND</text>
+<text x="720" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">return null</text>
+<!-- Compaction header -->
+<text x="10" y="265" font-family="JetBrains Mono" font-size="10" fill="#f59e0b" font-weight="700">COMPACTION (background):</text>
+<rect x="10" y="278" width="860" height="130" rx="10" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+<text x="20" y="296" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">BEFORE compaction:</text>
+<text x="20" y="310" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">SST-1: {a→1, b→3, d→5, f→7}</text>
+<text x="20" y="323" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">SST-2: {b→OLD, c→4, d→DELETED, e→6}</text>
+<text x="20" y="340" font-family="JetBrains Mono" font-size="9" fill="#10b981">AFTER compaction (merged, deduped):</text>
+<text x="20" y="354" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">SST-merged: {a→1, b→3 (new wins), c→4, e→6, f→7}</text>
+<text x="20" y="367" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  → b: old value discarded (newer wins)   → d: tombstone removed (DELETE finalised)</text>
+<text x="20" y="380" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Result: fewer SSTables, better read performance, less disk space</text>
+<text x="20" y="395" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Write amplification cost: each key written multiple times as data moves through levels (RocksDB: 10-30× amplification)</text>
+<!-- Arrows -->
+<line x1="90" y1="50" x2="108" y2="50" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#ra)"/>
+<line x1="230" y1="50" x2="248" y2="50" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#ra)"/>
+<line x1="80" y1="210" x2="98" y2="210" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#rb)"/>
+<line x1="200" y1="210" x2="218" y2="210" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#rb)"/>
+<line x1="320" y1="210" x2="338" y2="210" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#rb)"/>
+<line x1="440" y1="210" x2="458" y2="210" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#rb)"/>
+<line x1="560" y1="210" x2="578" y2="210" stroke="#10b981" stroke-width="1.5" marker-end="url(#rg)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="btree" class="panel">
+  <div class="sec"><div class="sec-head">🔵 B-Tree vs LSM Tree</div><div class="sec-body">
+    <div class="info-box"><strong>B-trees (used by PostgreSQL, MySQL InnoDB) and LSM trees (used by RocksDB, Cassandra, LevelDB) make opposite tradeoffs.</strong> B-trees optimise reads. LSM trees optimise writes.</div>
+    <br>
+    <table class="math-table">
+      <tr><th>Property</th><th>B-Tree (PostgreSQL)</th><th>LSM Tree (RocksDB)</th></tr>
+      <tr><td>Write</td><td>Random I/O (page update in-place) → slow</td><td class="ans">Sequential I/O (append WAL + memtable) → fast</td></tr>
+      <tr><td>Read</td><td class="ans">Single tree traversal O(log N) → fast</td><td>Check memtable + multiple SSTables → slower</td></tr>
+      <tr><td>Space amplification</td><td class="ans">~1× (in-place update)</td><td>1.1–10× (multiple versions during compaction)</td></tr>
+      <tr><td>Write amplification</td><td>~3–5× (WAL + B-tree page)</td><td>~10–30× (data moves through levels)</td></tr>
+      <tr><td>Read amplification</td><td class="ans">~3–5× (root → leaf)</td><td>~10× (multiple SSTables checked)</td></tr>
+      <tr><td>Range queries</td><td class="ans">Efficient (tree traversal)</td><td>Efficient (sorted SSTables, merge)</td></tr>
+      <tr><td>Best for</td><td>Read-heavy, OLTP, range queries</td><td class="ans">Write-heavy, append workloads, time-series</td></tr>
+      <tr><td>Used by</td><td>PostgreSQL, MySQL, SQLite</td><td>Cassandra, RocksDB, Kafka (segment files), HBase</td></tr>
+    </table>
+    <br>
+    <div class="warn-box"><strong>Key insight for interviews:</strong> Cassandra and DynamoDB use LSM trees because they're optimised for write-heavy workloads. MySQL/PostgreSQL use B-trees because they need fast reads. When asked "which storage engine would you use?" — ask about the read/write ratio first.</div>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Distributed KV Store Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:340px">
+<defs>
+<marker id="dra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="drg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="drb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+</defs>
+<!-- Client -->
+<rect x="10" y="130" width="80" height="50" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Client</text>
+<text x="50" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GET/PUT</text>
+<!-- Router -->
+<rect x="110" y="110" width="110" height="90" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="165" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fecdd3">🔀 Router</text>
+<text x="165" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">consistent hash</text>
+<text x="165" y="165" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">key → node</text>
+<text x="165" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">coord writes</text>
+<text x="165" y="191" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">quorum: W+R>N</text>
+<!-- Node 1 -->
+<rect x="250" y="30" width="180" height="280" rx="8" fill="rgba(244,63,94,.02)" stroke="rgba(244,63,94,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="340" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">NODE 1 (primary)</text>
+<rect x="262" y="60" width="156" height="50" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="340" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🧠 Memtable</text>
+<text x="340" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">sorted in RAM (256MB)</text>
+<rect x="262" y="120" width="156" height="40" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="340" y="137" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">📝 WAL</text>
+<text x="340" y="151" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">append-only, durable</text>
+<rect x="262" y="170" width="75" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+<text x="300" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">SST L0</text>
+<rect x="343" y="170" width="75" height="30" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1"/>
+<text x="380" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7dd3fc">SST L0</text>
+<rect x="262" y="210" width="156" height="30" rx="5" fill="#131c2e" stroke="#a78bfa" stroke-width="1"/>
+<text x="340" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#c4b5fd">SST L1 (non-overlap)</text>
+<rect x="262" y="250" width="156" height="30" rx="5" fill="#131c2e" stroke="#f59e0b" stroke-width="1"/>
+<text x="340" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">SST L2 (large)</text>
+<text x="340" y="295" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">🌸 Bloom filters per SST</text>
+<!-- Replicas -->
+<rect x="450" y="50" width="180" height="120" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="540" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">NODE 2 (replica)</text>
+<text x="540" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">async replication</text>
+<text x="540" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">same LSM structure</text>
+<text x="540" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">serves reads (eventual)</text>
+<text x="540" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">RF=3, quorum=2</text>
+<rect x="450" y="185" width="180" height="80" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="540" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">NODE 3 (replica)</text>
+<text x="540" y="225" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">async replication</text>
+<text x="540" y="245" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">anti-entropy + gossip</text>
+<!-- Consistent hash ring -->
+<rect x="650" y="80" width="200" height="200" rx="8" fill="rgba(56,189,248,.03)" stroke="rgba(56,189,248,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="750" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">Consistent Hash Ring</text>
+<circle cx="750" cy="178" r="55" fill="none" stroke="rgba(56,189,248,.2)" stroke-width="1.5"/>
+<circle cx="750" cy="123" r="6" fill="#f43f5e"/>
+<text x="750" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fb7185">N1 (0°)</text>
+<circle cx="797" cy="205" r="6" fill="#10b981"/>
+<text x="806" y="210" font-family="JetBrains Mono" font-size="7" fill="#6ee7b7">N2</text>
+<circle cx="703" cy="205" r="6" fill="#a78bfa"/>
+<text x="680" y="210" font-family="JetBrains Mono" font-size="7" fill="#c4b5fd">N3</text>
+<text x="750" y="255" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">vNodes: each node has 150+</text>
+<text x="750" y="267" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">virtual positions for balance</text>
+<!-- Arrows -->
+<line x1="90" y1="155" x2="108" y2="155" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#dra)"/>
+<line x1="220" y1="155" x2="248" y2="155" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#dra)"/>
+<line x1="430" y1="120" x2="448" y2="110" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#drg)"/>
+<line x1="430" y1="170" x2="448" y2="220" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#drg)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation — In-Memory KV with LSM Concepts</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Simplified LSM-style KV Store — Java
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">SimpleLsmStore</span> {
+
+    <span class="cm">// Memtable: sorted in-memory structure</span>
+    <span class="kw">private final</span> <span class="cls">ConcurrentSkipListMap</span>&lt;<span class="cls">String</span>, <span class="cls">String</span>&gt; memtable = <span class="kw">new</span> <span class="cls">ConcurrentSkipListMap</span>&lt;&gt;();
+    <span class="kw">private static final</span> <span class="kw">int</span> MEMTABLE_THRESHOLD = <span class="num">1000</span>; <span class="cm">// flush after 1K entries</span>
+    <span class="kw">private static final</span> <span class="cls">String</span> TOMBSTONE = <span class="str">"__DELETED__"</span>;
+
+    <span class="cm">// SSTables (ordered newest to oldest)</span>
+    <span class="kw">private final</span> <span class="cls">List</span>&lt;<span class="cls">SSTable</span>&gt; sstables = <span class="kw">new</span> <span class="cls">CopyOnWriteArrayList</span>&lt;&gt;();
+
+    <span class="cm">// WAL for durability</span>
+    <span class="kw">private final</span> <span class="cls">WalWriter</span> wal;
+
+    <span class="cm">/**
+     * PUT: Write to WAL first (durability), then memtable (speed).
+     * O(log N) where N = memtable size.
+     */</span>
+    <span class="kw">public void</span> <span class="fn2">put</span>(<span class="cls">String</span> key, <span class="cls">String</span> value) {
+        wal.append(<span class="str">"PUT"</span>, key, value);    <span class="cm">// persist to disk first</span>
+        memtable.put(key, value);          <span class="cm">// then update in-memory</span>
+        <span class="kw">if</span> (memtable.size() >= MEMTABLE_THRESHOLD) {
+            <span class="fn2">flushMemtable</span>();
+        }
+    }
+
+    <span class="cm">/**
+     * DELETE: Write tombstone marker.
+     * Actual deletion happens during compaction.
+     */</span>
+    <span class="kw">public void</span> <span class="fn2">delete</span>(<span class="cls">String</span> key) {
+        wal.append(<span class="str">"DELETE"</span>, key, <span class="kw">null</span>);
+        memtable.put(key, TOMBSTONE);      <span class="cm">// tombstone in memtable</span>
+    }
+
+    <span class="cm">/**
+     * GET: Check memtable first, then SSTables newest to oldest.
+     * Bloom filter skips SSTables that definitely don't have the key.
+     */</span>
+    <span class="kw">public</span> <span class="cls">Optional</span>&lt;<span class="cls">String</span>&gt; <span class="fn2">get</span>(<span class="cls">String</span> key) {
+        <span class="cm">// 1. Check memtable</span>
+        <span class="cls">String</span> memVal = memtable.get(key);
+        <span class="kw">if</span> (memVal != <span class="kw">null</span>) {
+            <span class="kw">return</span> TOMBSTONE.equals(memVal)
+                ? <span class="cls">Optional</span>.empty() <span class="cm">// deleted</span>
+                : <span class="cls">Optional</span>.of(memVal);
+        }
+
+        <span class="cm">// 2. Check SSTables newest first</span>
+        <span class="kw">for</span> (<span class="cls">SSTable</span> sst : sstables) {
+            <span class="cm">// Bloom filter: skip if key definitely not in this SSTable</span>
+            <span class="kw">if</span> (!sst.bloomFilter.mightContain(key)) <span class="kw">continue</span>;
+
+            <span class="cls">Optional</span>&lt;<span class="cls">String</span>&gt; val = sst.get(key);
+            <span class="kw">if</span> (val.isPresent()) {
+                <span class="kw">return</span> TOMBSTONE.equals(val.get()) ? <span class="cls">Optional</span>.empty() : val;
+            }
+        }
+
+        <span class="kw">return</span> <span class="cls">Optional</span>.empty();
+    }
+
+    <span class="cm">/**
+     * Flush memtable to a new SSTable.
+     * Called when memtable hits threshold.
+     */</span>
+    <span class="kw">private synchronized void</span> <span class="fn2">flushMemtable</span>() {
+        <span class="kw">if</span> (memtable.isEmpty()) <span class="kw">return</span>;
+        <span class="cm">// Snapshot the current memtable (concurrent writes go to new one)</span>
+        <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">String</span>&gt; snapshot = <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;(memtable);
+        memtable.clear();
+
+        <span class="cm">// Build SSTable from sorted snapshot</span>
+        <span class="cls">SSTable</span> sst = <span class="cls">SSTable</span>.build(snapshot);
+        sstables.add(<span class="num">0</span>, sst);  <span class="cm">// newest first</span>
+        wal.rotate();           <span class="cm">// new WAL segment, old segment no longer needed</span>
+
+        <span class="cm">// Trigger compaction if too many SSTables</span>
+        <span class="kw">if</span> (sstables.size() > <span class="num">10</span>) {
+            <span class="fn2">compact</span>();
+        }
+    }
+
+    <span class="cm">/**
+     * Size-tiered compaction: merge all SSTables into one.
+     * In production: leveled compaction with L0-L2+ tiers.
+     */</span>
+    <span class="kw">private synchronized void</span> <span class="fn2">compact</span>() {
+        <span class="cls">TreeMap</span>&lt;<span class="cls">String</span>, <span class="cls">String</span>&gt; merged = <span class="kw">new</span> <span class="cls">TreeMap</span>&lt;&gt;();
+
+        <span class="cm">// Iterate oldest to newest — newer values overwrite older ones</span>
+        <span class="kw">for</span> (<span class="kw">int</span> i = sstables.size() - <span class="num">1</span>; i >= <span class="num">0</span>; i--) {
+            sstables.get(i).entries().forEach((k, v) -> {
+                <span class="kw">if</span> (TOMBSTONE.equals(v)) {
+                    merged.remove(k);    <span class="cm">// honour tombstones</span>
+                } <span class="kw">else</span> {
+                    merged.put(k, v);    <span class="cm">// newer overwrites older</span>
+                }
+            });
+        }
+
+        <span class="cm">// Replace all SSTables with one compacted SSTable</span>
+        sstables.clear();
+        <span class="kw">if</span> (!merged.isEmpty()) {
+            sstables.add(<span class="cls">SSTable</span>.build(merged));
+        }
+    }
+}
+
+<span class="cm">// Bloom Filter — simple bit array implementation</span>
+<span class="kw">public class</span> <span class="cls">BloomFilter</span> {
+    <span class="kw">private final</span> <span class="kw">long</span>[] bits;
+    <span class="kw">private final int</span>   numHashFunctions;
+
+    <span class="kw">public</span> <span class="cls">BloomFilter</span>(<span class="kw">int</span> expectedInsertions, <span class="kw">double</span> falsePositiveRate) {
+        <span class="kw">int</span> m = <span class="fn2">optimalBitSize</span>(expectedInsertions, falsePositiveRate);
+        numHashFunctions = <span class="fn2">optimalHashCount</span>(m, expectedInsertions);
+        bits = <span class="kw">new long</span>[m / <span class="num">64</span> + <span class="num">1</span>];
+    }
+
+    <span class="kw">public void</span> <span class="fn2">put</span>(<span class="cls">String</span> key) {
+        <span class="kw">long</span>[] hashes = <span class="fn2">getHashes</span>(key);
+        <span class="kw">for</span> (<span class="kw">long</span> hash : hashes) {
+            <span class="kw">int</span> bit = (<span class="kw">int</span>) (hash % (bits.length * <span class="num">64</span>));
+            bits[bit / <span class="num">64</span>] |= (<span class="num">1L</span> << (bit % <span class="num">64</span>));
+        }
+    }
+
+    <span class="kw">public boolean</span> <span class="fn2">mightContain</span>(<span class="cls">String</span> key) {
+        <span class="kw">for</span> (<span class="kw">long</span> hash : <span class="fn2">getHashes</span>(key)) {
+            <span class="kw">int</span> bit = (<span class="kw">int</span>) (hash % (bits.length * <span class="num">64</span>));
+            <span class="kw">if</span> ((bits[bit / <span class="num">64</span>] & (<span class="num">1L</span> << (bit % <span class="num">64</span>))) == <span class="num">0</span>) {
+                <span class="kw">return false</span>; <span class="cm">// definitely not present</span>
+            }
+        }
+        <span class="kw">return true</span>; <span class="cm">// might be present (could be false positive)</span>
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Simplified LSM KV Store — Python
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> sortedcontainers, hashlib, math
+<span class="kw">from</span> sortedcontainers <span class="kw">import</span> SortedDict
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+TOMBSTONE = b\'__DELETED__\'
+
+<span class="kw">class</span> <span class="cls">BloomFilter</span>:
+    <span class="str">"""Probabilistic set membership. 0 false negatives, ~1% false positives."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, capacity=<span class="num">10000</span>, error_rate=<span class="num">0.01</span>):
+        m = int(-capacity * math.log(error_rate) / (math.log(<span class="num">2</span>)**<span class="num">2</span>))
+        self.bits = bytearray(m // <span class="num">8</span> + <span class="num">1</span>)
+        self.size = m
+        self.k    = max(<span class="num">1</span>, int(m / capacity * math.log(<span class="num">2</span>)))
+
+    <span class="kw">def</span> <span class="fn2">_hashes</span>(self, key: str):
+        h1 = int(hashlib.md5(key.encode()).hexdigest(), <span class="num">16</span>)
+        h2 = int(hashlib.sha1(key.encode()).hexdigest(), <span class="num">16</span>)
+        <span class="kw">return</span> [(h1 + i * h2) % self.size <span class="kw">for</span> i <span class="kw">in</span> range(self.k)]
+
+    <span class="kw">def</span> <span class="fn2">add</span>(self, key: str):
+        <span class="kw">for</span> pos <span class="kw">in</span> self._hashes(key):
+            self.bits[pos >> <span class="num">3</span>] |= (<span class="num">1</span> << (pos & <span class="num">7</span>))
+
+    <span class="kw">def</span> <span class="fn2">might_contain</span>(self, key: str) -> bool:
+        <span class="kw">return</span> all(self.bits[pos >> <span class="num">3</span>] & (<span class="num">1</span> << (pos & <span class="num">7</span>))
+                   <span class="kw">for</span> pos <span class="kw">in</span> self._hashes(key))
+
+
+<span class="kw">class</span> <span class="cls">SSTable</span>:
+    <span class="str">"""Immutable sorted file. In production: written to disk."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, sorted_data: dict):
+        self._data        = dict(sorted_data)  <span class="cm"># sorted by key</span>
+        self.bloom_filter = <span class="cls">BloomFilter</span>(len(sorted_data))
+        <span class="kw">for</span> k <span class="kw">in</span> sorted_data: self.bloom_filter.add(k)
+
+    <span class="kw">def</span> <span class="fn2">get</span>(self, key: str) -> Optional[bytes]:
+        <span class="kw">if not</span> self.bloom_filter.might_contain(key): <span class="kw">return None</span>
+        <span class="kw">return</span> self._data.get(key)
+
+    <span class="kw">def</span> <span class="fn2">items</span>(self): <span class="kw">return</span> self._data.items()
+
+
+<span class="kw">class</span> <span class="cls">LSMStore</span>:
+    MEMTABLE_MAX = <span class="num">1000</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, wal_path: str = <span class="str">"/tmp/wal.log"</span>):
+        self.memtable = SortedDict()          <span class="cm"># sorted in-memory</span>
+        self.sstables = []                    <span class="cm"># newest first</span>
+        self.wal      = open(wal_path, \'ab\')  <span class="cm"># append-only WAL</span>
+
+    <span class="kw">def</span> <span class="fn2">put</span>(self, key: str, value: bytes):
+        <span class="cm"># WAL first (durability), then memtable (speed)</span>
+        self.wal.write(f<span class="str">\'PUT {key}\\n\'</span>.encode() + value + b\'\\n\')
+        self.wal.flush()
+        self.memtable[key] = value
+        <span class="kw">if</span> len(self.memtable) >= self.MEMTABLE_MAX:
+            self._flush_memtable()
+
+    <span class="kw">def</span> <span class="fn2">delete</span>(self, key: str):
+        self.wal.write(f<span class="str">\'DELETE {key}\\n\'</span>.encode())
+        self.wal.flush()
+        self.memtable[key] = TOMBSTONE
+
+    <span class="kw">def</span> <span class="fn2">get</span>(self, key: str) -> Optional[bytes]:
+        <span class="cm"># 1. Memtable (newest data)</span>
+        <span class="kw">if</span> key <span class="kw">in</span> self.memtable:
+            val = self.memtable[key]
+            <span class="kw">return None if</span> val == TOMBSTONE <span class="kw">else</span> val
+
+        <span class="cm"># 2. SSTables newest first (bloom filter → skip if not present)</span>
+        <span class="kw">for</span> sst <span class="kw">in</span> self.sstables:
+            val = sst.get(key)
+            <span class="kw">if</span> val <span class="kw">is not None</span>:
+                <span class="kw">return None if</span> val == TOMBSTONE <span class="kw">else</span> val
+        <span class="kw">return None</span>
+
+    <span class="kw">def</span> <span class="fn2">_flush_memtable</span>(self):
+        <span class="kw">if not</span> self.memtable: <span class="kw">return</span>
+        sst = <span class="cls">SSTable</span>(dict(self.memtable))
+        self.sstables.insert(<span class="num">0</span>, sst)  <span class="cm"># newest first</span>
+        self.memtable.clear()
+        <span class="kw">if</span> len(self.sstables) > <span class="num">10</span>:
+            self._compact()
+
+    <span class="kw">def</span> <span class="fn2">_compact</span>(self):
+        <span class="str">"""Merge all SSTables. Newer values overwrite older."""</span>
+        merged = {}
+        <span class="kw">for</span> sst <span class="kw">in</span> reversed(self.sstables):  <span class="cm"># oldest first</span>
+            <span class="kw">for</span> k, v <span class="kw">in</span> sst.items():
+                <span class="kw">if</span> v == TOMBSTONE: merged.pop(k, <span class="kw">None</span>)
+                <span class="kw">else</span>: merged[k] = v
+        self.sstables = [<span class="cls">SSTable</span>(merged)] <span class="kw">if</span> merged <span class="kw">else</span> []
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🌲 LSM Tree: Write vs Read Amplification</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Write fast (sequential I/O)</div><p>All writes are sequential (WAL + memtable). No random disk seeks. Write throughput: &gt;500 MB/s on HDD. Critical for write-heavy workloads (time-series, logging, Cassandra). The fundamental insight: make writes sequential at the cost of read complexity.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">⚠️ Read amplification</div><p>A read may touch memtable + multiple SSTables at multiple levels. With leveled compaction (RocksDB): worst case 1 read per level. With 5 levels: 5 disk reads for a missing key (mitigated by Bloom filters). In-memory databases (Redis) solve this by keeping everything in RAM.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🌸 Bloom Filter: Size vs False Positive Rate</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">1% false positive rate</div><p>Memory: 9.6 bits per element. For 10M keys: ~12 MB per SSTable. In practice each SSTable has &lt;1M keys → ~1.2 MB Bloom filter. Very manageable. At 1% FPR: 99% of "not found" reads skip the SSTable entirely. The other 1% do an unnecessary disk read.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">0.1% false positive rate</div><p>Memory: 14.4 bits per element. 50% more memory for 10× better performance on "not found" queries. Worth it if your workload has many reads for non-existent keys (negative lookups). RocksDB lets you tune FPR per column family.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">⚡ In-Memory vs On-Disk Storage</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ In-memory (Redis)</div><p>All data in RAM. Sub-microsecond reads. No storage engine complexity — simple hash map. Persistence via RDB snapshots + AOF (Append-Only File, similar to WAL). Limit: dataset must fit in RAM. Cost: RAM is 10-50× more expensive than SSD per GB. Best for cache layers, session stores, rate limiting.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">On-disk + cache (RocksDB)</div><p>Dataset can exceed RAM. Hot data cached in block cache (LRU). Cold data on SSD. LSM tree enables fast writes (WAL + memtable). Compaction runs in background. Best for: databases, blob storage, large datasets. DynamoDB, Cassandra, MongoDB all use this model.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

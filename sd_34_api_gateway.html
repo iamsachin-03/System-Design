@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #34 — API Gateway / Service Mesh</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#84cc16;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#d9f99d;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(132,204,22,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ecfccb 0%,#84cc16 50%,#3f6212 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(132,204,22,.07);color:#d9f99d;border:1px solid rgba(132,204,22,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(132,204,22,.1);color:var(--ecolor);border:1.5px solid rgba(132,204,22,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(132,204,22,.08);color:var(--accent);border:1px solid rgba(132,204,22,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(132,204,22,.05);border:1px solid rgba(132,204,22,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#d9f99d;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(132,204,22,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#84cc16;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>34 / API Gateway</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🚪</div>
+    <div>
+      <div class="h-title">API Gateway / Service Mesh</div>
+      <div class="h-desc">Design an API gateway that handles 1M requests/sec — token-bucket rate limiting per client, JWT authentication, request routing to 500 microservices, circuit breaking for failing upstreams, TLS termination, and the operational difference between a gateway (north-south traffic) and a service mesh (east-west traffic with sidecar proxies).</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Rate Limiting</span>
+        <span class="badge b-tag">Circuit Breaker</span>
+        <span class="badge b-tag">JWT Auth</span>
+        <span class="badge b-tag">Service Discovery</span>
+        <span class="badge b-tag">mTLS</span>
+        <span class="badge b-tag">Envoy / Istio</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('rl',this)">⏱ Rate Limiting</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>The API gateway is the single entry point for all client traffic.</strong> It's the system that must never go down, must handle any load spike, and must not become a bottleneck. Every millisecond of latency it adds multiplies across every request in the system. The design challenge is making all these cross-cutting concerns (auth, rate limiting, routing, circuit breaking) cheap, correct, and horizontally scalable.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>TLS termination at gateway; upstream services use HTTP internally</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Authentication: validate JWT; reject invalid tokens</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Rate limiting: per client key (API key or user ID)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Request routing: map URL patterns to upstream services</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Circuit breaking: stop sending to a failing upstream</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Load balancing across upstream service instances</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>1M requests/sec peak throughput</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Added latency: &lt;5ms p99 (gateway overhead only)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Rate limiting accuracy: &gt;99.9% (minimal false positives/negatives)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Zero downtime deploys; horizontally scalable</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>500 upstream services; 10K service instances</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Rate Limiting Algorithms</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · RATE LIMITING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You need to rate limit at 1000 req/sec per API key. Walk me through the algorithms and what you'd pick.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Four main algorithms:<br><br>
+      <b>1. Fixed window counter:</b> Count requests per minute bucket. Simple — <code>INCR key:user:2024010112</code> in Redis. Problem: boundary burst — a client can fire 1000 req in the last second of minute 1 and 1000 req in the first second of minute 2, getting 2× the intended limit.<br><br>
+      <b>2. Sliding window log:</b> Store timestamp of each request in a sorted set. Count entries in the last 60s. Accurate but high memory — storing every timestamp for every user.<br><br>
+      <b>3. Sliding window counter (hybrid):</b> Track the current window count + the previous window count. Use a weighted average: <code>rate = prev_count × (1 - overlap) + curr_count</code>. Approximately accurate, low memory (2 counters per user). Good practical choice.<br><br>
+      <b>4. Token bucket (my choice):</b> Each API key has a bucket with capacity C. Tokens refill at rate R/sec. Each request consumes 1 token. If bucket empty → reject 429. Allows burst up to C while enforcing average rate R.<br><br>
+      Implementation: Redis Lua script for atomicity:<br>
+      <code>tokens = min(capacity, tokens + rate × elapsed); if tokens >= 1: tokens -= 1; return ALLOW; else: return REJECT</code><br><br>
+      Why token bucket: allows legitimate bursts (e.g., app startup fetching 50 configs at once), enforces long-term average. Natural for API use cases. The Lua script executes atomically — no race conditions between gateway instances.
+    </div></div>
+    <div class="tip-box"><strong>💡 For distributed rate limiting across 50 gateway nodes:</strong> Each node uses Redis as the shared counter store. The Lua script is the critical atomicity primitive. Local caching of token counts (sync every 100ms) reduces Redis calls by 99% while maintaining &lt;10% error rate on limits.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 2 — Circuit Breaker</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · CIRCUIT BREAKER</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The payments service is returning 503s. How do you prevent these failures from cascading to the gateway and taking down the entire system?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Without a circuit breaker: the gateway keeps sending requests to the failing payments service. Each request waits for the timeout (e.g., 30s). With 1M req/sec, thread pools exhaust and the gateway itself becomes unavailable — cascading failure.<br><br>
+      <b>Circuit breaker pattern (3 states):</b><br><br>
+      <b>CLOSED (normal):</b> All requests flow through. Gateway tracks error rate in a sliding window. If error rate exceeds threshold (e.g., 50% failures in last 10s), trip the circuit → OPEN.<br><br>
+      <b>OPEN (failing):</b> Gateway immediately returns 503 to clients without contacting the upstream. Fails fast in &lt;1ms instead of waiting for upstream timeout. This protects the gateway's thread pool and prevents timeout storm. A timer is set (e.g., 30s).<br><br>
+      <b>HALF-OPEN (probing):</b> After the timer expires, allow a small percentage of requests through (e.g., 5%). If they succeed, close the circuit — service has recovered. If they fail, reopen for another 30s.<br><br>
+      Implementation: each upstream service has its own circuit breaker state machine, stored in the gateway process (not Redis — we want ultra-low latency for the OPEN check). Health state replication between gateway nodes via gossip or a shared registry is optional — a brief period where some nodes have a stale circuit state is acceptable.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔀 Phase 3 — Gateway vs Service Mesh</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · GATEWAY vs MESH</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>When would you use a service mesh instead of (or in addition to) an API gateway?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>API Gateway</b> handles north-south traffic: client → gateway → service. One per cluster or per API surface. Handles external-facing concerns: auth, rate limiting, TLS termination, API versioning, client-facing routing.<br><br>
+      <b>Service Mesh</b> handles east-west traffic: service → service communication inside the cluster. Each service gets a sidecar proxy (Envoy). The sidecar intercepts all outbound/inbound traffic. Provides: mTLS between services, service-to-service rate limiting, retries with backoff, distributed tracing, circuit breaking — without any code changes to services.<br><br>
+      <b>When to use a mesh:</b><br>
+      <ul>
+        <li>100+ microservices where implementing retry/timeout/circuit-breaker in each service's code is impractical</li>
+        <li>Security requirement: zero-trust networking — every service-to-service call must be mutually authenticated (mTLS)</li>
+        <li>Observability: automatic distributed tracing across all services without instrumentation</li>
+        <li>Traffic splitting for canary deployments: route 5% of payments traffic to v2 without code changes</li>
+      </ul>
+      <b>When not to use a mesh:</b> &lt;20 services, teams comfortable implementing resilience patterns in code, or cost-sensitive (sidecar proxies add 5-10ms latency and CPU overhead per hop).
+    </div></div>
+  </div></div>
+</div>
+
+<div id="rl" class="panel">
+  <div class="sec"><div class="sec-head">⏱ Rate Limiting — All Algorithms Compared</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:340px">
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#84cc16" font-weight="700">RATE LIMITING ALGORITHMS — 1000 req/min limit</text>
+
+<!-- Fixed Window -->
+<rect x="10" y="28" width="195" height="140" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(132,204,22,.1)"/>
+<text x="107" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#84cc16">Fixed Window</text>
+<text x="20" y="64" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Counter resets every minute</text>
+<text x="20" y="78" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Key: user:2024010112</text>
+<text x="20" y="92" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">INCR, EXPIRE 60</text>
+<text x="20" y="110" font-family="JetBrains Mono" font-size="7" fill="#fcd34d">⚠ Boundary burst:</text>
+<text x="20" y="124" font-family="JetBrains Mono" font-size="7" fill="#f87171">:59 → 1000 req  ✗</text>
+<text x="20" y="138" font-family="JetBrains Mono" font-size="7" fill="#f87171">:01 → 1000 req  ✗ (2000 in 2s)</text>
+<text x="20" y="154" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Memory: 1 int/user</text>
+
+<!-- Sliding Window Log -->
+<rect x="215" y="28" width="195" height="140" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(132,204,22,.1)"/>
+<text x="312" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#84cc16">Sliding Window Log</text>
+<text x="225" y="64" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Store every request timestamp</text>
+<text x="225" y="78" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">ZADD key now now</text>
+<text x="225" y="92" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">ZREMRANGEBYSCORE key 0 (now-60)</text>
+<text x="225" y="106" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">ZCARD key → count</text>
+<text x="225" y="124" font-family="JetBrains Mono" font-size="7" fill="#34d399">✓ Perfectly accurate</text>
+<text x="225" y="138" font-family="JetBrains Mono" font-size="7" fill="#f87171">✗ Memory: 1 entry/request</text>
+<text x="225" y="154" font-family="JetBrains Mono" font-size="7" fill="#f87171">  1000 req/min = 1000 entries/user</text>
+
+<!-- Sliding Window Counter -->
+<rect x="420" y="28" width="195" height="140" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(132,204,22,.1)"/>
+<text x="517" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#84cc16">Sliding Window Counter</text>
+<text x="430" y="64" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Weighted blend of windows:</text>
+<text x="430" y="78" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">rate = prev × (60-elapsed)/60</text>
+<text x="430" y="92" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">     + curr</text>
+<text x="430" y="110" font-family="JetBrains Mono" font-size="7" fill="#34d399">✓ ~99% accurate vs log</text>
+<text x="430" y="124" font-family="JetBrains Mono" font-size="7" fill="#34d399">✓ 2 ints per user</text>
+<text x="430" y="138" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Cloudflare uses this</text>
+<text x="430" y="154" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">for global rate limiting</text>
+
+<!-- Token Bucket -->
+<rect x="625" y="28" width="205" height="140" rx="8" fill="rgba(132,204,22,.05)" stroke="rgba(132,204,22,.2)"/>
+<text x="727" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#84cc16">Token Bucket ✅ CHOSEN</text>
+<text x="635" y="64" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">capacity=100, refill=1000/min</text>
+<text x="635" y="78" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Redis Lua (atomic):</text>
+<text x="635" y="92" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">tokens += rate × elapsed</text>
+<text x="635" y="106" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">tokens = min(capacity, tokens)</text>
+<text x="635" y="120" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">if tokens >= 1: tokens--; ALLOW</text>
+<text x="635" y="134" font-family="JetBrains Mono" font-size="7" fill="#34d399">✓ Allows controlled bursts</text>
+<text x="635" y="148" font-family="JetBrains Mono" font-size="7" fill="#34d399">✓ Enforces long-term rate</text>
+<text x="635" y="162" font-family="JetBrains Mono" font-size="7" fill="#34d399">✓ 2 floats per user</text>
+
+<!-- Circuit Breaker state machine -->
+<text x="10" y="192" font-family="JetBrains Mono" font-size="10" fill="#84cc16" font-weight="700">CIRCUIT BREAKER STATE MACHINE</text>
+<rect x="10" y="202" width="820" height="130" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+
+<rect x="30" y="222" width="120" height="50" rx="6" fill="#131c2e" stroke="#34d399" stroke-width="2"/>
+<text x="90" y="244" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#34d399">CLOSED</text>
+<text x="90" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">requests flow</text>
+<text x="90" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">track error rate</text>
+
+<rect x="340" y="222" width="120" height="50" rx="6" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="400" y="244" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">OPEN</text>
+<text x="400" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">fail fast (&lt;1ms)</text>
+<text x="400" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">return 503</text>
+
+<rect x="650" y="222" width="120" height="50" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="710" y="244" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">HALF-OPEN</text>
+<text x="710" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">5% probe traffic</text>
+<text x="710" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">test recovery</text>
+
+<text x="165" y="244" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">err&gt;50%</text>
+<text x="165" y="257" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">──────→</text>
+<text x="470" y="244" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">30s timer</text>
+<text x="470" y="257" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">──────→</text>
+<text x="600" y="215" font-family="JetBrains Mono" font-size="8" fill="#34d399">probe OK → CLOSED</text>
+<text x="600" y="295" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">probe fail → OPEN</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Throughput:</span>
+  <span class="label">1M req/sec ÷ 50K req/sec per gateway node         = </span><span class="val">20 gateway nodes</span>
+  <span class="label">(Nginx/Envoy handles 50-100K req/sec per core)      </span>
+
+<span class="label">Connections:</span>
+  <span class="label">1M req/sec × avg 50ms latency                      = </span><span class="val">50K concurrent connections</span>
+  <span class="label">HTTP/2 multiplexing: 1 connection = multiple streams</span>
+  <span class="label">Upstream connections: 20 nodes × 500 services × 10 = </span><span class="val">100K upstream connections</span>
+
+<span class="label">Rate limiting (Redis):</span>
+  <span class="label">1M req/sec → 1M Redis Lua calls/sec               → </span><span class="val">too many</span>
+  <span class="label">Local token bucket cache, sync to Redis every 100ms:</span>
+  <span class="label">1M/100ms ÷ 100 = 10K Redis calls/sec               = </span><span class="val">trivial</span>
+  <span class="label">Error: ±10% on limit (acceptable for API rate limits)</span>
+
+<span class="label">JWT validation:</span>
+  <span class="label">RS256 verify: ~0.1ms per token on modern CPU       = </span><span class="val">10K JWT/sec/core</span>
+  <span class="label">Cache valid JWTs (5min TTL) → 95%+ cache hit ratio → </span><span class="val">&lt;0.1ms/req</span>
+
+<span class="label">Service discovery:</span>
+  <span class="label">500 services × 20 instances each                   = </span><span class="val">10K endpoints</span>
+  <span class="label">Consul/etcd watch events propagate in &lt;1s</span>
+
+<span class="result">→ 20 gateway nodes at 50K req/sec each. Rate limiting cached locally, synced to Redis. JWT cached.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Gateway nodes</td><td class="hi">20 nodes</td><td>50K req/sec each; Envoy or custom Nginx/Go</td></tr>
+      <tr><td>Rate limit store</td><td class="hi">Redis cluster</td><td>Local cache 100ms sync; Lua scripts atomic</td></tr>
+      <tr><td>JWT cache</td><td class="hi">In-process LRU</td><td>5-min TTL; 95%+ hit rate; no network call</td></tr>
+      <tr><td>Service registry</td><td class="hi">Consul / etcd</td><td>500 services × 20 instances; watch for changes</td></tr>
+      <tr><td>Circuit breakers</td><td class="hi">In-process state</td><td>Per upstream; sliding error window 10s</td></tr>
+      <tr><td>Added latency</td><td class="hi">&lt;2ms p99</td><td>Rate limit (0.1ms) + auth (0.1ms) + routing (0.1ms)</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture — Gateway + Service Mesh</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+<defs>
+<marker id="lma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#84cc16"/></marker>
+<marker id="lga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="lba" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+</defs>
+
+<!-- Internet -->
+<rect x="10" y="130" width="90" height="60" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="55" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🌐 Internet</text>
+<text x="55" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HTTPS clients</text>
+
+<!-- API Gateway cluster -->
+<rect x="120" y="80" width="210" height="200" rx="8" fill="rgba(132,204,22,.02)" stroke="rgba(132,204,22,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="225" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#84cc16">API GATEWAY (20 nodes)</text>
+<rect x="130" y="108" width="190" height="160" rx="7" fill="#131c2e" stroke="#84cc16" stroke-width="2"/>
+<text x="225" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#d9f99d">Gateway Node</text>
+<text x="225" y="146" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#84cc16">① TLS termination</text>
+<text x="225" y="160" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">② JWT validate (cached)</text>
+<text x="225" y="174" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">③ Rate limit (local+Redis)</text>
+<text x="225" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">④ Route (URL → service)</text>
+<text x="225" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">⑤ Circuit breaker check</text>
+<text x="225" y="216" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">⑥ LB to upstream</text>
+<text x="225" y="230" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#84cc16">⑦ Return response</text>
+<text x="225" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">&lt;2ms added latency</text>
+
+<!-- Support services -->
+<rect x="120" y="295" width="210" height="55" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="225" y="318" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">Redis (rate limits)</text>
+<text x="225" y="334" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">token buckets, JWT cache</text>
+<text x="225" y="345" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">cluster, sync every 100ms</text>
+
+<!-- Service mesh zone -->
+<rect x="350" y="30" width="520" height="310" rx="10" fill="rgba(56,189,248,.01)" stroke="rgba(56,189,248,.08)" stroke-width="1" stroke-dasharray="5,4"/>
+<text x="610" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">SERVICE MESH (east-west, Envoy sidecars)</text>
+
+<!-- Service A with sidecar -->
+<rect x="360" y="70" width="220" height="120" rx="7" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="470" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Payment Service Pod</text>
+<rect x="370" y="100" width="90" height="70" rx="5" fill="#131c2e" stroke="#84cc16" stroke-width="1.5"/>
+<text x="415" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#d9f99d">App</text>
+<text x="415" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">business logic</text>
+<text x="415" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">HTTP 8080</text>
+<rect x="475" y="100" width="90" height="70" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="520" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#bae6fd">Envoy</text>
+<text x="520" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">sidecar proxy</text>
+<text x="520" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">mTLS,retry,trace</text>
+
+<!-- Service B -->
+<rect x="600" y="70" width="220" height="120" rx="7" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="710" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Order Service Pod</text>
+<rect x="610" y="100" width="90" height="70" rx="5" fill="#131c2e" stroke="#84cc16" stroke-width="1.5"/>
+<text x="655" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#d9f99d">App</text>
+<rect x="715" y="100" width="90" height="70" rx="5" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="760" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#bae6fd">Envoy</text>
+
+<!-- Control plane -->
+<rect x="360" y="210" width="460" height="120" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="590" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Control Plane (Istio / Consul Connect)</text>
+<text x="590" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">xDS API: pushes config to all Envoy sidecars</text>
+<text x="590" y="264" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">mTLS cert rotation: auto every 24h (SPIFFE/SVID)</text>
+<text x="590" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Traffic policies: retry budget, timeout, circuit breaker per route</text>
+<text x="590" y="296" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Canary: route 5% traffic to v2 via weight split</text>
+<text x="590" y="312" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">Observability: distributed traces via Zipkin/Jaeger (automatic)</text>
+
+<!-- Arrows -->
+<line x1="100" y1="160" x2="118" y2="160" stroke="#84cc16" stroke-width="1.5" marker-end="url(#lma)"/>
+<line x1="320" y1="180" x2="358" y2="140" stroke="#84cc16" stroke-width="1.5" marker-end="url(#lma)"/>
+<line x1="220" y1="280" x2="220" y2="295" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#lma)"/>
+<line x1="565" y1="150" x2="613" y2="150" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#lba)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — Token Bucket + Circuit Breaker</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// API Gateway — Java: Token Bucket + Circuit Breaker
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── Token Bucket Rate Limiter (Redis Lua) ─────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">TokenBucketRateLimiter</span> {
+
+    <span class="kw">private static final</span> <span class="cls">String</span> LUA_SCRIPT = <span class="str">"""
+        local key      = KEYS[1]
+        local capacity = tonumber(ARGV[1])
+        local rate     = tonumber(ARGV[2])  -- tokens per second
+        local now      = tonumber(ARGV[3])  -- current time (ms)
+
+        local data     = redis.call('HMGET', key, 'tokens', 'last_refill')
+        local tokens   = tonumber(data[1]) or capacity
+        local last     = tonumber(data[2]) or now
+
+        -- Refill tokens based on elapsed time
+        local elapsed  = math.max(0, now - last)
+        tokens = math.min(capacity, tokens + rate * elapsed / 1000)
+
+        if tokens >= 1 then
+            tokens = tokens - 1
+            redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+            redis.call('EXPIRE', key, 3600)
+            return 1  -- ALLOW
+        else
+            redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+            return 0  -- REJECT
+        end
+        """</span>;
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="kw">private final</span> <span class="cls">DefaultRedisScript</span>&lt;<span class="cls">Long</span>&gt; script;
+
+    <span class="kw">public boolean</span> <span class="fn2">allow</span>(<span class="cls">String</span> clientKey, <span class="kw">double</span> capacity, <span class="kw">double</span> ratePerSec) {
+        <span class="cls">Long</span> result = redis.execute(script,
+            <span class="cls">List</span>.of(<span class="str">"ratelimit:"</span> + clientKey),
+            <span class="cls">String</span>.valueOf(capacity),
+            <span class="cls">String</span>.valueOf(ratePerSec),
+            <span class="cls">String</span>.valueOf(<span class="cls">System</span>.currentTimeMillis()));
+        <span class="kw">return</span> <span class="cls">Long</span>.valueOf(<span class="num">1L</span>).equals(result);
+    }
+}
+
+<span class="cm">// ── Circuit Breaker ───────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">CircuitBreaker</span> {
+
+    <span class="kw">public enum</span> <span class="cls">State</span> { CLOSED, OPEN, HALF_OPEN }
+
+    <span class="kw">private volatile</span> <span class="cls">State</span>  state      = <span class="cls">State</span>.CLOSED;
+    <span class="kw">private</span> <span class="cls">AtomicInteger</span>   failures   = <span class="kw">new</span> <span class="cls">AtomicInteger</span>();
+    <span class="kw">private</span> <span class="cls">AtomicInteger</span>   successes  = <span class="kw">new</span> <span class="cls">AtomicInteger</span>();
+    <span class="kw">private volatile long</span>   openedAt   = <span class="num">0</span>;
+
+    <span class="kw">private final int</span>    failureThreshold = <span class="num">50</span>;  <span class="cm">// % errors to trip</span>
+    <span class="kw">private final int</span>    windowSize       = <span class="num">100</span>; <span class="cm">// requests in window</span>
+    <span class="kw">private final long</span>   openDuration     = <span class="num">30_000</span>; <span class="cm">// ms before HALF_OPEN</span>
+
+    <span class="kw">public boolean</span> <span class="fn2">canRequest</span>() {
+        <span class="kw">return switch</span> (state) {
+            <span class="kw">case</span> CLOSED    -> <span class="kw">true</span>;
+            <span class="kw">case</span> OPEN      -> {
+                <span class="kw">if</span> (<span class="cls">System</span>.currentTimeMillis() - openedAt > openDuration) {
+                    state = <span class="cls">State</span>.HALF_OPEN; yield <span class="kw">true</span>; <span class="cm">// probe</span>
+                }
+                yield <span class="kw">false</span>; <span class="cm">// fast reject</span>
+            }
+            <span class="kw">case</span> HALF_OPEN -> <span class="cls">Math</span>.random() < <span class="num">0.05</span>; <span class="cm">// 5% probe rate</span>
+        };
+    }
+
+    <span class="kw">public void</span> <span class="fn2">recordSuccess</span>() {
+        <span class="kw">if</span> (state == <span class="cls">State</span>.HALF_OPEN) { state = <span class="cls">State</span>.CLOSED; <span class="fn2">reset</span>(); <span class="kw">return</span>; }
+        successes.incrementAndGet();
+    }
+
+    <span class="kw">public void</span> <span class="fn2">recordFailure</span>() {
+        <span class="kw">if</span> (state == <span class="cls">State</span>.HALF_OPEN) { state = <span class="cls">State</span>.OPEN; openedAt = <span class="cls">System</span>.currentTimeMillis(); <span class="kw">return</span>; }
+        <span class="kw">int</span> f = failures.incrementAndGet();
+        <span class="kw">int</span> total = f + successes.get();
+        <span class="kw">if</span> (total >= windowSize && (f * <span class="num">100</span> / total) >= failureThreshold) {
+            state = <span class="cls">State</span>.OPEN; openedAt = <span class="cls">System</span>.currentTimeMillis(); <span class="fn2">reset</span>();
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">reset</span>() { failures.set(<span class="num">0</span>); successes.set(<span class="num">0</span>); }
+}
+
+<span class="cm">// ── Gateway Request Handler ───────────────────────────</span>
+<span class="ann">@RestController</span>
+<span class="kw">public class</span> <span class="cls">GatewayHandler</span> {
+
+    <span class="ann">@Autowired</span> TokenBucketRateLimiter rateLimiter;
+    <span class="ann">@Autowired</span> JwtValidator            jwtValidator;
+    <span class="ann">@Autowired</span> ServiceRegistry         registry;
+    Map&lt;String, CircuitBreaker&gt;        breakers = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+
+    <span class="ann">@RequestMapping</span>(<span class="str">"/**"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;?&gt; <span class="fn2">proxy</span>(<span class="cls">HttpServletRequest</span> req) {
+        <span class="cls">String</span> clientId = req.getHeader(<span class="str">"X-API-Key"</span>);
+
+        <span class="cm">// 1. Rate limit</span>
+        <span class="kw">if</span> (!rateLimiter.allow(clientId, <span class="num">100</span>, <span class="num">1000.0</span>/<span class="num">60</span>))
+            <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="num">429</span>).body(<span class="str">"Rate limit exceeded"</span>);
+
+        <span class="cm">// 2. JWT auth</span>
+        <span class="cls">String</span> token = req.getHeader(<span class="str">"Authorization"</span>);
+        <span class="kw">if</span> (!jwtValidator.validate(token))
+            <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="num">401</span>).body(<span class="str">"Unauthorized"</span>);
+
+        <span class="cm">// 3. Route</span>
+        <span class="cls">String</span>   upstream = registry.route(req.getRequestURI());
+        <span class="cls">CircuitBreaker</span> cb = breakers.computeIfAbsent(upstream, __ -> <span class="kw">new</span> <span class="cls">CircuitBreaker</span>());
+
+        <span class="cm">// 4. Circuit breaker</span>
+        <span class="kw">if</span> (!cb.canRequest())
+            <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="num">503</span>).body(<span class="str">"Service unavailable"</span>);
+
+        <span class="cm">// 5. Forward request</span>
+        <span class="kw">try</span> {
+            <span class="cls">ResponseEntity</span>&lt;?&gt; resp = <span class="fn2">forward</span>(req, upstream);
+            <span class="kw">if</span> (resp.getStatusCode().is2xxSuccessful()) cb.recordSuccess();
+            <span class="kw">else if</span> (resp.getStatusCode().is5xxServerError()) cb.recordFailure();
+            <span class="kw">return</span> resp;
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) { cb.recordFailure(); <span class="kw">throw</span> e; }
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# API Gateway — Python: Token Bucket + Circuit Breaker
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, math, random, threading, requests
+<span class="kw">from</span> enum <span class="kw">import</span> Enum
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">import</span> redis
+
+r = redis.Redis()
+
+TOKEN_BUCKET_LUA = <span class="str">"""
+local key      = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local rate     = tonumber(ARGV[2])
+local now      = tonumber(ARGV[3])
+local data     = redis.call('HMGET', key, 'tokens', 'last_refill')
+local tokens   = tonumber(data[1]) or capacity
+local last     = tonumber(data[2]) or now
+local elapsed  = math.max(0, now - last)
+tokens = math.min(capacity, tokens + rate * elapsed / 1000)
+if tokens >= 1 then
+    tokens = tokens - 1
+    redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+    redis.call('EXPIRE', key, 3600)
+    return 1
+else
+    redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+    return 0
+end
+"""</span>
+
+_rl_script = r.register_script(TOKEN_BUCKET_LUA)
+
+<span class="kw">def</span> <span class="fn2">allow_request</span>(client_key: str, capacity: float = <span class="num">100</span>, rate: float = <span class="num">16.67</span>) -> bool:
+    <span class="str">"""Token bucket via Redis Lua. rate = tokens/sec (e.g. 1000/min = 16.67/sec)."""</span>
+    result = _rl_script(
+        keys=[f<span class="str">"ratelimit:{client_key}"</span>],
+        args=[capacity, rate, int(time.time() * <span class="num">1000</span>)])
+    <span class="kw">return</span> result == <span class="num">1</span>
+
+
+<span class="kw">class</span> <span class="cls">CBState</span>(Enum):
+    CLOSED    = <span class="str">"closed"</span>
+    OPEN      = <span class="str">"open"</span>
+    HALF_OPEN = <span class="str">"half_open"</span>
+
+<span class="kw">class</span> <span class="cls">CircuitBreaker</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, failure_threshold: float = <span class="num">0.5</span>, window: int = <span class="num">100</span>, open_secs: int = <span class="num">30</span>):
+        self.state     = <span class="cls">CBState</span>.CLOSED
+        self.failures  = <span class="num">0</span>
+        self.successes = <span class="num">0</span>
+        self.opened_at = <span class="num">0</span>
+        self.threshold = failure_threshold
+        self.window    = window
+        self.open_secs = open_secs
+        self._lock     = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">can_request</span>(self) -> bool:
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if</span> self.state == <span class="cls">CBState</span>.CLOSED: <span class="kw">return True</span>
+            <span class="kw">if</span> self.state == <span class="cls">CBState</span>.OPEN:
+                <span class="kw">if</span> time.time() - self.opened_at > self.open_secs:
+                    self.state = <span class="cls">CBState</span>.HALF_OPEN; <span class="kw">return True</span>
+                <span class="kw">return False</span>
+            <span class="kw">return</span> random.random() < <span class="num">0.05</span>  <span class="cm"># 5% probe in HALF_OPEN</span>
+
+    <span class="kw">def</span> <span class="fn2">record_success</span>(self):
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if</span> self.state == <span class="cls">CBState</span>.HALF_OPEN: self._close()
+            <span class="kw">else</span>: self.successes += <span class="num">1</span>
+
+    <span class="kw">def</span> <span class="fn2">record_failure</span>(self):
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if</span> self.state == <span class="cls">CBState</span>.HALF_OPEN: self._open(); <span class="kw">return</span>
+            self.failures += <span class="num">1</span>
+            total = self.failures + self.successes
+            <span class="kw">if</span> total >= self.window <span class="kw">and</span> self.failures / total >= self.threshold:
+                self._open()
+
+    <span class="kw">def</span> <span class="fn2">_open</span>(self):
+        self.state = <span class="cls">CBState</span>.OPEN; self.opened_at = time.time()
+        self.failures = self.successes = <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn2">_close</span>(self):
+        self.state = <span class="cls">CBState</span>.CLOSED; self.failures = self.successes = <span class="num">0</span>
+
+
+<span class="cm"># ── Gateway Request Pipeline ──────────────────────────</span>
+breakers: dict[str, <span class="cls">CircuitBreaker</span>] = {}
+route_table = {<span class="str">"/payments"</span>: <span class="str">"http://payments-svc"</span>, <span class="str">"/orders"</span>: <span class="str">"http://orders-svc"</span>}
+
+<span class="kw">def</span> <span class="fn2">handle_request</span>(method: str, path: str, headers: dict, body: bytes):
+    client_key = headers.get(<span class="str">"x-api-key"</span>, <span class="str">"anonymous"</span>)
+
+    <span class="cm"># 1. Rate limit</span>
+    <span class="kw">if not</span> allow_request(client_key):
+        <span class="kw">return</span> <span class="num">429</span>, <span class="str">"Rate limit exceeded"</span>
+
+    <span class="cm"># 2. JWT auth (simplified)</span>
+    token = headers.get(<span class="str">"authorization"</span>, <span class="str">""</span>)
+    <span class="kw">if not</span> token.startswith(<span class="str">"Bearer "</span>):
+        <span class="kw">return</span> <span class="num">401</span>, <span class="str">"Unauthorized"</span>
+
+    <span class="cm"># 3. Route</span>
+    prefix  = <span class="str">"/"</span> + path.split(<span class="str">"/"</span>)[<span class="num">1</span>]
+    upstream = route_table.get(prefix)
+    <span class="kw">if not</span> upstream: <span class="kw">return</span> <span class="num">404</span>, <span class="str">"No route"</span>
+
+    <span class="cm"># 4. Circuit breaker</span>
+    cb = breakers.setdefault(upstream, <span class="cls">CircuitBreaker</span>())
+    <span class="kw">if not</span> cb.can_request():
+        <span class="kw">return</span> <span class="num">503</span>, <span class="str">"Service unavailable (circuit open)"</span>
+
+    <span class="cm"># 5. Forward</span>
+    <span class="kw">try</span>:
+        resp = requests.request(method, upstream + path, headers=headers,
+                                data=body, timeout=<span class="num">5</span>)
+        <span class="kw">if</span> resp.status_code >= <span class="num">500</span>: cb.record_failure()
+        <span class="kw">else</span>: cb.record_success()
+        <span class="kw">return</span> resp.status_code, resp.content
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        cb.record_failure()
+        <span class="kw">return</span> <span class="num">502</span>, str(e)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🚪 Gateway Implementation: Nginx + Lua vs Envoy vs Custom</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Nginx + Lua (OpenResty)</div><p>Extremely high performance (1M+ req/sec). Lua scripts for custom logic. Used by Kong (API gateway) as the underlying engine. Operationally complex — Lua debugging is painful. No native service mesh integration. Good for pure API gateway use cases where performance is paramount.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Envoy Proxy</div><p>Designed specifically for service proxy use cases. Native xDS config API (used by Istio). Excellent observability out-of-box (Prometheus metrics, distributed tracing). Circuit breaker, retry, timeout, rate limiting built in. Written in C++ — fast. The standard choice for both API gateway and service mesh sidecars.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Custom (Go/Rust)</div><p>Full control over behaviour. Used by companies with very specific requirements (e.g., Cloudflare's Pingora in Rust). 6-18 months to match Envoy's feature set. Only justified at extremely large scale (&gt;10M req/sec per node) or when standard proxies have fundamental limitations for your use case.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">⏱ Rate Limiting: Local vs Global vs Hybrid</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Purely Local</div><p>Each gateway node maintains its own counter. Fast — no network call. But: with 20 gateway nodes, a client gets 20× the limit (each node allows 1000 req/min independently). Only correct if you have sticky sessions routing each client to the same node. Unacceptable for API rate limits that must be globally accurate.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Purely Global (Redis)</div><p>All nodes check a shared Redis counter. Perfectly accurate. But: every request = 1 Redis RTT (~0.5ms) = 50% of your 1ms latency budget. At 1M req/sec = 1M Redis ops/sec. Redis can handle it, but it's an extra dependency in the hot path. A Redis outage = rate limiting fails open or closed.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Hybrid (local cache + async sync)</div><p>Each node maintains local token bucket. Sync consumed tokens to Redis every 100ms. Local node allows requests using local count; Redis reconciles the global view. Error: ±10% on limits (acceptable). Eliminates Redis from the hot path. Used by Cloudflare, Kong in production. Best throughput/accuracy tradeoff.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

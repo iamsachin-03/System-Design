@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #25 — Ad Click Aggregation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#38bdf8;--a2:#0ea5e9;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#a855f7;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#bae6fd;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#07090f 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(56,189,248,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#e0f2fe 0%,#38bdf8 50%,#0369a1 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(56,189,248,.07);color:#bae6fd;border:1px solid rgba(56,189,248,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(56,189,248,.1);color:var(--ecolor);border:1.5px solid rgba(56,189,248,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(56,189,248,.08);color:var(--accent);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.info-box{background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bae6fd;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(56,189,248,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(56,189,248,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#38bdf8;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:140px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Analytics Systems › <span>25 / Ad Click Aggregation</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">📊</div>
+    <div>
+      <div class="h-title">Ad Click Aggregation</div>
+      <div class="h-desc">Design a system that ingests 1 million ad click events per second, deduplicates fraudulent/repeated clicks, aggregates counts per ad per minute using sliding windows, stores results queryable by advertisers in real time — all while handling late-arriving events, watermarks, and the tradeoffs between exactly-once and at-least-once delivery.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Stream Processing</span>
+        <span class="badge b-tag">Flink / Kafka</span>
+        <span class="badge b-tag">Sliding Windows</span>
+        <span class="badge b-tag">Deduplication</span>
+        <span class="badge b-tag">Watermarks</span>
+        <span class="badge b-tag">OLAP Query</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('pipeline',this)">🔄 Pipeline</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Clarify Scope</div><div class="sec-body">
+    <div class="info-box"><strong>Ad click aggregation is a canonical stream processing problem.</strong> The hard parts: deduplication at scale (same click sent multiple times), late-arriving events (click from a user on a slow network arrives 5 minutes after it happened), and making aggregates queryable in real time without scanning raw logs.</div><br>
+    <div class="rq-grid">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask First</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Query granularity — last 1 min, last hour, last day?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Exact counts or approximate (HyperLogLog)?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How do we define a duplicate click? Same user + ad within X seconds?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How late can events arrive and still count?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Do advertisers need real-time dashboards or batch reports?</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Query: clicks per ad per minute (1-min tumbling window). Also support last 1h, 24h roll-ups.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Exact counts for billing. Approximate OK for dashboards.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Duplicate = same (user_id, ad_id) within 1 minute.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Late events up to 5 minutes accepted. After that, discarded.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Real-time dashboards (seconds lag), batch billing reports (hourly).</div></div>
+      </div>
+    </div>
+  </div></div>
+  <div class="sec"><div class="sec-head">✅ Functional + Non-Functional</div><div class="sec-body">
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Ingest:</strong> Receive click events with ad_id, user_id, timestamp, IP</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Dedup:</strong> Deduplicate repeat clicks same user+ad within 1 min</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Aggregate:</strong> Count clicks per ad per 1-min window (tumbling)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Query:</strong> GET clicks for ad X over time range Y–Z</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Billing:</strong> Hourly exact count batch report per advertiser</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Ingest: 1M events/sec sustained, 3M peak</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Query latency: &lt;1s for aggregated results</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Aggregate freshness: &lt;10s lag from click to dashboard</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Billing accuracy: exactly-once semantics (no undercounting)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Late events: accepted up to 5 minutes after event time</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Deduplication at 1M events/sec</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · DEDUPLICATION</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A mobile app sends a click event, then retries on network failure and sends it again 30 seconds later. How do you deduplicate at 1M events/sec?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      The dedup key is <code>(user_id, ad_id, window_minute)</code> — same user clicking the same ad in the same 1-minute window counts as one click.<br><br>
+      <b>Two-tier dedup strategy:</b><br><br>
+      <b>1. Event-level dedup (click_id):</b> Each click event includes a client-generated <code>click_id</code> (UUID). This is the primary dedup key for exact duplicate events (retries, network re-sends). Kafka's idempotent producer + the consumer's <code>enable.idempotence=true</code> handles this at the message layer — same click_id sent twice = processed exactly once.<br><br>
+      <b>2. Business-level dedup (user+ad+window):</b> Even after event dedup, we may have multiple genuine clicks from the same user on the same ad within 1 minute (spam, bot, accidental double-click). For this we maintain a Redis set per window: <code>SADD dedup:{ad_id}:{window_min} {user_id}</code>. If <code>SADD</code> returns 0 (user already in set), discard this click. TTL on the set: 5 minutes (covering our late-event window).<br><br>
+      <b>Memory calculation:</b> 1M clicks/min × avg 10 bytes per user_id → 10 MB per ad per window. With 100K ads, this is 1 TB — too large for Redis sets. Solution: use HyperLogLog per ad per window for dashboard (approximate, ~12 KB per window) + exact Bloom filter for billing-critical dedup. Alternatively, partition by ad_id across a Redis cluster — each Redis node handles only ~10K ads.
+    </div></div>
+    <div class="tip-box"><strong>💡 Key insight:</strong> Separate the dedup concern from the aggregation concern. Use Bloom filters or HyperLogLog for fast approximate dedup in stream layer, then reconcile against the raw event log in batch for exact billing counts.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⏰ Phase 2 — Late Events & Watermarks</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · LATE DATA</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A user is on a plane with no wifi. They click an ad offline. 4 minutes later the plane lands and the event is sent. How does your system handle this?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      This is the late event / watermark problem. The event's <b>event time</b> (when the user clicked) is 4 minutes before the <b>processing time</b> (when we receive it).<br><br>
+      <b>Windowing with watermarks (Apache Flink approach):</b><br><br>
+      <b>Watermark:</b> A signal that says "I won't receive any more events with event_time &lt; W". Flink generates watermarks by tracking the maximum event timestamp seen, minus a configurable <b>allowed lateness</b> (our 5 min). When the watermark advances past the end of a window, the window closes and emits its result.<br><br>
+      Example: We're at processing time 12:10. Our watermark is 12:05 (5 min allowed lateness). An event arrives with event_time=12:03 → this is &lt; watermark (12:05), so it's accepted as a late event and added to the 12:03–12:04 window. But an event with event_time=11:59 is 6 minutes late → past our allowed lateness → discarded (or routed to a side-output dead-letter queue for manual review).<br><br>
+      <b>Implementation:</b> Flink's <code>TumblingEventTimeWindows</code> + <code>withAllowedLateness(Time.minutes(5))</code>. Windows emit an initial result when watermark passes, then emit updated results for each accepted late event. The billing batch job reconciles using the raw log (Kafka retained 7 days) to catch anything the stream missed.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📐 Phase 3 — Query API Design</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · QUERY LAYER</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>An advertiser queries "how many clicks did ad #12345 get in the last hour?" How does that work?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Two data stores serve different query patterns:<br><br>
+      <b>1. OLAP (ClickHouse / Apache Druid) for time-range queries:</b> Flink writes 1-minute aggregates to ClickHouse: <code>INSERT INTO ad_clicks (ad_id, window_start, click_count)</code>. Query: <code>SELECT SUM(click_count) FROM ad_clicks WHERE ad_id=12345 AND window_start BETWEEN now()-3600 AND now()</code>. ClickHouse columnar storage makes this extremely fast — 60 rows for 1 hour, sub-millisecond. Scales to billions of rows for historical analysis.<br><br>
+      <b>2. Redis for real-time "last N minutes":</b> Flink also writes to a Redis time-series key: <code>ZADD clicks:{ad_id} {timestamp} {count}</code>. Query last 5 minutes: <code>ZRANGEBYSCORE clicks:{ad_id} (now-300) now</code> → SUM the values. Ultra-fast for dashboard sparklines. TTL: 24h — after that, read from ClickHouse.<br><br>
+      <b>Why both?</b> Redis: sub-millisecond for recent real-time data. ClickHouse: seconds for historical analysis over months of data. Neither is optimal alone for both time ranges.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="pipeline" class="panel">
+  <div class="sec"><div class="sec-head">🔄 Data Pipeline — Full Flow</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:400px">
+<defs>
+<marker id="ba" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="bga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="bya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+<marker id="bra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+<!-- INGEST -->
+<text x="10" y="16" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">INGEST</text>
+<rect x="10" y="22" width="100" height="50" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="60" y="43" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">📱 Clients</text>
+<text x="60" y="57" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">click events</text>
+<text x="60" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">click_id UUID</text>
+
+<rect x="130" y="22" width="120" height="50" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="190" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">📨 Click Svc</text>
+<text x="190" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">validate + enrich</text>
+<text x="190" y="67" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">1M events/sec</text>
+
+<rect x="270" y="22" width="130" height="50" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="335" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">📨 Kafka</text>
+<text x="335" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ad_clicks topic</text>
+<text x="335" y="67" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">partitioned by ad_id</text>
+
+<!-- STREAM PROCESSING -->
+<text x="420" y="16" font-family="JetBrains Mono" font-size="9" fill="#10b981">STREAM PROCESSING</text>
+<rect x="420" y="22" width="190" height="140" rx="8" fill="rgba(16,185,129,.03)" stroke="rgba(16,185,129,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="515" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">⚡ Apache Flink</text>
+<rect x="430" y="52" width="170" height="28" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="515" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">1. Dedup (Bloom filter / Redis)</text>
+<rect x="430" y="86" width="170" height="28" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="515" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">2. Tumbling 1-min windows</text>
+<rect x="430" y="120" width="170" height="28" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="515" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">3. Watermark 5-min lateness</text>
+<rect x="430" y="154" width="170" height="28" rx="5" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="515" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">4. Emit aggregate per window</text>
+
+<!-- STORAGE -->
+<text x="632" y="16" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">STORAGE + QUERY</text>
+<rect x="632" y="22" width="140" height="60" rx="6" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="702" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">⚡ Redis TS</text>
+<text x="702" y="57" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">real-time 24h</text>
+<text x="702" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">dashboard sparklines</text>
+<rect x="632" y="96" width="140" height="70" rx="6" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="702" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🏛 ClickHouse</text>
+<text x="702" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1-min granularity</text>
+<text x="702" y="146" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">OLAP, historical</text>
+<text x="702" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">sub-second queries</text>
+
+<!-- Advertisers / API -->
+<rect x="800" y="22" width="90" height="144" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="845" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">Query API</text>
+<text x="845" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Advertisers</text>
+<text x="845" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">GET /clicks</text>
+<text x="845" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">/ad_id/range</text>
+<text x="845" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">recent: Redis</text>
+<text x="845" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">history: CH</text>
+
+<!-- BATCH PATH -->
+<text x="10" y="210" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">BATCH PATH (billing)</text>
+<rect x="270" y="220" width="130" height="50" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="335" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Kafka (raw log)</text>
+<text x="335" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">retained 7 days</text>
+<text x="335" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">ground truth</text>
+
+<rect x="420" y="220" width="190" height="50" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="515" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Spark / Batch Job</text>
+<text x="515" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">hourly exact dedup</text>
+<text x="515" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">billing-accurate counts</text>
+
+<rect x="632" y="220" width="140" height="50" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="702" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Billing DB</text>
+<text x="702" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">exact hourly counts</text>
+<text x="702" y="268" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">invoicing source of truth</text>
+
+<!-- Watermark annotation -->
+<rect x="10" y="292" width="860" height="100" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="22" y="310" font-family="JetBrains Mono" font-size="9" fill="#38bdf8" font-weight="700">WATERMARK EXAMPLE:</text>
+<text x="22" y="326" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Processing time: 12:10:00  |  Max event_time seen: 12:09:45  |  Watermark = 12:09:45 - 5min = 12:04:45</text>
+<text x="22" y="342" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Event arrives with event_time=12:03:20  → 12:03:20 &gt; 12:04:45? NO → LATE EVENT (within 5 min) → accepted, added to 12:03 window</text>
+<text x="22" y="358" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">Event arrives with event_time=11:55:00  → 11:55:00 &gt; 12:04:45? NO → TOO LATE (&gt;5min) → discarded or side-output</text>
+<text x="22" y="375" font-family="JetBrains Mono" font-size="8" fill="#10b981">12:04 window emits when watermark crosses 12:05 → final result written to Redis + ClickHouse</text>
+
+<!-- Arrows -->
+<line x1="110" y1="47" x2="128" y2="47" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ba)"/>
+<line x1="250" y1="47" x2="268" y2="47" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ba)"/>
+<line x1="400" y1="47" x2="418" y2="47" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ba)"/>
+<line x1="610" y1="60" x2="630" y2="55" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#bra)"/>
+<line x1="610" y1="130" x2="630" y2="130" stroke="#a855f7" stroke-width="1.5" marker-end="url(#ba)"/>
+<line x1="772" y1="90" x2="798" y2="90" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ba)"/>
+<line x1="400" y1="245" x2="418" y2="245" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#bya)"/>
+<line x1="610" y1="245" x2="630" y2="245" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#bya)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity Estimation</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Ingest throughput:</span>
+  <span class="label">1M clicks/sec × 200B per event                  = </span><span class="val">200 MB/sec</span>  <span class="label">Kafka write</span>
+  <span class="label">Kafka partitions: 1M/sec ÷ 100K msgs/sec/partition = </span><span class="val">10 partitions</span>  <span class="label">min (use 100 for safety)</span>
+
+<span class="label">Deduplication (Redis Bloom):</span>
+  <span class="label">1M unique (user,ad) pairs/min × 10B each         = </span><span class="val">10 MB/min</span>  <span class="label">per Bloom filter</span>
+  <span class="label">With 5-min window: 50 MB total bloom state        → </span><span class="val">fits in Redis easily</span>
+
+<span class="label">Flink aggregation state:</span>
+  <span class="label">100K active ads × 1 counter per window            = </span><span class="val">100K × 8B = 800 KB</span>  <span class="label">trivial</span>
+
+<span class="label">ClickHouse storage (1-min granularity):</span>
+  <span class="label">100K ads × 1440 min/day × 16B per row             = </span><span class="val">2.3 GB/day</span>
+  <span class="label">1 year of 1-min data:                             = </span><span class="val">~840 GB</span>  <span class="label">compressed ~200 GB</span>
+
+<span class="label">Redis time-series (24h hot data):</span>
+  <span class="label">100K ads × 1440 min × 20B                         = </span><span class="val">2.9 GB</span>  <span class="label">per Redis node</span>
+
+<span class="result">→ Kafka is the throughput bottleneck. Flink is stateless per window. ClickHouse is the query layer.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Kafka</td><td class="hi">100 partitions</td><td>100K msgs/sec/partition; 7-day retention = ~120 TB</td></tr>
+      <tr><td>Flink</td><td class="hi">20 task managers</td><td>1M/sec ÷ 50K/sec per TM; stateless per 1-min window</td></tr>
+      <tr><td>Redis (dedup)</td><td class="hi">50 MB bloom state</td><td>5-min window; per ad_id partition</td></tr>
+      <tr><td>ClickHouse</td><td class="hi">~200 GB/year</td><td>columnar, ~10× compression; sub-second 1h queries</td></tr>
+      <tr><td>Redis TS (realtime)</td><td class="hi">2.9 GB/node</td><td>24h hot window for dashboard</td></tr>
+      <tr><td>Query API</td><td class="hi">&lt;1s p99</td><td>Redis: recent; ClickHouse: historical</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="api" class="panel">
+  <div class="sec"><div class="sec-head">🔌 API Design</div><div class="sec-body">
+    <div class="api-ep">
+      <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/clicks</span><span class="api-desc">Ingest a click event</span></div>
+      <div>
+        <div class="api-sec"><div class="api-sec-title">Request Body</div>
+          <div class="frow"><span class="fn">click_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Client-generated UUID. Dedup key — retrying with same click_id is safe.</span></div>
+          <div class="frow"><span class="fn">ad_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Ad identifier. Kafka partition key.</span></div>
+          <div class="frow"><span class="fn">user_id</span><span class="ft">string</span><span class="fr">required</span><span class="fd">User performing the click. Part of business dedup key.</span></div>
+          <div class="frow"><span class="fn">event_time</span><span class="ft">long</span><span class="fr">required</span><span class="fd">Unix timestamp ms at click time (client clock). Used for event-time windowing.</span></div>
+          <div class="frow"><span class="fn">context</span><span class="ft">object</span><span class="fo">optional</span><span class="fd">IP, user-agent, geo. Used for fraud scoring.</span></div>
+        </div>
+        <div class="api-sec"><div class="api-sec-title">Response 202</div>
+          <div class="frow"><span class="fn">accepted</span><span class="ft">bool</span><span class="fo"></span><span class="fd">Always 202 Accepted for valid events — fire-and-forget. Client doesn't wait for aggregation.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="api-ep">
+      <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/clicks/{ad_id}</span><span class="api-desc">Query aggregated click counts</span></div>
+      <div>
+        <div class="api-sec"><div class="api-sec-title">Query Parameters</div>
+          <div class="frow"><span class="fn">start_time</span><span class="ft">long</span><span class="fr">required</span><span class="fd">Unix timestamp ms. Start of query window.</span></div>
+          <div class="frow"><span class="fn">end_time</span><span class="ft">long</span><span class="fr">required</span><span class="fd">Unix timestamp ms. End of query window.</span></div>
+          <div class="frow"><span class="fn">granularity</span><span class="ft">enum</span><span class="fo">optional</span><span class="fd"><code>minute</code> | <code>hour</code> | <code>day</code>. Default: <code>minute</code>.</span></div>
+        </div>
+        <div class="api-sec"><div class="api-sec-title">Response 200</div>
+          <div class="frow"><span class="fn">ad_id</span><span class="ft">string</span><span class="fo"></span><span class="fd">Requested ad ID.</span></div>
+          <div class="frow"><span class="fn">buckets</span><span class="ft">object[]</span><span class="fo"></span><span class="fd"><code>[{"window_start": 1697040000000, "click_count": 4821}]</code> — one entry per granularity bucket.</span></div>
+          <div class="frow"><span class="fn">total</span><span class="ft">long</span><span class="fo"></span><span class="fd">Sum of all click_count values in range.</span></div>
+          <div class="frow"><span class="fn">data_source</span><span class="ft">enum</span><span class="fo"></span><span class="fd"><code>realtime</code> (Redis, last 24h) | <code>historical</code> (ClickHouse). Transparency for dashboard.</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 High-Level Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+<defs>
+<marker id="ha" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="hga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="hya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+<marker id="hra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+<!-- Zones -->
+<rect x="8" y="8" width="850" height="340" rx="10" fill="rgba(0,0,0,.1)" stroke="rgba(255,255,255,.03)"/>
+
+<!-- Click Svc -->
+<rect x="18" y="40" width="120" height="80" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="78" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#bae6fd">Click Svc</text>
+<text x="78" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">validate click_id</text>
+<text x="78" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">idempotent ingest</text>
+<text x="78" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">enrich (geo, UA)</text>
+<text x="78" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">1M events/sec</text>
+
+<!-- Kafka -->
+<rect x="158" y="40" width="140" height="80" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="228" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#bae6fd">Kafka Cluster</text>
+<text x="228" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">100 partitions</text>
+<text x="228" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">keyed by ad_id</text>
+<text x="228" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">7-day retention</text>
+<text x="228" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">200 MB/sec write</text>
+
+<!-- Flink -->
+<rect x="318" y="20" width="220" height="200" rx="8" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="428" y="40" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">APACHE FLINK (stream)</text>
+<rect x="328" y="50" width="200" height="32" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="428" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">1. Dedup Stage</text>
+<text x="428" y="79" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Bloom filter per (user,ad,window)</text>
+<rect x="328" y="90" width="200" height="32" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="428" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">2. Watermark Assigner</text>
+<text x="428" y="119" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">event_time - 5min allowed lateness</text>
+<rect x="328" y="130" width="200" height="32" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="428" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">3. TumblingWindow(1 min)</text>
+<text x="428" y="159" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">COUNT per ad_id per window</text>
+<rect x="328" y="170" width="200" height="32" rx="5" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="428" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">4. Emit Aggregate</text>
+<text x="428" y="199" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">→ Redis TS + ClickHouse</text>
+
+<!-- Spark batch -->
+<rect x="318" y="232" width="220" height="70" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="428" y="252" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">Spark Batch (hourly)</text>
+<text x="428" y="266" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">reads raw Kafka log</text>
+<text x="428" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">exact dedup → billing counts</text>
+<text x="428" y="293" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">ground-truth reconciliation</text>
+
+<!-- Stores -->
+<rect x="558" y="20" width="150" height="80" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="633" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">Redis TS</text>
+<text x="633" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">last 24h, real-time</text>
+<text x="633" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ZADD/ZRANGEBYSCORE</text>
+<text x="633" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">~3 GB/node</text>
+
+<rect x="558" y="116" width="150" height="80" rx="7" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="633" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">ClickHouse</text>
+<text x="633" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1-min aggregates</text>
+<text x="633" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">columnar OLAP</text>
+<text x="633" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">200 GB/year compressed</text>
+
+<rect x="558" y="212" width="150" height="80" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="633" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">Billing DB</text>
+<text x="633" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">exact hourly counts</text>
+<text x="633" y="262" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">PostgreSQL</text>
+<text x="633" y="276" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">invoicing source</text>
+
+<!-- Query API -->
+<rect x="728" y="60" width="120" height="180" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="788" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#bae6fd">Query API</text>
+<text x="788" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">recent (&lt;24h)</text>
+<text x="788" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Redis TS</text>
+<text x="788" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#a855f7">historical</text>
+<text x="788" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ ClickHouse</text>
+<text x="788" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">billing</text>
+<text x="788" y="176" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Billing DB</text>
+<text x="788" y="196" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">Advertisers</text>
+<text x="788" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">Dashboard / API</text>
+
+<!-- Arrows -->
+<line x1="138" y1="80" x2="156" y2="80" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ha)"/>
+<line x1="298" y1="80" x2="316" y2="90" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#ha)"/>
+<line x1="298" y1="260" x2="316" y2="260" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hya)"/>
+<line x1="538" y1="90" x2="556" y2="68" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#hra)"/>
+<line x1="538" y1="150" x2="556" y2="155" stroke="#a855f7" stroke-width="1.5" marker-end="url(#ha)"/>
+<line x1="538" y1="260" x2="556" y2="255" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#hya)"/>
+<line x1="708" y1="120" x2="726" y2="150" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ha)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java (Flink)</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python (Faust)</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Ad Click Aggregation — Apache Flink (Java)
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">AdClickAggregationJob</span> {
+
+    <span class="kw">public static void</span> <span class="fn2">main</span>(<span class="cls">String</span>[] args) <span class="kw">throws</span> <span class="cls">Exception</span> {
+        <span class="cls">StreamExecutionEnvironment</span> env = <span class="cls">StreamExecutionEnvironment</span>.getExecutionEnvironment();
+
+        <span class="cm">// ── 1. Kafka Source ──────────────────────────────────</span>
+        <span class="cls">KafkaSource</span>&lt;<span class="cls">ClickEvent</span>&gt; source = <span class="cls">KafkaSource</span>.&lt;<span class="cls">ClickEvent</span>&gt;builder()
+            .setBootstrapServers(<span class="str">"kafka:9092"</span>)
+            .setTopics(<span class="str">"ad_clicks"</span>)
+            .setGroupId(<span class="str">"flink-agg-group"</span>)
+            .setValueOnlyDeserializer(<span class="kw">new</span> <span class="cls">ClickEventDeserializer</span>())
+            .build();
+
+        <span class="cls">DataStream</span>&lt;<span class="cls">ClickEvent</span>&gt; clicks = env
+            .fromSource(source, <span class="cls">WatermarkStrategy</span>
+                .&lt;<span class="cls">ClickEvent</span>&gt;forBoundedOutOfOrderness(<span class="cls">Duration</span>.ofMinutes(<span class="num">5</span>)) <span class="cm">// 5-min late allowance</span>
+                .withTimestampAssigner((e, ts) -> e.getEventTimeMs()),
+            <span class="str">"Kafka Click Source"</span>);
+
+        <span class="cm">// ── 2. Dedup Stage ───────────────────────────────────</span>
+        <span class="cls">DataStream</span>&lt;<span class="cls">ClickEvent</span>&gt; deduped = clicks
+            .keyBy(e -> e.getAdId() + <span class="str">":"</span> + e.getUserId())
+            .process(<span class="kw">new</span> <span class="cls">DeduplicationFunction</span>());
+
+        <span class="cm">// ── 3. Tumbling 1-min window ─────────────────────────</span>
+        <span class="cls">DataStream</span>&lt;<span class="cls">AdClickAggregate</span>&gt; aggregates = deduped
+            .keyBy(<span class="cls">ClickEvent</span>::getAdId)
+            .window(<span class="cls">TumblingEventTimeWindows</span>.of(<span class="cls">Time</span>.minutes(<span class="num">1</span>)))
+            .allowedLateness(<span class="cls">Time</span>.minutes(<span class="num">5</span>))  <span class="cm">// re-emit on late events</span>
+            .aggregate(<span class="kw">new</span> <span class="cls">CountAggregator</span>(), <span class="kw">new</span> <span class="cls">WindowMetadataAdder</span>());
+
+        <span class="cm">// ── 4. Dual sink: Redis TS + ClickHouse ──────────────</span>
+        aggregates.addSink(<span class="kw">new</span> <span class="cls">RedisSink</span>());
+        aggregates.addSink(<span class="kw">new</span> <span class="cls">ClickHouseSink</span>());
+
+        env.execute(<span class="str">"Ad Click Aggregation"</span>);
+    }
+}
+
+<span class="cm">// ── Deduplication: Bloom filter per (user, ad, window) ──</span>
+<span class="kw">public class</span> <span class="cls">DeduplicationFunction</span>
+    <span class="kw">extends</span> <span class="cls">KeyedProcessFunction</span>&lt;<span class="cls">String</span>, <span class="cls">ClickEvent</span>, <span class="cls">ClickEvent</span>&gt; {
+
+    <span class="kw">private</span> <span class="cls">ValueState</span>&lt;<span class="cls">Boolean</span>&gt; seenState;
+
+    <span class="ann">@Override</span>
+    <span class="kw">public void</span> <span class="fn2">open</span>(<span class="cls">Configuration</span> params) {
+        seenState = getRuntimeContext().getState(
+            <span class="kw">new</span> <span class="cls">ValueStateDescriptor</span>&lt;&gt;(<span class="str">"seen"</span>, <span class="cls">Boolean</span>.<span class="kw">class</span>));
+        <span class="cm">// TTL: auto-clear state after 65 seconds (1-min window + margin)</span>
+        seenState.enableTimeToLive(<span class="cls">StateTtlConfig</span>
+            .newBuilder(<span class="cls">Time</span>.seconds(<span class="num">65</span>)).build());
+    }
+
+    <span class="ann">@Override</span>
+    <span class="kw">public void</span> <span class="fn2">processElement</span>(<span class="cls">ClickEvent</span> event, <span class="cls">Context</span> ctx, <span class="cls">Collector</span>&lt;<span class="cls">ClickEvent</span>&gt; out) <span class="kw">throws</span> <span class="cls">Exception</span> {
+        <span class="kw">if</span> (seenState.value() == <span class="kw">null</span>) {
+            seenState.update(<span class="kw">true</span>);
+            out.collect(event); <span class="cm">// first click in this window for this key</span>
+        }
+        <span class="cm">// else: duplicate — drop silently</span>
+    }
+}
+
+<span class="cm">// ── Click Count Aggregator ───────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">CountAggregator</span>
+    <span class="kw">implements</span> <span class="cls">AggregateFunction</span>&lt;<span class="cls">ClickEvent</span>, <span class="cls">Long</span>, <span class="cls">Long</span>&gt; {
+    <span class="ann">@Override</span> <span class="kw">public</span> <span class="cls">Long</span> <span class="fn2">createAccumulator</span>() { <span class="kw">return</span> 0L; }
+    <span class="ann">@Override</span> <span class="kw">public</span> <span class="cls">Long</span> <span class="fn2">add</span>(<span class="cls">ClickEvent</span> e, <span class="cls">Long</span> acc) { <span class="kw">return</span> acc + <span class="num">1</span>; }
+    <span class="ann">@Override</span> <span class="kw">public</span> <span class="cls">Long</span> <span class="fn2">getResult</span>(<span class="cls">Long</span> acc) { <span class="kw">return</span> acc; }
+    <span class="ann">@Override</span> <span class="kw">public</span> <span class="cls">Long</span> <span class="fn2">merge</span>(<span class="cls">Long</span> a, <span class="cls">Long</span> b) { <span class="kw">return</span> a + b; }
+}
+
+<span class="cm">// ── Redis Time-Series Sink ───────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">RedisSink</span> <span class="kw">extends</span> <span class="cls">RichSinkFunction</span>&lt;<span class="cls">AdClickAggregate</span>&gt; {
+    <span class="kw">private</span> <span class="cls">JedisPool</span> pool;
+    <span class="ann">@Override</span>
+    <span class="kw">public void</span> <span class="fn2">invoke</span>(<span class="cls">AdClickAggregate</span> agg, <span class="cls">Context</span> ctx) {
+        <span class="kw">try</span> (<span class="cls">Jedis</span> j = pool.getResource()) {
+            <span class="cm">// ZADD clicks:{ad_id} {timestamp_score} {count}</span>
+            j.zadd(<span class="str">"clicks:"</span> + agg.getAdId(),
+                   agg.getWindowStart(),
+                   agg.getWindowStart() + <span class="str">":"</span> + agg.getClickCount());
+            j.expire(<span class="str">"clicks:"</span> + agg.getAdId(), <span class="num">86400</span>); <span class="cm">// 24h TTL</span>
+        }
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Ad Click Aggregation — Python (Faust stream library)
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> faust, time, redis
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime, timedelta
+
+app = faust.App(<span class="str">\'ad-click-agg\'</span>,
+    broker=<span class="str">\'kafka://localhost:9092\'</span>,
+    value_serializer=<span class="str">\'json\'</span>)
+
+
+<span class="kw">class</span> <span class="cls">ClickEvent</span>(faust.Record):
+    click_id:   str
+    ad_id:      str
+    user_id:    str
+    event_time: int  <span class="cm"># unix ms</span>
+
+
+<span class="kw">class</span> <span class="cls">AggResult</span>(faust.Record):
+    ad_id:        str
+    window_start: int
+    click_count:  int
+
+
+clicks_topic  = app.topic(<span class="str">\'ad_clicks\'</span>, value_type=<span class="cls">ClickEvent</span>)
+agg_topic     = app.topic(<span class="str">\'ad_agg\'</span>, value_type=<span class="cls">AggResult</span>)
+redis_client  = redis.Redis()
+
+<span class="cm"># State: dedup table (user+ad+window → seen bool)</span>
+seen_table = app.Table(<span class="str">\'dedup\'</span>, default=bool, help=<span class="str">\'Dedup state per user+ad+window\'</span>)
+<span class="cm"># State: counts per ad per window</span>
+count_table = app.Table(<span class="str">\'counts\'</span>, default=int, help=<span class="str">\'Click counts per ad per minute window\'</span>)
+
+
+<span class="kw">def</span> <span class="fn2">window_minute</span>(event_time_ms: int) -> int:
+    <span class="str">"""Floor event_time to minute boundary."""</span>
+    <span class="kw">return</span> (event_time_ms // <span class="num">60000</span>) * <span class="num">60000</span>
+
+<span class="kw">def</span> <span class="fn2">dedup_key</span>(event: <span class="cls">ClickEvent</span>) -> str:
+    <span class="kw">return</span> f<span class="str">"{event.user_id}:{event.ad_id}:{window_minute(event.event_time)}"</span>
+
+<span class="kw">def</span> <span class="fn2">count_key</span>(event: <span class="cls">ClickEvent</span>) -> str:
+    <span class="kw">return</span> f<span class="str">"{event.ad_id}:{window_minute(event.event_time)}"</span>
+
+
+<span class="ann">@app.agent</span>(clicks_topic)
+<span class="kw">async def</span> <span class="fn2">process_clicks</span>(stream):
+    <span class="kw">async for</span> event <span class="kw">in</span> stream:
+        <span class="cm"># 1. Dedup check</span>
+        dk = dedup_key(event)
+        <span class="kw">if</span> seen_table[dk]:
+            <span class="kw">continue</span>  <span class="cm"># duplicate — skip</span>
+        seen_table[dk] = True
+
+        <span class="cm"># 2. Late event check (5-min allowed lateness)</span>
+        now_ms   = int(time.time() * <span class="num">1000</span>)
+        lateness = now_ms - event.event_time
+        <span class="kw">if</span> lateness > <span class="num">300_000</span>:  <span class="cm"># 5 minutes in ms</span>
+            <span class="kw">continue</span>  <span class="cm"># too late — discard</span>
+
+        <span class="cm"># 3. Increment window counter</span>
+        ck = count_key(event)
+        count_table[ck] += <span class="num">1</span>
+
+        <span class="cm"># 4. Every minute: emit aggregate to Redis + ClickHouse</span>
+        <span class="kw">await</span> <span class="fn2">emit_aggregate</span>(event.ad_id, window_minute(event.event_time), count_table[ck])
+
+
+<span class="kw">async def</span> <span class="fn2">emit_aggregate</span>(ad_id: str, window_start: int, count: int):
+    <span class="str">"""Write aggregate to Redis TS and downstream (ClickHouse in production)."""</span>
+    redis_key = f<span class="str">\'clicks:{ad_id}\'</span>
+
+    <span class="cm"># ZADD with score=timestamp for time-range queries</span>
+    redis_client.zadd(redis_key, {f<span class="str">\'{window_start}:{count}\'</span>: window_start})
+    redis_client.expire(redis_key, <span class="num">86400</span>)  <span class="cm"># 24h TTL</span>
+
+    <span class="cm"># In production: also INSERT INTO clickhouse.ad_clicks ...</span>
+    print(f<span class="str">\'[AGG] ad={ad_id} window={window_start} count={count}\'</span>)
+
+
+<span class="cm"># ── Query API (separate FastAPI service) ────────────</span>
+<span class="kw">def</span> <span class="fn2">query_clicks</span>(ad_id: str, start_ms: int, end_ms: int) -> dict:
+    <span class="str">"""
+    Route query to Redis (recent) or ClickHouse (historical).
+    """</span>
+    cutoff_ms = int(time.time() * <span class="num">1000</span>) - <span class="num">86_400_000</span>  <span class="cm"># 24h ago</span>
+
+    <span class="kw">if</span> start_ms >= cutoff_ms:
+        <span class="cm"># Recent: serve from Redis TS</span>
+        entries = redis_client.zrangebyscore(
+            f<span class="str">\'clicks:{ad_id}\'</span>, start_ms, end_ms, withscores=False)
+        buckets = []
+        <span class="kw">for</span> entry <span class="kw">in</span> entries:
+            window_start, count = entry.decode().split(<span class="str">\':\'</span>)
+            buckets.append({<span class="str">\'window_start\'</span>: int(window_start), <span class="str">\'click_count\'</span>: int(count)})
+        <span class="kw">return</span> {<span class="str">\'ad_id\'</span>: ad_id, <span class="str">\'buckets\'</span>: buckets,
+                <span class="str">\'total\'</span>: sum(b[<span class="str">\'click_count\'</span>] <span class="kw">for</span> b <span class="kw">in</span> buckets),
+                <span class="str">\'data_source\'</span>: <span class="str">\'realtime\'</span>}
+    <span class="kw">else</span>:
+        <span class="cm"># Historical: query ClickHouse</span>
+        <span class="cm"># SELECT window_start, click_count FROM ad_clicks WHERE ad_id=? AND ...</span>
+        <span class="kw">return</span> {<span class="str">\'ad_id\'</span>: ad_id, <span class="str">\'data_source\'</span>: <span class="str">\'historical\'</span>}
+
+
+<span class="kw">if</span> __name__ == <span class="str">\'__main__\'</span>:
+    app.main()
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">⚡ Exactly-Once vs At-Least-Once vs At-Most-Once</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">At-Most-Once</div><p>Drop events on failure. Never double-count. Undercounts on crashes. Unacceptable for billing — advertisers would be undercharged but the gap is invisible. Only OK for non-critical metrics where under-reporting is preferred to over-reporting.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">⚠️ At-Least-Once (stream layer)</div><p>Retry on failure — no events lost. May double-count on retry. Mitigated by application-level dedup (click_id + bloom filter). Acceptable for dashboards. Not sufficient alone for billing (need batch reconciliation).</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Exactly-Once (billing via batch)</div><p>Stream gives at-least-once (fast, low latency). Batch Spark job reads from Kafka raw log (7-day retention) with exact dedup — produces billing-accurate hourly counts. Two-layer approach: stream for realtime visibility, batch for financial accuracy. Best of both.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">📊 Aggregation: Stream-only vs Lambda vs Kappa</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Stream-only</div><p>Only Flink, no batch. Simple architecture. But: stream state is lossy on failure (if Kafka retention expires, late events are lost permanently). Complex exactly-once handling. Acceptable if Kafka retention covers your reprocessing window.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Lambda (stream + batch)</div><p>Stream for real-time (seconds lag). Batch for accuracy (minutes lag). Two separate pipelines. More complex to maintain. But: batch always wins on correctness — can reprocess any time window from the Kafka log. This is the industry standard for billing systems at Google/Meta/Twitter scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Kappa (one stream for both)</div><p>Single Flink job, re-processes history by rewinding Kafka offsets. Simpler to maintain. Works well when stream processing is idempotent. Risk: slow historical reprocessing blocks real-time if they share resources. Emerging pattern but less battle-tested for billing accuracy.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🗃 Storage: ClickHouse vs TimescaleDB vs Druid</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ ClickHouse (chosen)</div><p>Columnar OLAP. Sub-second queries on billions of rows. Excellent compression (10×). INSERT throughput: 500K rows/sec. Perfect for pre-aggregated 1-minute data. Used by Cloudflare, Uber, eBay for analytics at this scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Apache Druid</div><p>Real-time OLAP with native stream ingest. More complex to operate than ClickHouse. Better for sub-second ingestion and query. Higher operational cost. Best when you need &lt;1s query on raw (non-pre-aggregated) data.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">TimescaleDB</div><p>PostgreSQL extension for time-series. Familiar SQL. Great for &lt;100M rows/day. At 1M events/sec → 86B rows/day — even aggregated, TimescaleDB struggles at this scale. Fine for small-scale analytics, not for this problem.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

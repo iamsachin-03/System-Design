@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #31 — Collaborative Document Editing</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#34d399;--a2:#059669;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#a7f3d0;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#071209 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(52,211,153,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#d1fae5 0%,#34d399 50%,#065f46 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(52,211,153,.07);color:#a7f3d0;border:1px solid rgba(52,211,153,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(52,211,153,.1);color:var(--ecolor);border:1.5px solid rgba(52,211,153,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(52,211,153,.08);color:var(--accent);border:1px solid rgba(52,211,153,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(52,211,153,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin}
+.cblock.active{display:block}
+pre{margin:0}code.bl{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(52,211,153,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#34d399;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Collaboration › <span>31 / Collaborative Editing</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">📝</div>
+    <div>
+      <div class="h-title">Collaborative Document Editing (Google Docs)</div>
+      <div class="h-desc">Design a system where multiple users can simultaneously edit the same document and see each other's changes in real time — covering Operational Transformation vs CRDTs for conflict resolution, cursor synchronisation, presence awareness, offline editing with eventual consistency, and how Google Docs actually works under the hood.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">OT</span>
+        <span class="badge b-tag">CRDT</span>
+        <span class="badge b-tag">Conflict Resolution</span>
+        <span class="badge b-tag">WebSocket</span>
+        <span class="badge b-tag">Presence</span>
+        <span class="badge b-tag">Offline</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('ot',this)">🔀 OT vs CRDT</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>The core challenge: two users type simultaneously.</strong> User A inserts "Hello" at position 5. User B deletes character at position 3. Both operations are generated concurrently — each based on the same document state. If applied naively in any order, the result will be wrong for one user. This is the conflict resolution problem.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Real-time collaborative text editing (multiple users, same doc)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Conflict-free merge of concurrent edits</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Cursor & selection presence (see where others are typing)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Offline editing — reconnect and sync without data loss</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Undo/redo per user (doesn't undo other users' changes)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Persistent document storage with version history</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>50 concurrent users per document max</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Operation propagation: &lt;200ms to all collaborators</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Strong eventual consistency — all users converge to same state</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>100M documents in the system</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Document history: retain last 30 days of versions</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — The Conflict Problem</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · CONFLICT RESOLUTION</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Document: "Hello". User A inserts "!" at position 5 → "Hello!". User B simultaneously inserts " World" at position 5 → "Hello World". Server receives A's op first, then B's. What happens?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Without conflict resolution: apply A's insert(pos=5, "!") → "Hello!". Then apply B's insert(pos=5, " World") → "Hello World!" (B's op inserts at 5, pushing ! to end). But on B's machine: B applied their op first → "Hello World", then receives A's insert(pos=5, "!") → "Hello!World". The two clients now have different documents. <b>Diverged state.</b><br><br>
+      <b>Operational Transformation (OT) fixes this:</b> When the server receives B's op (insert at pos=5), it knows A's op (also insert at pos=5) was applied first. OT transforms B's op against A's: since A inserted 1 character before position 5, B's position must shift by +1 → transformed to insert at pos=6. Result: "Hello! World". Both users converge to "Hello! World".<br><br>
+      <b>The transform function:</b><br>
+      <code>transform(insert(pos, text), insert(pos2, text2))</code><br>
+      If pos2 &lt;= pos: pos += len(text2) // shift right<br>
+      else: pos unchanged<br><br>
+      Every pair of operation types (insert/insert, insert/delete, delete/delete) needs a transform function. This is manageable for text, but complex for rich documents (tables, images, formulas).
+    </div></div>
+    <div class="tip-box"><strong>💡 Google Docs uses OT</strong> — specifically the Jupiter/Wave algorithm. Figma uses CRDTs. Both achieve strong eventual consistency but with different tradeoffs.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔗 Phase 2 — CRDT Alternative</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · CRDT</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What's the alternative to OT, and when would you pick it?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>CRDT (Conflict-free Replicated Data Type)</b> — instead of transforming operations, design the data structure itself to be inherently conflict-free.<br><br>
+      <b>For text: LSEQ or RGA (Replicated Growable Array).</b> Instead of positions (which shift when others insert), each character gets a globally unique, stable identifier — typically a fractional position between its left and right neighbours. Character "H" gets ID 0.1, "e" gets 0.2, etc. When A inserts "!" between "o" (ID 0.5) and end (ID 1.0), it gets ID 0.75. When B inserts " " at the same spot, it gets ID 0.62. The document is just the characters sorted by ID — no transformation needed. A's "!" at 0.75 and B's " " at 0.62 can be merged by any node independently: sorted order gives " !" or "! " depending on ID comparison. Both users see the same result — convergence without coordination.<br><br>
+      <b>Why OT might still be chosen:</b> OT is more mature, better studied for rich text. CRDTs have tombstone problem (deleted characters leave ghost IDs, document state grows forever). OT requires a central server to order operations; CRDTs can work fully peer-to-peer. CRDTs are better for offline-first/P2P (Notion, Linear, Figma). OT is better when you have a central server and want simpler client code.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🌐 Phase 3 — Offline Sync</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · OFFLINE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>User edits a document offline for 30 minutes. They reconnect. How do you merge their changes without losing anything?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      The client stores a local operation log with a <b>vector clock</b> (or simply the server's last acknowledged revision number). While offline, the client applies operations locally and queues them with a monotonically increasing local sequence number.<br><br>
+      On reconnect: client sends all queued operations to the server, tagged with the revision it was based on: <code>[{op: insert(5,"x"), based_on_rev: 142}, ...]</code>. The server knows the current document is at rev 160. It replays all ops from rev 143-160 through the transform function against each of the client's ops, producing transformed ops that apply cleanly on top of rev 160. Client receives the server's ops (rev 143-160) and applies them, resulting in an identical document state on both sides.<br><br>
+      <b>Key design choice:</b> Server persists the full operation log, not just snapshots. This enables replay-based merge. Snapshots are taken periodically (every N ops) for efficiency — merge replays from the nearest snapshot, not from document creation.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="ot" class="panel">
+  <div class="sec"><div class="sec-head">🔀 OT Transform Functions — Worked Example</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+<defs>
+<marker id="ga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#34d399"/></marker>
+<marker id="ra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="ya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#34d399" font-weight="700">OPERATIONAL TRANSFORMATION — DIAMOND PROPERTY</text>
+
+<!-- Initial state -->
+<rect x="320" y="28" width="200" height="40" rx="6" fill="#131c2e" stroke="#34d399" stroke-width="2"/>
+<text x="420" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a7f3d0">Document: "Hello World"</text>
+<text x="420" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">rev 5 (shared base)</text>
+
+<!-- User A op -->
+<rect x="80" y="110" width="200" height="50" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="2"/>
+<text x="180" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">User A: delete(6, 5)</text>
+<text x="180" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">"Hello World" → "Hello"</text>
+
+<!-- User B op -->
+<rect x="560" y="110" width="200" height="50" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="660" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">User B: insert(5, "!")</text>
+<text x="660" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">"Hello World" → "Hello! World"</text>
+
+<!-- Server applies A first -->
+<rect x="80" y="210" width="200" height="40" rx="6" fill="#131c2e" stroke="#34d399" stroke-width="1.5"/>
+<text x="180" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a7f3d0">Server applies A → "Hello"</text>
+<text x="180" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">rev 6</text>
+
+<!-- Transform B against A -->
+<rect x="320" y="210" width="200" height="50" rx="6" fill="rgba(245,158,11,.08)" stroke="#f59e0b" stroke-width="2"/>
+<text x="420" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">transform(B, A):</text>
+<text x="420" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">B=insert(5,"!"), A=delete(6,5)</text>
+<text x="420" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">pos 5 &lt; del_start 6 → unchanged</text>
+
+<!-- Transformed B' -->
+<rect x="560" y="210" width="200" height="40" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="660" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">B' = insert(5, "!")</text>
+<text x="660" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(position unchanged here)</text>
+
+<!-- Converged state -->
+<rect x="280" y="300" width="280" height="50" rx="6" fill="rgba(52,211,153,.08)" stroke="#34d399" stroke-width="2"/>
+<text x="420" y="320" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#34d399">✅ "Hello!"</text>
+<text x="420" y="336" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#a7f3d0">Both users converge to same state — rev 7</text>
+<text x="420" y="348" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Strong Eventual Consistency</text>
+
+<!-- Transform table -->
+<rect x="10" y="360" width="820" height="18" rx="4" fill="rgba(0,0,0,.15)"/>
+<text x="20" y="372" font-family="JetBrains Mono" font-size="7" fill="#34d399">TRANSFORM RULES: ins/ins (same pos) → break tie by user ID. ins/del → shift position if del before ins. del/del (overlap) → clamp range.</text>
+
+<!-- Arrows -->
+<line x1="420" y1="68" x2="220" y2="108" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#ga)"/>
+<line x1="420" y1="68" x2="620" y2="108" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ya)"/>
+<line x1="180" y1="160" x2="180" y2="208" stroke="#34d399" stroke-width="1.5" marker-end="url(#ga)"/>
+<line x1="660" y1="160" x2="420" y2="208" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#ya)"/>
+<line x1="520" y1="230" x2="560" y2="230" stroke="#10b981" stroke-width="1.5" marker-end="url(#ga)"/>
+<line x1="180" y1="250" x2="310" y2="300" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ga)"/>
+<line x1="660" y1="250" x2="530" y2="300" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ga)"/>
+</svg>
+    </div>
+  </div></div>
+  <div class="sec"><div class="sec-head">🧩 CRDT Character IDs — Worked Example</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:220px">
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#34d399" font-weight="700">CRDT (RGA / LSEQ) — Stable character IDs, no transformation needed</text>
+<rect x="10" y="28" width="820" height="180" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="22" y="48" font-family="JetBrains Mono" font-size="8" fill="#34d399">Initial: "Hello" with stable IDs</text>
+<text x="22" y="64" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  H(0.1)  e(0.2)  l(0.3)  l(0.4)  o(0.5)</text>
+
+<text x="22" y="90" font-family="JetBrains Mono" font-size="8" fill="#a78bfa">User A inserts "!" after o(0.5): → !(0.75) [between 0.5 and 1.0]</text>
+<text x="22" y="106" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">User B inserts " " after o(0.5) simultaneously: → (space)(0.62) [between 0.5 and 0.75 — B picked smaller fraction]</text>
+
+<text x="22" y="130" font-family="JetBrains Mono" font-size="8" fill="#34d399">Merge (sort by ID): H(0.1) e(0.2) l(0.3) l(0.4) o(0.5) (space)(0.62) !(0.75)</text>
+<text x="22" y="146" font-family="JetBrains Mono" font-size="8" fill="#34d399">Result: "Hello !" — SAME on all nodes, no server coordination needed</text>
+
+<text x="22" y="170" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">Tombstone problem: delete(l at 0.3) leaves ghost: l(0.3, DELETED). State grows forever as chars accumulate tombstones.</text>
+<text x="22" y="186" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Compaction: periodically GC tombstones where all peers have acknowledged deletion (requires distributed GC coordination).</text>
+<text x="22" y="198" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Used by: Automerge (Ink &amp; Switch), Yjs (Notion, Linear, Loom), Loro, Diamond Types.</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Active sessions:</span>
+  <span class="label">100M docs × 1% active at peak                    = </span><span class="val">1M active docs</span>
+  <span class="label">avg 5 users per doc                               = </span><span class="val">5M WebSocket connections</span>
+  <span class="label">50K connections/server → </span><span class="val">100 WebSocket servers</span>
+
+<span class="label">Operation throughput:</span>
+  <span class="label">5M users × 2 ops/sec average (typing)             = </span><span class="val">10M ops/sec</span>
+  <span class="label">Each op: ~100B → 10M × 100B                       = </span><span class="val">1 GB/sec</span>  <span class="label">fanout to collaborators</span>
+  <span class="label">Per doc: 50 users × 2 ops/sec fanout = 100 ops/sec → trivial per session server</span>
+
+<span class="label">Storage:</span>
+  <span class="label">Op log: avg 10K ops/doc/day × 100B × 100M docs    = </span><span class="val">100 TB/day</span>  <span class="label">(only active docs)</span>
+  <span class="label">Snapshot every 1000 ops: 100K × avg 50KB          = </span><span class="val">5 GB/M docs</span>
+  <span class="label">30-day history: compact old ops to snapshots</span>
+
+<span class="result">→ Session servers (WebSocket) are the bottleneck. Op log storage is the cost driver.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>WebSocket servers</td><td class="hi">100 servers</td><td>50K connections each; sticky routing by doc_id</td></tr>
+      <tr><td>Op log (Kafka)</td><td class="hi">10M ops/sec</td><td>Partitioned by doc_id; 7-day retention</td></tr>
+      <tr><td>Document store</td><td class="hi">100M docs</td><td>MongoDB / DynamoDB; snapshots + op log</td></tr>
+      <tr><td>Presence (Redis)</td><td class="hi">5M cursors</td><td>TTL 30s; pub/sub per doc_id channel</td></tr>
+      <tr><td>OT server</td><td class="hi">1 per doc shard</td><td>Serialises ops for a doc; single-threaded per doc</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:320px">
+<defs>
+<marker id="hga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#34d399"/></marker>
+<marker id="hba" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="hya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+<!-- Clients -->
+<rect x="10" y="50" width="80" height="45" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="71" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">👤 User A</text>
+<text x="50" y="85" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">local OT client</text>
+<rect x="10" y="115" width="80" height="45" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="50" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">👤 User B</text>
+<text x="50" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">local OT client</text>
+
+<!-- WebSocket gateway -->
+<rect x="110" y="60" width="130" height="90" rx="7" fill="#131c2e" stroke="#34d399" stroke-width="2"/>
+<text x="175" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a7f3d0">WebSocket</text>
+<text x="175" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a7f3d0">Session Server</text>
+<text x="175" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">sticky by doc_id</text>
+<text x="175" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">50K connections</text>
+<text x="175" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#34d399">fan-out ops to peers</text>
+
+<!-- OT Engine -->
+<rect x="260" y="60" width="150" height="90" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="335" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">OT Engine</text>
+<text x="335" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1 per active doc</text>
+<text x="335" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">serialises ops</text>
+<text x="335" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">transforms + acks</text>
+<text x="335" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">assigns global revision</text>
+
+<!-- Kafka -->
+<rect x="430" y="60" width="120" height="90" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="490" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">Kafka</text>
+<text x="490" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">op-log topic</text>
+<text x="490" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">partitioned by doc_id</text>
+<text x="490" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">7d retention</text>
+<text x="490" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">durable op journal</text>
+
+<!-- Doc store -->
+<rect x="570" y="50" width="140" height="50" rx="6" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="640" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">MongoDB / DynamoDB</text>
+<text x="640" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">snapshots + latest state</text>
+<text x="640" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">every 1000 ops</text>
+
+<!-- Presence Redis -->
+<rect x="570" y="120" width="140" height="50" rx="6" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="640" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">Redis Pub/Sub</text>
+<text x="640" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">cursor positions, presence</text>
+<text x="640" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">TTL 30s, doc_id channel</text>
+
+<!-- Snapshot service -->
+<rect x="730" y="80" width="120" height="70" rx="6" fill="#131c2e" stroke="#34d399" stroke-width="1.5"/>
+<text x="790" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a7f3d0">Snapshot Svc</text>
+<text x="790" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">compacts op log</text>
+<text x="790" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">every 1000 ops</text>
+<text x="790" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#34d399">enables fast reconnect</text>
+
+<!-- Message flow -->
+<rect x="10" y="200" width="840" height="110" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="22" y="218" font-family="JetBrains Mono" font-size="8" fill="#34d399" font-weight="700">OPERATION FLOW:</text>
+<text x="22" y="234" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">1. Client sends: {type:'insert', pos:5, text:'!', client_rev:42, client_id:'user_a'} via WebSocket</text>
+<text x="22" y="250" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2. Session server forwards to OT Engine for this doc</text>
+<text x="22" y="266" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">3. OT Engine: transform against all ops since client_rev=42, assign server_rev=61, persist to Kafka + Mongo</text>
+<text x="22" y="282" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">4. Broadcast transformed op + server_rev to ALL users in this doc's WebSocket session</text>
+<text x="22" y="298" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">5. Each client applies op, updates their known server_rev to 61</text>
+<text x="22" y="314" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Presence: cursor moves sent every 50ms → Redis PUBLISH doc:{id}:cursors → broadcast via WebSocket</text>
+
+<!-- Arrows -->
+<line x1="90" y1="72" x2="108" y2="100" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#hga)"/>
+<line x1="90" y1="137" x2="108" y2="110" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#hga)"/>
+<line x1="240" y1="105" x2="258" y2="105" stroke="#34d399" stroke-width="1.5" marker-end="url(#hga)"/>
+<line x1="410" y1="105" x2="428" y2="105" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#hya)"/>
+<line x1="550" y1="80" x2="568" y2="75" stroke="#a855f7" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hga)"/>
+<line x1="550" y1="120" x2="568" y2="140" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hga)"/>
+<line x1="690" y1="110" x2="728" y2="115" stroke="#34d399" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hga)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java (OT Engine)</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python (OT Transform)</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code class="bl"><span class="cm">// ══════════════════════════════════════════════════════
+// Collaborative Editing — Java: OT Engine (server-side)
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">OTEngine</span> {
+
+    <span class="kw">private final</span> <span class="cls">List</span>&lt;<span class="cls">Operation</span>&gt; history = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+    <span class="kw">private</span> <span class="cls">StringBuilder</span> document = <span class="kw">new</span> <span class="cls">StringBuilder</span>();
+    <span class="kw">private int</span> serverRevision = <span class="num">0</span>;
+
+    <span class="cm">/**
+     * Apply an op from a client. The client may be based on an older revision.
+     * Transform the op against all ops since client's revision, then apply.
+     */</span>
+    <span class="kw">public synchronized</span> <span class="cls">OperationAck</span> <span class="fn2">applyClientOp</span>(<span class="cls">Operation</span> clientOp, <span class="kw">int</span> clientRevision) {
+        <span class="cm">// Transform against all ops that happened after client's known revision</span>
+        <span class="cls">Operation</span> transformed = clientOp;
+        <span class="kw">for</span> (<span class="kw">int</span> i = clientRevision; i < history.size(); i++) {
+            transformed = <span class="fn2">transform</span>(transformed, history.get(i));
+        }
+        <span class="cm">// Apply transformed op to document</span>
+        <span class="fn2">applyToDocument</span>(transformed);
+        history.add(transformed);
+        serverRevision++;
+        <span class="kw">return new</span> <span class="cls">OperationAck</span>(transformed, serverRevision);
+    }
+
+    <span class="cm">/**
+     * OT Transform: adjust opA as if opB was already applied.
+     * Both ops start from the same base state.
+     */</span>
+    <span class="kw">private</span> <span class="cls">Operation</span> <span class="fn2">transform</span>(<span class="cls">Operation</span> opA, <span class="cls">Operation</span> opB) {
+        <span class="kw">if</span> (opA <span class="kw">instanceof</span> <span class="cls">Insert</span> insA && opB <span class="kw">instanceof</span> <span class="cls">Insert</span> insB) {
+            <span class="kw">return</span> <span class="fn2">transformInsertInsert</span>(insA, insB);
+        } <span class="kw">else if</span> (opA <span class="kw">instanceof</span> <span class="cls">Insert</span> insA && opB <span class="kw">instanceof</span> <span class="cls">Delete</span> delB) {
+            <span class="kw">return</span> <span class="fn2">transformInsertDelete</span>(insA, delB);
+        } <span class="kw">else if</span> (opA <span class="kw">instanceof</span> <span class="cls">Delete</span> delA && opB <span class="kw">instanceof</span> <span class="cls">Insert</span> insB) {
+            <span class="kw">return</span> <span class="fn2">transformDeleteInsert</span>(delA, insB);
+        } <span class="kw">else</span> {
+            <span class="kw">return</span> <span class="fn2">transformDeleteDelete</span>((<span class="cls">Delete</span>) opA, (<span class="cls">Delete</span>) opB);
+        }
+    }
+
+    <span class="cm">/** Insert vs Insert: if opB inserted before opA, shift opA right */</span>
+    <span class="kw">private</span> <span class="cls">Insert</span> <span class="fn2">transformInsertInsert</span>(<span class="cls">Insert</span> a, <span class="cls">Insert</span> b) {
+        <span class="kw">if</span> (b.pos < a.pos || (b.pos == a.pos && b.userId.compareTo(a.userId) < <span class="num">0</span>)) {
+            <span class="kw">return new</span> <span class="cls">Insert</span>(a.pos + b.text.length(), a.text, a.userId);
+        }
+        <span class="kw">return</span> a; <span class="cm">// no shift needed</span>
+    }
+
+    <span class="cm">/** Insert vs Delete: if delete removed chars before insert position, shift left */</span>
+    <span class="kw">private</span> <span class="cls">Insert</span> <span class="fn2">transformInsertDelete</span>(<span class="cls">Insert</span> a, <span class="cls">Delete</span> b) {
+        <span class="kw">if</span> (b.pos + b.length <= a.pos) {
+            <span class="kw">return new</span> <span class="cls">Insert</span>(a.pos - b.length, a.text, a.userId);
+        } <span class="kw">else if</span> (b.pos >= a.pos) {
+            <span class="kw">return</span> a; <span class="cm">// delete after insert, no shift</span>
+        } <span class="kw">else</span> {
+            <span class="kw">return new</span> <span class="cls">Insert</span>(b.pos, a.text, a.userId); <span class="cm">// delete overlaps, clamp</span>
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">applyToDocument</span>(<span class="cls">Operation</span> op) {
+        <span class="kw">if</span> (op <span class="kw">instanceof</span> <span class="cls">Insert</span> ins) {
+            document.insert(ins.pos, ins.text);
+        } <span class="kw">else if</span> (op <span class="kw">instanceof</span> <span class="cls">Delete</span> del) {
+            document.delete(del.pos, del.pos + del.length);
+        }
+    }
+}
+
+<span class="cm">// ── WebSocket session handler ─────────────────────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">DocumentSessionHandler</span> <span class="kw">extends</span> <span class="cls">TextWebSocketHandler</span> {
+    <span class="cm">// One OTEngine per active document (held in memory, persisted async)</span>
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">OTEngine</span>&gt; engines = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">Set</span>&lt;<span class="cls">WebSocketSession</span>&gt;&gt; docSessions = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+
+    <span class="ann">@Override</span>
+    <span class="kw">public void</span> <span class="fn2">handleTextMessage</span>(<span class="cls">WebSocketSession</span> session, <span class="cls">TextMessage</span> msg) {
+        <span class="cls">ClientMessage</span> cm = <span class="fn2">parse</span>(msg.getPayload());
+        <span class="cls">OTEngine</span> engine = engines.get(cm.docId());
+        <span class="cls">OperationAck</span> ack = engine.applyClientOp(cm.op(), cm.clientRevision());
+
+        <span class="cm">// Broadcast to all sessions on this doc</span>
+        <span class="cls">String</span> broadcast = <span class="fn2">toJson</span>(ack);
+        docSessions.get(cm.docId()).forEach(s -> {
+            <span class="kw">try</span> { s.sendMessage(<span class="kw">new</span> <span class="cls">TextMessage</span>(broadcast)); }
+            <span class="kw">catch</span> (<span class="cls">Exception</span> e) { <span class="cm">/* handle disconnect */</span> }
+        });
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code class="bl"><span class="cm"># ══════════════════════════════════════════════════════
+# Collaborative Editing — Python: OT Transform functions
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Union, List
+<span class="kw">import</span> threading
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Insert</span>:
+    pos:     int
+    text:    str
+    user_id: str
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Delete</span>:
+    pos:    int
+    length: int
+
+<span class="cls">Op</span> = Union[<span class="cls">Insert</span>, <span class="cls">Delete</span>]
+
+
+<span class="kw">def</span> <span class="fn2">transform</span>(a: <span class="cls">Op</span>, b: <span class="cls">Op</span>) -> <span class="cls">Op</span>:
+    <span class="str">"""Transform op a assuming op b has already been applied."""</span>
+    <span class="kw">if</span> isinstance(a, <span class="cls">Insert</span>) <span class="kw">and</span> isinstance(b, <span class="cls">Insert</span>):
+        <span class="kw">return</span> _ti_ti(a, b)
+    <span class="kw">elif</span> isinstance(a, <span class="cls">Insert</span>) <span class="kw">and</span> isinstance(b, <span class="cls">Delete</span>):
+        <span class="kw">return</span> _ti_td(a, b)
+    <span class="kw">elif</span> isinstance(a, <span class="cls">Delete</span>) <span class="kw">and</span> isinstance(b, <span class="cls">Insert</span>):
+        <span class="kw">return</span> _td_ti(a, b)
+    <span class="kw">else</span>:
+        <span class="kw">return</span> _td_td(a, b)
+
+
+<span class="kw">def</span> <span class="fn2">_ti_ti</span>(a: <span class="cls">Insert</span>, b: <span class="cls">Insert</span>) -> <span class="cls">Insert</span>:
+    <span class="str">"""Insert vs Insert. Tiebreak by user_id for determinism."""</span>
+    <span class="kw">if</span> b.pos < a.pos <span class="kw">or</span> (b.pos == a.pos <span class="kw">and</span> b.user_id < a.user_id):
+        <span class="kw">return</span> <span class="cls">Insert</span>(a.pos + len(b.text), a.text, a.user_id)
+    <span class="kw">return</span> a
+
+
+<span class="kw">def</span> <span class="fn2">_ti_td</span>(a: <span class="cls">Insert</span>, b: <span class="cls">Delete</span>) -> <span class="cls">Insert</span>:
+    <span class="str">"""Insert vs Delete."""</span>
+    <span class="kw">if</span> b.pos + b.length <= a.pos:
+        <span class="kw">return</span> <span class="cls">Insert</span>(a.pos - b.length, a.text, a.user_id)
+    <span class="kw">elif</span> b.pos >= a.pos:
+        <span class="kw">return</span> a
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="cls">Insert</span>(b.pos, a.text, a.user_id)  <span class="cm"># clamp to delete start</span>
+
+
+<span class="kw">def</span> <span class="fn2">_td_ti</span>(a: <span class="cls">Delete</span>, b: <span class="cls">Insert</span>) -> <span class="cls">Delete</span>:
+    <span class="str">"""Delete vs Insert."""</span>
+    <span class="kw">if</span> b.pos <= a.pos:
+        <span class="kw">return</span> <span class="cls">Delete</span>(a.pos + len(b.text), a.length)
+    <span class="kw">elif</span> b.pos >= a.pos + a.length:
+        <span class="kw">return</span> a
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="cls">Delete</span>(a.pos, a.length + len(b.text))  <span class="cm"># insert inside delete range</span>
+
+
+<span class="kw">def</span> <span class="fn2">_td_td</span>(a: <span class="cls">Delete</span>, b: <span class="cls">Delete</span>) -> <span class="cls">Delete</span>:
+    <span class="str">"""Delete vs Delete — overlap handling."""</span>
+    a_end = a.pos + a.length
+    b_end = b.pos + b.length
+    <span class="kw">if</span> b_end <= a.pos:
+        <span class="kw">return</span> <span class="cls">Delete</span>(a.pos - b.length, a.length)
+    <span class="kw">elif</span> b.pos >= a_end:
+        <span class="kw">return</span> a
+    <span class="kw">else</span>:  <span class="cm"># overlapping deletes — shrink a's range</span>
+        new_pos    = min(a.pos, b.pos)
+        new_length = max(<span class="num">0</span>, a.length - (min(a_end, b_end) - max(a.pos, b.pos)))
+        <span class="kw">return</span> <span class="cls">Delete</span>(new_pos, new_length)
+
+
+<span class="kw">class</span> <span class="cls">OTServer</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, initial_doc: str = <span class="str">""</span>):
+        self.doc      = list(initial_doc)
+        self.history: List[<span class="cls">Op</span>] = []
+        self.rev      = <span class="num">0</span>
+        self._lock    = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">apply</span>(self, op: <span class="cls">Op</span>, client_rev: int) -> tuple[<span class="cls">Op</span>, int]:
+        <span class="str">"""Transform op and apply. Returns (transformed_op, server_rev)."""</span>
+        <span class="kw">with</span> self._lock:
+            transformed = op
+            <span class="kw">for</span> historical_op <span class="kw">in</span> self.history[client_rev:]:
+                transformed = transform(transformed, historical_op)
+            self._apply_to_doc(transformed)
+            self.history.append(transformed)
+            self.rev += <span class="num">1</span>
+            <span class="kw">return</span> transformed, self.rev
+
+    <span class="kw">def</span> <span class="fn2">_apply_to_doc</span>(self, op: <span class="cls">Op</span>):
+        <span class="kw">if</span> isinstance(op, <span class="cls">Insert</span>):
+            self.doc[op.pos:op.pos] = list(op.text)
+        <span class="kw">elif</span> isinstance(op, <span class="cls">Delete</span>):
+            <span class="kw">del</span> self.doc[op.pos:op.pos + op.length]
+
+    <span class="kw">def</span> <span class="fn2">text</span>(self) -> str:
+        <span class="kw">return</span> <span class="str">""</span>.join(self.doc)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🔀 OT vs CRDT vs Last-Write-Wins</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ OT (Operational Transform)</div><p>Mature, battle-tested (Google Docs, Etherpad). Correct for text. Requires central server to order operations — no true P2P. Transform functions are complex to implement correctly for rich content. Used where a central server is acceptable.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ CRDT (Yjs, Automerge)</div><p>Peer-to-peer capable — no central server needed. Offline-first. Correct by construction. Tombstone memory overhead for deleted chars. Harder to implement undo/redo. Used by Notion, Linear, Figma, Loom. Growing adoption.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Last-Write-Wins</div><p>Lock the document: one user edits at a time (Google Sheets cell locking). Simple but destroys collaboration experience. Or: just overwrite on conflict — leads to data loss. Never acceptable for real-time collaborative text.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🔄 Persistence: Op-log vs Snapshot-only vs Event Sourcing</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Snapshot-only</div><p>Save the full document every N seconds. Simple. Can't replay history. Conflicts during concurrent saves require full-doc merge. Not suitable for collaborative editing — loses all granular operation history needed for offline sync.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Op-log + periodic snapshots</div><p>Full operation history in Kafka (7d). Snapshots every 1000 ops for fast load. Offline sync replays ops since last snapshot. Version history is free — just replay to any revision. Google Docs uses this model.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Snapshot + delta compression</div><p>Store only diffs between snapshots. Smaller storage. Complex to implement. Needed only at Google-scale (billions of documents with rich history). Standard op-log is fine for most use cases up to 100M documents.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

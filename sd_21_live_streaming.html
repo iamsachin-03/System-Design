@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #21 — Live Streaming (Twitch)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#a855f7;--a2:#9333ea;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#e9d5ff;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#0a070f 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;background:radial-gradient(circle,rgba(168,85,247,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(168,85,247,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#f3e8ff 0%,#a855f7 50%,#7e22ce 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(168,85,247,.07);color:#e9d5ff;border:1px solid rgba(168,85,247,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(168,85,247,.1);color:var(--ecolor);border:1.5px solid rgba(168,85,247,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(168,85,247,.08);color:var(--accent);border:1px solid rgba(168,85,247,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.info-box{background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#e9d5ff;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(168,85,247,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:720px){.three-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(168,85,247,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#a855f7;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:140px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Streaming Systems › <span>21 / Live Streaming</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">📡</div>
+    <div>
+      <div class="h-title">Live Streaming (Twitch)</div>
+      <div class="h-desc">Design a live video streaming platform — RTMP ingest from streamer OBS, real-time transcoding to HLS at multiple bitrates, sub-10-second end-to-end latency, CDN delivery to millions of concurrent viewers, and real-time chat at massive scale. Fundamentally different from on-demand video: no buffering, no seek, every viewer is live.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">RTMP Ingest</span>
+        <span class="badge b-tag">HLS</span>
+        <span class="badge b-tag">Adaptive Bitrate</span>
+        <span class="badge b-tag">Transcoding</span>
+        <span class="badge b-tag">Edge CDN</span>
+        <span class="badge b-tag">Live Chat</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('pipeline',this)">🎬 Stream Pipeline</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Clarify Scope</div><div class="sec-body">
+    <div class="info-box"><strong>Live streaming is fundamentally different from on-demand video (YouTube).</strong> Key differences: no seeking (viewers are at the live edge), latency matters (chat interaction requires &lt;10s), transcoding must happen in real-time (not batched), and every CDN PoP must receive the stream continuously.</div><br>
+    <div class="rq-grid">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Target latency — sub-3s (WebRTC-style), sub-10s (HLS), or 30s+ (MPEG-DASH)?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Max concurrent viewers per stream? Total concurrent streams?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Do we store the stream for VOD replay after it ends?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Chat — per-channel chat at what scale? Moderation?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Ingest protocol — RTMP, SRT, WebRTC?</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Sub-10s latency (HLS with low-latency extensions). WebRTC is out of scope.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>1M concurrent viewers per top stream, 8M total concurrent viewers.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — retain stream as VOD for 60 days after ending.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Chat at 100K messages/min per popular channel. Basic moderation.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>RTMP ingest (industry standard from OBS/streaming software).</div></div>
+      </div>
+    </div>
+  </div></div>
+  <div class="sec"><div class="sec-head">✅ Functional + Non-Functional</div><div class="sec-body">
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Go Live:</strong> Streamer connects OBS → RTMP ingest → real-time transcoding to 3 bitrates → HLS segments → CDN delivery</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Watch Stream:</strong> Viewer loads HLS playlist, adaptive bitrate selection by client player</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Live Chat:</strong> WebSocket-based, 100K msg/min per channel, moderation</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>VOD:</strong> Segments assembled into replay after stream ends, S3 retained 60 days</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Stream metadata:</strong> Viewer count, stream title, category, thumbnail</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>End-to-end latency: &lt;10s (streamer action → viewer sees it)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Startup time: &lt;3s (first frame to viewer)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Buffering ratio: &lt;0.5% of playback time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>8M concurrent viewers, 100K concurrent streams</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Stream ingest: 5 Mbps avg, 12 Mbps max input bitrate</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Ingest to Delivery Pipeline</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · STREAM PIPELINE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Walk me through what happens from the moment a streamer clicks "Go Live" in OBS to a viewer seeing the video.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      The pipeline has five stages:<br><br>
+      <b>1. RTMP Ingest:</b> OBS sends a raw H.264/AAC stream over RTMP to our nearest ingest edge node. The ingest node is selected via DNS GeoDNS — the streamer connects to the closest point of presence. RTMP is TCP-based and handles the streamer's unreliable internet connection with retries.<br><br>
+      <b>2. Stream Relay:</b> The ingest edge node relays the RTMP stream to our transcoding cluster (typically in a central data centre). This is a reliable backbone connection — we don't trust the last-mile streamer uplink for quality.<br><br>
+      <b>3. Real-time Transcoding:</b> The transcoding server receives the raw stream and generates 3 quality variants simultaneously using GPU-accelerated FFmpeg:<br>
+      <ul>
+        <li>1080p @ 6 Mbps (high quality)</li>
+        <li>720p @ 3 Mbps (medium)</li>
+        <li>480p @ 1.5 Mbps (low / mobile)</li>
+      </ul>
+      Each variant is segmented into 2-second HLS chunks (.ts files) and pushed to S3 + CDN origin.<br><br>
+      <b>4. HLS Manifest Update:</b> Every 2 seconds, the master .m3u8 playlist is updated pointing to the newest segments. The viewer's player polls this every 1-2s (low-latency HLS).<br><br>
+      <b>5. CDN Delivery:</b> Viewers fetch segments from the nearest CDN edge node. The CDN pull-caches segments from S3. Since every viewer watches the same segments at the live edge, the CDN hit rate for a popular stream is ~99% — effectively all viewers share the same cached chunks.
+    </div></div>
+    <div class="tip-box"><strong>💡 The key insight:</strong> Unlike on-demand video where different users want different positions, live streaming means all viewers want the same 2-second segment at the same time. This makes CDN caching extraordinarily effective — one cache miss serves millions of viewers.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 2 — Latency Sources & Reduction</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · LATENCY</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Where does the latency come from? Standard HLS is 30+ seconds. How do you get to sub-10?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Standard HLS latency budget breakdown:<br>
+      <ul>
+        <li><b>Encoding latency:</b> Time to encode one segment. At 6-second segments → 6s minimum latency. Reduce to 2s segments → 2s encoding latency.</li>
+        <li><b>Playlist polling:</b> Player polls manifest every segment length. At 6s segments → up to 6s additional. Use HTTP/2 server push or chunked transfer to reduce to ~0.5s.</li>
+        <li><b>CDN propagation:</b> Segment reaches CDN after upload. With pull-caching: ~0.5s. With push (pre-positioned at edge): ~0s.</li>
+        <li><b>Player buffer:</b> Player buffers 3 segments by default → 18s of buffer. With Low-Latency HLS (LL-HLS): 1 segment → 2s buffer.</li>
+      </ul>
+      <b>Low-Latency HLS (Apple LL-HLS) approach:</b><br>
+      <ul>
+        <li>2-second segments instead of 6-second</li>
+        <li>Partial segments (0.5s chunks delivered mid-segment using chunked HTTP)</li>
+        <li>Playlist push using long-polling: player receives manifest update immediately when new segment is ready</li>
+        <li>Result: 3-8s end-to-end latency (vs 30s+ standard HLS)</li>
+      </ul>
+      Total latency budget: encoding (2s) + upload (0.5s) + CDN (0.5s) + player buffer (2s) + network (~1s) = <b>~6s</b>.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">💬 Phase 3 — Chat at 100K Messages/Min</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · CHAT</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A popular streamer has 100,000 concurrent viewers all sending chat messages. How does chat work?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      100K viewers × 1 message/minute = ~1,667 messages/sec per channel. Each message must be delivered to all 100K viewers within 1-2 seconds. This is a fan-out problem.<br><br>
+      <b>Architecture:</b><br>
+      Each viewer maintains a <b>WebSocket connection</b> to a chat server. Chat servers are stateful — they know which channel each connection is watching. We use a pub/sub system (Redis Pub/Sub or Kafka) to fan out messages:<br>
+      <ol>
+        <li>Viewer sends message → chat server validates (rate limit, moderation)</li>
+        <li>Chat server publishes to Redis channel: <code>PUBLISH chat:{channel_id} {message_json}</code></li>
+        <li>All chat servers subscribed to that channel receive the message via Redis Pub/Sub</li>
+        <li>Each chat server pushes to all WebSocket connections watching that channel</li>
+      </ol>
+      <b>Scale math:</b> 100K viewers across 50 chat servers = 2,000 WebSocket connections per server. Each server subscribes to Redis for their active channels. Redis Pub/Sub easily handles 100K message deliveries/sec per channel.<br><br>
+      <b>Slow mode & rate limiting:</b> For popular channels, apply slow mode (1 message per user per 30s). This reduces 100K viewers to at most 3,333 messages/min regardless of how many people try to chat simultaneously.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="pipeline" class="panel">
+  <div class="sec"><div class="sec-head">🎬 Stream Pipeline — Detailed Breakdown</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+<defs>
+<marker id="pa" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a855f7"/></marker>
+<marker id="pg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="pb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+</defs>
+<!-- OBS -->
+<rect x="10" y="130" width="90" height="60" rx="8" fill="#131c2e" stroke="#a855f7" stroke-width="2"/>
+<text x="55" y="155" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#e9d5ff">🎮 OBS</text>
+<text x="55" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">H.264 + AAC</text>
+<text x="55" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">5 Mbps RTMP</text>
+<!-- RTMP ingest -->
+<rect x="120" y="110" width="120" height="100" rx="8" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="180" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#e9d5ff">📡 RTMP Ingest</text>
+<text x="180" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GeoDNS → nearest</text>
+<text x="180" y="163" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">edge node</text>
+<text x="180" y="176" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">validates stream key</text>
+<text x="180" y="189" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">relays to transcoder</text>
+<text x="180" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">TCP, authenticated</text>
+<!-- Transcoding cluster -->
+<rect x="260" y="60" width="160" height="200" rx="8" fill="rgba(168,85,247,.02)" stroke="rgba(168,85,247,.2)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="340" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a855f7">⚡ TRANSCODING (GPU)</text>
+<rect x="272" y="92" width="136" height="36" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="340" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">1080p @ 6 Mbps</text>
+<text x="340" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">H.264, GPU-accelerated FFmpeg</text>
+<rect x="272" y="136" width="136" height="36" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="340" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">720p @ 3 Mbps</text>
+<text x="340" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">same GPU server, parallel</text>
+<rect x="272" y="180" width="136" height="36" rx="5" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="340" y="196" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">480p @ 1.5 Mbps</text>
+<text x="340" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">mobile / low bandwidth</text>
+<text x="340" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">2-second segments → HLS .ts chunks</text>
+<!-- HLS Packager -->
+<rect x="440" y="100" width="130" height="120" rx="8" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="505" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">📦 HLS Packager</text>
+<text x="505" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">master.m3u8</text>
+<text x="505" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1080p.m3u8</text>
+<text x="505" y="163" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">720p.m3u8</text>
+<text x="505" y="176" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">480p.m3u8</text>
+<text x="505" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">seg_{n}.ts files</text>
+<text x="505" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">LL-HLS: playlist push</text>
+<!-- S3 / Origin -->
+<rect x="590" y="100" width="120" height="60" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="650" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🪣 S3 Origin</text>
+<text x="650" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">segments + manifests</text>
+<text x="650" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">VOD retained 60 days</text>
+<!-- CDN -->
+<rect x="590" y="178" width="120" height="42" rx="8" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="650" y="196" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🌐 CDN Edge</text>
+<text x="650" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">global PoPs, ~1s TTL</text>
+<!-- Viewers -->
+<rect x="730" y="100" width="110" height="120" rx="8" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="785" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#e9d5ff">👥 Viewers</text>
+<text x="785" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HLS.js player</text>
+<text x="785" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">adaptive bitrate</text>
+<text x="785" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">polls manifest</text>
+<text x="785" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">every 1-2s</text>
+<text x="785" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1M concurrent</text>
+<text x="785" y="206" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">99% CDN cache hit</text>
+<!-- Arrows -->
+<line x1="100" y1="160" x2="118" y2="160" stroke="#a855f7" stroke-width="2" marker-end="url(#pa)"/>
+<line x1="240" y1="160" x2="258" y2="160" stroke="#a855f7" stroke-width="2" marker-end="url(#pa)"/>
+<line x1="420" y1="160" x2="438" y2="160" stroke="#10b981" stroke-width="2" marker-end="url(#pg)"/>
+<line x1="570" y1="140" x2="588" y2="140" stroke="#38bdf8" stroke-width="2" marker-end="url(#pb)"/>
+<line x1="570" y1="170" x2="588" y2="195" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#pb)"/>
+<line x1="710" y1="199" x2="728" y2="199" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#pb)"/>
+<line x1="710" y1="140" x2="728" y2="155" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#pa)"/>
+<!-- Latency annotations -->
+<text x="55" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">~0s</text>
+<text x="180" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">+0.5s relay</text>
+<text x="340" y="272" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">+2s encode</text>
+<text x="505" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">+0.5s package</text>
+<text x="650" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">+0.5s CDN</text>
+<text x="785" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">+2s player buffer</text>
+<text x="450" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a855f7">Total end-to-end: ~5.5s (Low-Latency HLS)</text>
+</svg>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📐 HLS Manifest Structure</div><div class="sec-body">
+    <div class="two-col">
+      <div style="background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-bottom:10px">master.m3u8 (playlist of playlists)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8;line-height:1.9">
+          <div style="color:#818cf8">#EXTM3U</div>
+          <div style="color:#818cf8">#EXT-X-VERSION:6</div>
+          <div style="color:#4e6070">#EXT-X-STREAM-INF:BANDWIDTH=6000000,</div>
+          <div style="color:#4e6070">  RESOLUTION=1920x1080</div>
+          <div style="color:#6ee7b7">1080p.m3u8</div>
+          <div style="color:#4e6070">#EXT-X-STREAM-INF:BANDWIDTH=3000000,</div>
+          <div style="color:#4e6070">  RESOLUTION=1280x720</div>
+          <div style="color:#6ee7b7">720p.m3u8</div>
+          <div style="color:#4e6070">#EXT-X-STREAM-INF:BANDWIDTH=1500000,</div>
+          <div style="color:#4e6070">  RESOLUTION=854x480</div>
+          <div style="color:#6ee7b7">480p.m3u8</div>
+        </div>
+      </div>
+      <div style="background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-bottom:10px">720p.m3u8 (media playlist, live)</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8;line-height:1.9">
+          <div style="color:#818cf8">#EXTM3U</div>
+          <div style="color:#818cf8">#EXT-X-VERSION:6</div>
+          <div style="color:#818cf8">#EXT-X-TARGETDURATION:2</div>
+          <div style="color:#f59e0b">#EXT-X-MEDIA-SEQUENCE:847</div>
+          <div style="color:#4e6070">#EXTINF:2.0,</div>
+          <div style="color:#6ee7b7">seg_845.ts</div>
+          <div style="color:#4e6070">#EXTINF:2.0,</div>
+          <div style="color:#6ee7b7">seg_846.ts</div>
+          <div style="color:#4e6070">#EXTINF:2.0,</div>
+          <div style="color:#6ee7b7">seg_847.ts  ← newest (live edge)</div>
+          <div style="color:#4e6070">#EXTINF:2.0,</div>
+          <div style="color:#818cf8">#EXT-X-PART:DURATION=0.5 seg_848_0.ts</div>
+          <div style="color:#4e6070">↑ partial seg (LL-HLS)</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity Estimation</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Streams: 100K concurrent | Viewers: 8M concurrent</span>
+
+<span class="label">Ingest bandwidth (per stream avg 5 Mbps):</span>
+  <span class="label">100K streams × 5 Mbps                = </span><span class="val">500 Gbps</span>  <span class="label">total ingest</span>
+
+<span class="label">Transcoding output (3 bitrates: 6+3+1.5 = 10.5 Mbps per stream):</span>
+  <span class="label">100K × 10.5 Mbps                     = </span><span class="val">1.05 Tbps</span>  <span class="label">transcoded output</span>
+
+<span class="label">CDN egress (top stream: 1M viewers × avg 3 Mbps):</span>
+  <span class="label">1M × 3 Mbps                          = </span><span class="val">3 Tbps</span>  <span class="label">single stream, CDN absorbs</span>
+  <span class="label">Total all streams: 8M viewers × 3 Mbps = </span><span class="val">24 Tbps</span>  <span class="label">CDN handles</span>
+
+<span class="label">Transcoding servers (1 GPU server handles ~50 streams at 3 bitrates):</span>
+  <span class="label">100K ÷ 50                            = </span><span class="val">2,000 GPU servers</span>
+
+<span class="label">Segment storage (VOD, 60 days):</span>
+  <span class="label">100K streams × 2s segments × 10.5 Mbps × 86400 × 60 days</span>
+  <span class="label">≈ 100K × 10.5 × 86400 × 60 / 8 GB   = </span><span class="val">~68 PB</span>  <span class="label">S3 (cold tiered)</span>
+
+<span class="result">→ Transcoding is the compute bottleneck. CDN is the bandwidth bottleneck.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+      <tr><td>Concurrent streams</td><td class="hi">100K</td><td>Each needs dedicated transcoder</td></tr>
+      <tr><td>Concurrent viewers</td><td class="hi">8M</td><td>24 Tbps CDN egress</td></tr>
+      <tr><td>Ingest bandwidth</td><td class="hi">500 Gbps</td><td>100K × 5 Mbps avg</td></tr>
+      <tr><td>GPU transcoding servers</td><td class="hi">2,000</td><td>50 streams/server, 3 bitrates each</td></tr>
+      <tr><td>End-to-end latency</td><td class="hi">~5.5s</td><td>LL-HLS, 2s segments</td></tr>
+      <tr><td>VOD storage (60 days)</td><td class="hi">~68 PB</td><td>S3 with intelligent tiering</td></tr>
+      <tr><td>Chat messages (peak)</td><td class="hi">100K msg/min</td><td>Per top channel</td></tr>
+      <tr><td>CDN cache hit rate</td><td class="hi">~99%</td><td>All viewers want same live-edge segment</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="api" class="panel">
+  <div class="sec"><div class="sec-head">🔌 API Design</div><div class="sec-body">
+    <div class="api-ep">
+      <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/api/v1/streams/start</span><span class="api-desc">Streamer goes live</span></div>
+      <div class="api-body">
+        <div class="api-sec"><div class="api-sec-title">Request</div>
+          <div class="frow"><span class="fn">stream_key</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Streamer's private key (authenticates OBS). Validated before RTMP accepted.</span></div>
+          <div class="frow"><span class="fn">title</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Stream title. Max 140 chars.</span></div>
+          <div class="frow"><span class="fn">category_id</span><span class="ft">string</span><span class="fo">optional</span><span class="fd">Game/category ID for discovery.</span></div>
+        </div>
+        <div class="api-sec"><div class="api-sec-title">Response 201</div>
+          <div class="frow"><span class="fn">rtmp_url</span><span class="ft">string</span><span class="fo"></span><span class="fd">RTMP ingest URL: <code>rtmp://ingest-us-west.twitch.tv/live/{stream_key}</code></span></div>
+          <div class="frow"><span class="fn">hls_url</span><span class="ft">string</span><span class="fo"></span><span class="fd">Master playlist for viewers: <code>https://usher.twitch.tv/{channel}/index.m3u8</code></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="api-ep">
+      <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/streams/{channel}/playback</span><span class="api-desc">Get HLS playback URL for viewer</span></div>
+      <div class="api-body">
+        <div class="api-sec"><div class="api-sec-title">Response 200</div>
+          <div class="frow"><span class="fn">master_playlist_url</span><span class="ft">string</span><span class="fo"></span><span class="fd">CDN URL to master.m3u8. Viewer player fetches this, auto-selects quality based on bandwidth.</span></div>
+          <div class="frow"><span class="fn">latency_mode</span><span class="ft">enum</span><span class="fo"></span><span class="fd"><code>low_latency</code> (LL-HLS, ~6s) | <code>normal</code> (standard HLS, ~30s) — viewer can toggle</span></div>
+          <div class="frow"><span class="fn">viewer_count</span><span class="ft">integer</span><span class="fo"></span><span class="fd">Current concurrent viewers (updated every 30s)</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 High-Level Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 950 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:450px">
+<defs>
+<marker id="hpa" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a855f7"/></marker>
+<marker id="hpg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="hpb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="hpo" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+<!-- Streamer zone -->
+<rect x="8" y="8" width="120" height="434" rx="10" fill="rgba(168,85,247,.02)" stroke="rgba(168,85,247,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="68" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a855f7">STREAMERS</text>
+<rect x="18" y="42" width="100" height="52" rx="7" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="68" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#e9d5ff">🎮 OBS</text>
+<text x="68" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">RTMP push</text>
+<text x="68" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">5 Mbps H.264</text>
+<!-- Ingest -->
+<rect x="138" y="8" width="170" height="220" rx="10" fill="rgba(168,85,247,.02)" stroke="rgba(168,85,247,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="223" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a855f7">INGEST LAYER</text>
+<rect x="148" y="42" width="150" height="70" rx="7" fill="#131c2e" stroke="#a855f7" stroke-width="2"/>
+<text x="223" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#e9d5ff">📡 RTMP Edge</text>
+<text x="223" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GeoDNS routing</text>
+<text x="223" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">auth + stream key</text>
+<text x="223" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">50+ global PoPs</text>
+<rect x="148" y="128" width="150" height="70" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="223" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🔁 Stream Relay</text>
+<text x="223" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">backbone to</text>
+<text x="223" y="175" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">transcoding cluster</text>
+<text x="223" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">RTMP re-stream</text>
+<!-- Processing -->
+<rect x="318" y="8" width="220" height="220" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="428" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">PROCESSING</text>
+<rect x="328" y="42" width="200" height="100" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="428" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">⚡ GPU Transcoder</text>
+<text x="428" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">FFmpeg NVENC</text>
+<text x="428" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#10b981">1080p/720p/480p parallel</text>
+<text x="428" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">2-second segments</text>
+<text x="428" y="115" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">2,000 GPU servers total</text>
+<text x="428" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">50 streams per server</text>
+<rect x="328" y="156" width="200" height="52" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="428" y="176" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📦 HLS Packager</text>
+<text x="428" y="190" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">manifest + segments</text>
+<text x="428" y="204" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">LL-HLS partial segments</text>
+<!-- Storage + CDN -->
+<rect x="548" y="8" width="180" height="220" rx="10" fill="rgba(245,158,11,.02)" stroke="rgba(245,158,11,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="638" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f59e0b">STORAGE</text>
+<rect x="558" y="42" width="160" height="70" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="638" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🪣 S3 Origin</text>
+<text x="638" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">live segments (~1s)</text>
+<text x="638" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">VOD archive 60 days</text>
+<text x="638" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">~68 PB total</text>
+<rect x="558" y="128" width="160" height="70" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="638" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7dd3fc">🌐 CDN</text>
+<text x="638" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">global edge nodes</text>
+<text x="638" y="175" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">24 Tbps capacity</text>
+<text x="638" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">99% cache hit (live edge)</text>
+<!-- Viewer + Chat -->
+<rect x="738" y="8" width="200" height="434" rx="10" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="838" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">VIEWERS</text>
+<rect x="748" y="42" width="180" height="100" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="838" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#bfdbfe">📺 Video Player</text>
+<text x="838" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HLS.js adaptive</text>
+<text x="838" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">polls manifest/2s</text>
+<text x="838" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">8M concurrent</text>
+<text x="838" y="115" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">1M on top stream</text>
+<rect x="748" y="160" width="180" height="100" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="838" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">💬 Chat</text>
+<text x="838" y="194" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">WebSocket</text>
+<text x="838" y="207" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">100K msg/min</text>
+<text x="838" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Redis Pub/Sub</text>
+<text x="838" y="233" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">50 chat servers</text>
+<rect x="748" y="278" width="180" height="70" rx="7" fill="#131c2e" stroke="#a855f7" stroke-width="1"/>
+<text x="838" y="298" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#e9d5ff">📊 Metadata Svc</text>
+<text x="838" y="312" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">viewer count</text>
+<text x="838" y="325" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">stream info, discovery</text>
+<text x="838" y="338" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">PostgreSQL + Redis</text>
+<!-- Arrows -->
+<line x1="118" y1="68" x2="146" y2="68" stroke="#a855f7" stroke-width="1.5" marker-end="url(#hpa)"/>
+<line x1="223" y1="112" x2="223" y2="126" stroke="#a855f7" stroke-width="1.5" marker-end="url(#hpa)"/>
+<line x1="298" y1="160" x2="326" y2="110" stroke="#10b981" stroke-width="1.5" marker-end="url(#hpg)"/>
+<line x1="528" y1="88" x2="556" y2="75" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#hpo)"/>
+<line x1="528" y1="182" x2="556" y2="165" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="718" y1="82" x2="746" y2="90" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#hpb)"/>
+<line x1="718" y1="160" x2="746" y2="196" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hpb)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Live Streaming — Java: Ingest + HLS Packaging
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── 1. Stream Ingest Controller ───────────────────────</span>
+<span class="ann">@RestController</span>
+<span class="kw">public class</span> <span class="cls">StreamIngestController</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">StreamKeyService</span>    keyService;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">TranscoderService</span>  transcoder;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">MetadataService</span>    metadata;
+
+    <span class="cm">// Called by RTMP relay when stream connects</span>
+    <span class="ann">@PostMapping</span>(<span class="str">"/internal/stream/on-publish"</span>)
+    <span class="kw">public</span> <span class="cls">ResponseEntity</span>&lt;?&gt; <span class="fn2">onStreamStart</span>(
+            <span class="ann">@RequestParam</span> <span class="cls">String</span> name,  <span class="cm">// stream key</span>
+            <span class="ann">@RequestParam</span> <span class="cls">String</span> addr) { <span class="cm">// streamer IP</span>
+
+        <span class="cm">// 1. Validate stream key</span>
+        <span class="cls">Streamer</span> streamer = keyService.validate(name);
+        <span class="kw">if</span> (streamer == <span class="kw">null</span>)
+            <span class="kw">return</span> <span class="cls">ResponseEntity</span>.status(<span class="num">403</span>).body(<span class="str">"Invalid stream key"</span>);
+
+        <span class="cm">// 2. Launch transcoding pipeline for this stream</span>
+        <span class="cls">TranscodingJob</span> job = <span class="cls">TranscodingJob</span>.builder()
+            .channelId(streamer.getChannelId())
+            .inputRtmpUrl(<span class="str">"rtmp://localhost/live/"</span> + name)
+            .qualities(<span class="cls">List</span>.of(
+                <span class="kw">new</span> <span class="cls">Quality</span>(<span class="num">1920</span>, <span class="num">1080</span>, <span class="num">6000</span>),
+                <span class="kw">new</span> <span class="cls">Quality</span>(<span class="num">1280</span>, <span class="num">720</span>,  <span class="num">3000</span>),
+                <span class="kw">new</span> <span class="cls">Quality</span>(<span class="num">854</span>,  <span class="num">480</span>,  <span class="num">1500</span>)))
+            .segmentDurationSeconds(<span class="num">2</span>)
+            .outputS3Prefix(<span class="str">"streams/"</span> + streamer.getChannelId())
+            .build();
+        transcoder.launch(job);
+
+        <span class="cm">// 3. Mark channel as live in metadata store</span>
+        metadata.setLive(streamer.getChannelId(), <span class="kw">true</span>);
+
+        <span class="kw">return</span> <span class="cls">ResponseEntity</span>.ok(<span class="str">"Stream accepted"</span>);
+    }
+
+    <span class="ann">@PostMapping</span>(<span class="str">"/internal/stream/on-done"</span>)
+    <span class="kw">public void</span> <span class="fn2">onStreamEnd</span>(<span class="ann">@RequestParam</span> <span class="cls">String</span> name) {
+        <span class="cls">Streamer</span> s = keyService.validate(name);
+        <span class="kw">if</span> (s == <span class="kw">null</span>) <span class="kw">return</span>;
+        transcoder.stop(s.getChannelId());
+        metadata.setLive(s.getChannelId(), <span class="kw">false</span>);
+        <span class="cm">// Trigger VOD assembly (async)</span>
+        vodService.assembleVod(s.getChannelId());
+    }
+}
+
+<span class="cm">// ── 2. HLS Packager — Segment Push ────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">HlsPackager</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">S3Client</span>    s3;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+
+    <span class="cm">/**
+     * Called every 2 seconds with a new completed segment.
+     * Uploads to S3 and updates the live HLS manifest.
+     */</span>
+    <span class="kw">public void</span> <span class="fn2">onSegmentComplete</span>(<span class="cls">String</span> channelId, <span class="cls">String</span> quality,
+                                     <span class="kw">int</span> sequenceNum, <span class="kw">byte</span>[] tsData) {
+        <span class="cls">String</span> segKey = <span class="cls">String</span>.format(<span class="str">"streams/%s/%s/seg_%d.ts"</span>,
+            channelId, quality, sequenceNum);
+
+        <span class="cm">// 1. Upload segment to S3 (CDN pulls from here)</span>
+        s3.putObject(<span class="cls">PutObjectRequest</span>.builder()
+            .bucket(<span class="str">"stream-segments"</span>).key(segKey)
+            .cacheControl(<span class="str">"public, max-age=86400"</span>) <span class="cm">// long TTL — segments don't change</span>
+            .build(), <span class="cls">RequestBody</span>.fromBytes(tsData));
+
+        <span class="cm">// 2. Update manifest in Redis (fast, viewers poll manifest frequently)</span>
+        <span class="cls">String</span> manifestKey = <span class="str">"manifest:"</span> + channelId + <span class="str">":"</span> + quality;
+        redis.opsForList().rightPush(manifestKey, segKey);
+        redis.opsForList().trim(manifestKey, <span class="num">-5</span>, <span class="num">-1</span>); <span class="cm">// keep last 5 segments</span>
+
+        <span class="cm">// 3. Upload updated manifest to S3 (CDN polls with 1s TTL)</span>
+        <span class="kw">byte</span>[] manifest = <span class="fn2">buildManifest</span>(channelId, quality, sequenceNum);
+        s3.putObject(<span class="cls">PutObjectRequest</span>.builder()
+            .bucket(<span class="str">"stream-segments"</span>)
+            .key(<span class="str">"streams/"</span> + channelId + <span class="str">"/"</span> + quality + <span class="str">".m3u8"</span>)
+            .cacheControl(<span class="str">"public, max-age=1"</span>) <span class="cm">// short TTL — manifest changes every 2s</span>
+            .build(), <span class="cls">RequestBody</span>.fromBytes(manifest));
+    }
+
+    <span class="kw">private byte</span>[] <span class="fn2">buildManifest</span>(<span class="cls">String</span> channelId, <span class="cls">String</span> quality, <span class="kw">int</span> seqNum) {
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; recentSegs = redis.opsForList()
+            .range(<span class="str">"manifest:"</span> + channelId + <span class="str">":"</span> + quality, <span class="num">0</span>, <span class="num">-1</span>);
+        <span class="cls">StringBuilder</span> sb = <span class="kw">new</span> <span class="cls">StringBuilder</span>();
+        sb.append(<span class="str">"#EXTM3U
+#EXT-X-VERSION:6
+"</span>);
+        sb.append(<span class="str">"#EXT-X-TARGETDURATION:2
+"</span>);
+        sb.append(<span class="str">"#EXT-X-MEDIA-SEQUENCE:"</span>).append(seqNum - recentSegs.size() + <span class="num">1</span>).append(<span class="str">"
+"</span>);
+        <span class="kw">for</span> (<span class="cls">String</span> seg : recentSegs) {
+            sb.append(<span class="str">"#EXTINF:2.0,
+"</span>).append(seg).append(<span class="str">"
+"</span>);
+        }
+        <span class="kw">return</span> sb.toString().getBytes();
+    }
+}
+
+<span class="cm">// ── 3. Chat Service — WebSocket + Redis Pub/Sub ────────</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">ChatWebSocketHandler</span> <span class="kw">extends</span> <span class="cls">TextWebSocketHandler</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RateLimiter</span>    rateLimiter;
+    <span class="cm">// channelId → set of WebSocket sessions watching that channel</span>
+    <span class="kw">private</span> <span class="cls">ConcurrentHashMap</span>&lt;<span class="cls">String</span>, <span class="cls">Set</span>&lt;<span class="cls">WebSocketSession</span>&gt;&gt; viewers = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+
+    <span class="ann">@Override</span>
+    <span class="kw">protected void</span> <span class="fn2">handleTextMessage</span>(<span class="cls">WebSocketSession</span> session, <span class="cls">TextMessage</span> msg) {
+        <span class="cls">ChatMessage</span> chat = <span class="cls">JsonUtil</span>.parse(msg.getPayload());
+
+        <span class="cm">// Rate limit: 1 message per user per 30s in slow mode</span>
+        <span class="kw">if</span> (!rateLimiter.tryAcquire(<span class="str">"chat:"</span> + chat.getUserId(), <span class="num">1</span>, <span class="num">30</span>))
+            <span class="kw">return</span>;
+
+        <span class="cm">// Publish to Redis Pub/Sub → all chat servers for this channel receive it</span>
+        redis.convertAndSend(<span class="str">"chat:"</span> + chat.getChannelId(),
+            <span class="cls">JsonUtil</span>.toJson(chat));
+    }
+
+    <span class="cm">// Redis subscription handler — push to all local WebSocket sessions</span>
+    <span class="ann">@RedisMessageHandler</span>
+    <span class="kw">public void</span> <span class="fn2">onChatMessage</span>(<span class="cls">String</span> channelId, <span class="cls">String</span> messageJson) {
+        <span class="cls">Set</span>&lt;<span class="cls">WebSocketSession</span>&gt; sessions = viewers.getOrDefault(channelId, <span class="cls">Set</span>.of());
+        <span class="kw">for</span> (<span class="cls">WebSocketSession</span> s : sessions) {
+            <span class="kw">if</span> (s.isOpen()) {
+                <span class="kw">try</span> { s.sendMessage(<span class="kw">new</span> <span class="cls">TextMessage</span>(messageJson)); }
+                <span class="kw">catch</span> (<span class="cls">Exception</span> ignored) {}
+            }
+        }
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Live Streaming — Python: HLS packager + chat
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> subprocess, boto3, json, time
+<span class="kw">from</span> typing <span class="kw">import</span> List
+
+s3 = boto3.client('s3')
+BUCKET = 'stream-segments'
+
+<span class="kw">def</span> <span class="fn2">launch_transcoder</span>(channel_id: str, rtmp_input: str):
+    <span class="str">"""
+    Launch FFmpeg with GPU acceleration (NVENC) for 3-quality HLS output.
+    Segments uploaded to S3 via HLS packager hook.
+    """</span>
+    cmd = [
+        'ffmpeg', '-re',
+        '-i', rtmp_input,
+        <span class="cm"># 1080p output</span>
+        '-c:v', 'h264_nvenc', '-b:v', '6000k', '-vf', 'scale=1920:1080',
+        '-c:a', 'aac', '-b:a', '192k',
+        '-f', 'hls', '-hls_time', '2',
+        '-hls_flags', 'delete_segments+append_list',
+        '-hls_segment_filename', f'/tmp/{channel_id}/1080p/seg_%d.ts',
+        f'/tmp/{channel_id}/1080p.m3u8',
+        <span class="cm"># 720p output (map same input)</span>
+        '-c:v', 'h264_nvenc', '-b:v', '3000k', '-vf', 'scale=1280:720',
+        '-f', 'hls', '-hls_time', '2',
+        '-hls_segment_filename', f'/tmp/{channel_id}/720p/seg_%d.ts',
+        f'/tmp/{channel_id}/720p.m3u8',
+    ]
+    <span class="kw">return</span> subprocess.Popen(cmd)
+
+
+<span class="kw">def</span> <span class="fn2">upload_segment</span>(channel_id: str, quality: str,
+                    seg_num: int, seg_path: str):
+    <span class="str">"""Upload a completed .ts segment to S3 with long TTL."""</span>
+    key = f<span class="str">'streams/{channel_id}/{quality}/seg_{seg_num}.ts'</span>
+    s3.upload_file(seg_path, BUCKET, key,
+        ExtraArgs={'CacheControl': 'public, max-age=86400',
+                   'ContentType': 'video/MP2T'})
+
+
+<span class="kw">def</span> <span class="fn2">update_manifest</span>(channel_id: str, quality: str,
+                      recent_segs: List[int], redis_client):
+    <span class="str">"""Rebuild and upload the HLS manifest with recent segments."""</span>
+    manifest_lines = [
+        '#EXTM3U', '#EXT-X-VERSION:6',
+        '#EXT-X-TARGETDURATION:2',
+        f'#EXT-X-MEDIA-SEQUENCE:{recent_segs[0]}',
+    ]
+    <span class="kw">for</span> n <span class="kw">in</span> recent_segs:
+        manifest_lines += ['#EXTINF:2.0,',
+            f'https://cdn.example.com/streams/{channel_id}/{quality}/seg_{n}.ts']
+
+    manifest = '\n'.join(manifest_lines).encode()
+    key = f'streams/{channel_id}/{quality}.m3u8'
+    s3.put_object(Bucket=BUCKET, Key=key, Body=manifest,
+        CacheControl='public, max-age=1',  <span class="cm"># short TTL — changes every 2s</span>
+        ContentType='application/x-mpegURL')
+
+
+<span class="cm"># ── Chat Service ──────────────────────────────────────</span>
+<span class="kw">import</span> asyncio, websockets
+
+<span class="kw">class</span> <span class="cls">ChatServer</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, redis):
+        self.redis    = redis
+        self.channels = {}  <span class="cm"># channel_id → set of websocket connections</span>
+
+    <span class="kw">async def</span> <span class="fn2">handle</span>(self, ws, path):
+        channel_id = path.strip('/')
+        self.channels.setdefault(channel_id, set()).add(ws)
+        <span class="cm"># Subscribe to Redis pub/sub for this channel</span>
+        pubsub = self.redis.pubsub()
+        <span class="kw">await</span> pubsub.subscribe(f'chat:{channel_id}')
+        <span class="kw">try</span>:
+            <span class="kw">async for</span> msg <span class="kw">in</span> ws:
+                data = json.loads(msg)
+                <span class="cm"># Validate + rate limit, then publish</span>
+                <span class="kw">await</span> self.redis.publish(f'chat:{channel_id}', json.dumps({
+                    'user': data['user'], 'text': data['text'],
+                    'ts': int(time.time() * <span class="num">1000</span>)
+                }))
+        <span class="kw">finally</span>:
+            self.channels.get(channel_id, set()).discard(ws)
+
+    <span class="kw">async def</span> <span class="fn2">broadcast_loop</span>(self, channel_id: str):
+        <span class="str">"""Receive from Redis, fan out to all local WebSocket connections."""</span>
+        pubsub = self.redis.pubsub()
+        <span class="kw">await</span> pubsub.subscribe(f'chat:{channel_id}')
+        <span class="kw">async for</span> message <span class="kw">in</span> pubsub.listen():
+            <span class="kw">if</span> message['type'] == 'message':
+                payload = message['data']
+                dead = set()
+                <span class="kw">for</span> ws <span class="kw">in</span> self.channels.get(channel_id, set()):
+                    <span class="kw">try</span>:
+                        <span class="kw">await</span> ws.send(payload)
+                    <span class="kw">except</span>:
+                        dead.add(ws)
+                self.channels[channel_id] -= dead
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">⏱ Latency vs Reliability: HLS vs WebRTC vs RTMP Playback</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ HLS / LL-HLS (chosen)</div><p>5-10s latency. Works everywhere (every browser, mobile, smart TV). CDN-cacheable — one stream serves millions. Battle-tested. Industry standard. Can't do sub-3s but 5-10s is acceptable for most gaming streams.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">⚠️ WebRTC (ultra-low latency)</div><p>&lt;500ms latency. P2P or SFU server. Excellent for interactive applications (trivia, co-op games, where viewer reaction time matters). But: doesn't scale to 1M viewers per stream — requires mesh or SFU infrastructure. High server cost. Not CDN-cacheable. Twitch uses for "co-streaming" with hosts.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">❌ RTMP Playback</div><p>2-3s latency. But: Flash is dead, requires custom player, no CDN caching. Every viewer connection directly to origin server — doesn't scale. Deprecated as a delivery protocol. Fine for ingest (streamer → server) but not for delivery (server → viewer).</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🎬 Transcoding: Live on Ingest vs Batched vs Client-Side</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Real-time GPU transcoding</div><p>GPU-accelerated NVENC processes in under 2s per segment. One GPU server handles 50 streams. Scales linearly with stream count. High GPU cost but no alternative for live content — you can't buffer and transcode offline.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">❌ Passthrough (no transcoding)</div><p>Forward raw stream to viewers. Zero transcoding cost. But: all viewers must support the streamer's exact codec/bitrate. A 6 Mbps 1080p stream will buffer on mobile. No adaptive bitrate = terrible viewer experience on poor connections. Not viable for consumer platform.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">💡 Adaptive vs Fixed Quality</div><p>Fixed quality (one bitrate): simpler, 33% of transcoding cost. But viewers on mobile or poor connection either buffer or watch low-res. Adaptive (3 bitrates): HLS.js player automatically selects 480p/720p/1080p based on available bandwidth. Industry standard for consumer platforms.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">💬 Chat: Redis Pub/Sub vs Kafka vs WebSocket Direct</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">❌ WebSocket direct (no broker)</div><p>All chat servers must know each other. Viewer sends → server must forward to all other servers. Full mesh O(N²) at 50 servers. Operational nightmare. No persistence.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Redis Pub/Sub (chosen)</div><p>Central broker. Any server publishes → all subscribers receive. Simple. &lt;1ms delivery. No persistence (fire and forget). Perfect for chat — messages don't need durability. Redis easily handles 100K messages/sec per channel.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">⚠️ Kafka (over-engineered for chat)</div><p>Durable, ordered, replayable. Would work. But: adds 50-200ms latency per message (unnecessary for chat). Operational overhead. Chat doesn't need durability — if you miss a message while disconnected, that's fine. Save Kafka for when you need the durability (analytics).</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

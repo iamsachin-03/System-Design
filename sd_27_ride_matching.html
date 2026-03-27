@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #27 — Ride Matching / Dispatch</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#fbbf24;--a2:#f59e0b;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fef3c7;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#0f0d07 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(251,191,36,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fef9c3 0%,#fbbf24 50%,#92400e 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(251,191,36,.07);color:#fef3c7;border:1px solid rgba(251,191,36,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(251,191,36,.1);color:var(--ecolor);border:1.5px solid rgba(251,191,36,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(251,191,36,.08);color:var(--accent);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fef3c7;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(251,191,36,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(251,191,36,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#fbbf24;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Mobility › <span>27 / Ride Matching</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🚗</div>
+    <div>
+      <div class="h-title">Ride Matching / Dispatch (Uber)</div>
+      <div class="h-desc">Design the core of Uber's dispatch system — real-time geospatial indexing of millions of moving drivers, matching riders to the nearest available driver in under 2 seconds, ETA computation via road network graphs, surge pricing from demand/supply imbalance, and handling the thundering herd when a concert ends.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Geospatial Index</span>
+        <span class="badge b-tag">H3 Hexagons</span>
+        <span class="badge b-tag">ETA Graph</span>
+        <span class="badge b-tag">Surge Pricing</span>
+        <span class="badge b-tag">Supply/Demand</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('geo',this)">🗺 Geospatial</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>The hardest part of Uber's system is not the matching algorithm — it's tracking millions of moving drivers with sub-second precision and making matching decisions faster than the driver can drive away.</strong></div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Drivers report location every 4 seconds (GPS heartbeat)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Rider requests trip → match nearest available driver</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>ETA estimation to pickup + destination</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Surge pricing based on supply/demand imbalance per zone</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Trip lifecycle: requested → matched → pickup → in-trip → completed</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>1M concurrent drivers globally, 10M rider sessions</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Match latency: &lt;2s from rider request to driver notification</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Location update throughput: 250K updates/sec (1M drivers ÷ 4s)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>ETA accuracy: ±30 seconds for &lt;15 min trips</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Geospatial query latency: &lt;100ms (find nearby drivers)</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Geospatial Indexing</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · GEO INDEX</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>1 million drivers are moving around the world. A rider requests a trip. How do you find nearby available drivers efficiently?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Naive approach: scan all 1M drivers, calculate distance to each. At O(N) this is 1M distance calculations per request — too slow.<br><br>
+      <b>Geospatial indexing with S2 or H3 cells:</b><br><br>
+      The Earth's surface is divided into hierarchical hexagonal/square cells. Uber uses <b>Uber H3</b> (hexagonal hierarchical index); Google Maps uses S2 (quad cells). The key property: all points within a cell are close together, and adjacent cells cover contiguous geography.<br><br>
+      Each driver's location is mapped to a cell ID at a resolution that covers roughly 1km². Driver locations are stored in Redis: <code>HSET cell:{h3_cell_id} {driver_id} {status,lat,lng,timestamp}</code>.<br><br>
+      <b>Finding nearby drivers:</b> Convert rider's location to H3 cell ID at the same resolution. Query that cell + its 6 immediate neighbours (H3's hexagonal grid means 7 cells = ~7 km² coverage). This reduces 1M driver scan to typically &lt;500 drivers in nearby cells.<br><br>
+      <b>Dynamic radius:</b> If fewer than 3 available drivers found in radius-1, expand to radius-2 (next ring of cells, ~37 cells). Most cities find enough drivers in radius-1. Rural areas expand to radius-3+.
+    </div></div>
+    <div class="tip-box"><strong>💡 Why H3 over geohash?</strong> H3 hexagons have equal area and equidistant neighbours — no edge distortion. Geohash squares have non-uniform distance to corner neighbours vs edge neighbours. For proximity queries, hexagons give more uniform results.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 2 — Matching Algorithm</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · MATCHING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You found 50 nearby drivers. How do you decide which one gets the trip?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Simplistic answer: pick the nearest driver. But "nearest" in Euclidean distance ≠ "nearest" in real-world driving time due to road topology, traffic, one-ways. Better:<br><br>
+      <b>ETA-based matching:</b> For each candidate driver, compute the estimated time to reach the rider using the road network graph. Select the driver with minimum ETA to pickup.<br><br>
+      <b>ETA computation:</b> Uber maintains a road graph for each city (nodes = intersections, edges = road segments with travel time weights). Travel times are updated in real-time from GPS trace data of all active drivers. For each candidate driver, run a truncated Dijkstra/A* from driver location to rider location. With a time limit (e.g., compute for max 2km radius), this runs in &lt;10ms per driver.<br><br>
+      <b>Multi-objective scoring:</b> Production matching isn't purely ETA-minimizing. Uber's algorithm balances:<br>
+      <ul>
+        <li>ETA to pickup (rider satisfaction)</li>
+        <li>Driver's heading direction (a driver already driving toward the pickup zone gets a bonus)</li>
+        <li>Driver's idle time (fairness — longer-waiting drivers preferred if ETA is similar)</li>
+        <li>Surge zone efficiency (matching within the same surge zone avoids cross-zone arbitrage)</li>
+      </ul>
+      <b>Batched matching:</b> Rather than matching each ride request independently, Uber batches requests every 500ms and runs an optimal matching (linear assignment problem) across all pending requests and available drivers. This allows better global optimisation — avoids two drivers crossing paths to serve two riders when swapping would be more efficient.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">💰 Phase 3 — Surge Pricing</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · SURGE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A concert just ended. 10,000 people suddenly want rides simultaneously. How does surge pricing work technically?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Surge is a demand-to-supply ratio computed per geographic zone, updated every 1-2 minutes:<br><br>
+      <b>Supply:</b> Count of available drivers in each H3 zone (queried from the driver location index).<br>
+      <b>Demand:</b> Count of active ride requests in each zone in the last 5 minutes (time-windowed from the request stream).<br>
+      <b>Surge multiplier:</b> A piecewise function of demand/supply ratio. At ratio=1 (balanced), multiplier=1.0×. At ratio=2 (twice as many riders as drivers), multiplier=1.5×. At ratio=5+, multiplier=3-4×. The exact function is tuned to bring supply into equilibrium — higher prices incentivise distant drivers to drive into the surge zone.<br><br>
+      <b>Technical implementation:</b> A Flink/Spark streaming job reads driver location updates and ride requests, computes the demand/supply ratio per H3 zone every 60 seconds, and writes the surge multiplier to Redis: <code>SET surge:{h3_zone} 2.1 EX 120</code> (TTL 2 minutes ensures stale surge expires). The pricing service reads this key at trip request time to compute the final fare estimate.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="geo" class="panel">
+  <div class="sec"><div class="sec-head">🗺 H3 Geospatial Indexing — Deep Dive</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+<defs>
+<marker id="ya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fbbf24"/></marker>
+<marker id="ga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+</defs>
+<!-- H3 grid -->
+<text x="10" y="20" font-family="JetBrains Mono" font-size="10" fill="#fbbf24" font-weight="700">H3 HEXAGONAL GRID — Rider at center, search 7 cells (radius 1)</text>
+
+<!-- Center hex (rider) -->
+<polygon points="240,110 280,88 320,110 320,154 280,176 240,154" fill="rgba(244,63,94,.2)" stroke="#f43f5e" stroke-width="2"/>
+<text x="280" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb7185">📍 Rider</text>
+<text x="280" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">cell: 8a2a307</text>
+
+<!-- Adjacent hexes (6 neighbours) -->
+<polygon points="160,110 200,88 240,110 240,154 200,176 160,154" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="200" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">🚗 3 drivers</text>
+<text x="200" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">8a2a308</text>
+
+<polygon points="240,44 280,22 320,44 320,88 280,110 240,88" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="280" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">🚗 5 drivers</text>
+<text x="280" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">8a2a309</text>
+
+<polygon points="320,110 360,88 400,110 400,154 360,176 320,154" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="360" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">🚗 1 driver</text>
+<text x="360" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">8a2a30a</text>
+
+<polygon points="320,176 360,154 400,176 400,220 360,242 320,220" fill="rgba(16,185,129,.08)" stroke="#10b981" stroke-width="1.5"/>
+<text x="360" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">🚗 2 drivers</text>
+<text x="360" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">best ETA</text>
+
+<polygon points="240,176 280,154 320,176 320,220 280,242 240,220" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="280" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">🚗 4 drivers</text>
+
+<polygon points="160,176 200,154 240,176 240,220 200,242 160,220" fill="rgba(251,191,36,.08)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="200" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">🚗 0 drivers</text>
+
+<!-- Match result -->
+<text x="450" y="40" font-family="JetBrains Mono" font-size="9" fill="#10b981" font-weight="700">MATCHING RESULT</text>
+<rect x="450" y="50" width="350" height="200" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+<text x="462" y="72" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">Query: cells [8a2a307, 308, 309, 30a, 30b, 30c, 30d]</text>
+<text x="462" y="88" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Found: 15 available drivers in radius-1</text>
+<text x="462" y="106" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Compute ETA for each via road graph:</text>
+<text x="462" y="120" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  driver-A: 2m 45s  (3.1 km, heading NW)</text>
+<text x="462" y="134" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  driver-B: 2m 12s  (2.7 km, heading SE ✓)</text>
+<text x="462" y="148" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  driver-C: 3m 30s  (4.2 km, stuck at light)</text>
+<text x="462" y="162" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  ... 12 more</text>
+<text x="462" y="180" font-family="JetBrains Mono" font-size="8" fill="#10b981">Selected: driver-B (min ETA + heading bonus)</text>
+<text x="462" y="196" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">Notification sent via WebSocket push → driver app</text>
+<text x="462" y="212" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Acceptance window: 10 seconds. If declined → next.</text>
+<text x="462" y="228" font-family="JetBrains Mono" font-size="7" fill="#e879f9">Total latency: geo query (15ms) + ETA (80ms) + push (50ms) = 145ms</text>
+
+<!-- Resolution table -->
+<rect x="10" y="270" width="420" height="80" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+<text x="20" y="288" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">H3 RESOLUTION SELECTION:</text>
+<text x="20" y="304" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Res 9  → cell ~0.1 km²  (too granular, misses nearby drivers)</text>
+<text x="20" y="318" font-family="JetBrains Mono" font-size="8" fill="#10b981">Res 8  → cell ~0.7 km²  ✓ used for driver lookup</text>
+<text x="20" y="332" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Res 6  → cell ~36 km²   (used for surge pricing zones)</text>
+<text x="20" y="346" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Res 4  → cell ~1770 km²  (used for city-level supply)</text>
+
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Driver location updates:</span>
+  <span class="label">1M drivers × 1 update/4s                        = </span><span class="val">250K updates/sec</span>
+  <span class="label">Each update: 50B payload → 250K × 50B             = </span><span class="val">12.5 MB/sec</span>  <span class="label">ingest</span>
+
+<span class="label">Location DB (Redis Geo):</span>
+  <span class="label">1M drivers × 100B per entry                      = </span><span class="val">100 MB</span>  <span class="label">trivial, fits easily</span>
+
+<span class="label">H3 cell query throughput:</span>
+  <span class="label">100K ride requests/day = 1.2 requests/sec         = </span><span class="val">trivial</span>
+  <span class="label">Peak: 10× = 12 requests/sec, each queries 7 cells = 84 Redis ops/sec</span>
+
+<span class="label">ETA computation:</span>
+  <span class="label">15 candidate drivers × 10ms each (road graph A*) = </span><span class="val">150ms</span>  <span class="label">parallel</span>
+  <span class="label">Actual parallel: 15 × 10ms / 15 threads           = </span><span class="val">10ms</span>
+
+<span class="label">Surge computation:</span>
+  <span class="label">Flink job: recalculate all H3 res-6 cells every 60s</span>
+  <span class="label">~50K zones globally × simple ratio calculation    → </span><span class="val">&lt;1s batch</span>
+
+<span class="result">→ Location tracking (250K/sec) is the hot path. Matching itself is low volume (12 req/sec peak).</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Load</th><th>Solution</th></tr>
+      <tr><td>Driver location write</td><td class="hi">250K/sec</td><td>Kafka → Redis geo cluster (sharded by city)</td></tr>
+      <tr><td>Geospatial query</td><td class="hi">12 req/sec peak</td><td>Redis GEORADIUS / H3 cell lookup, &lt;15ms</td></tr>
+      <tr><td>ETA computation</td><td class="hi">15 drivers × 12 req/s</td><td>Parallel A* on in-memory road graph</td></tr>
+      <tr><td>Driver WebSocket</td><td class="hi">1M connections</td><td>50K connections per WebSocket server, 20 servers</td></tr>
+      <tr><td>Surge pricing</td><td class="hi">50K zones/60s</td><td>Flink streaming, Redis SET with 120s TTL</td></tr>
+      <tr><td>Trip state machine</td><td class="hi">100K trips/day</td><td>PostgreSQL + Redis state cache</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+<defs>
+<marker id="hya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fbbf24"/></marker>
+<marker id="hga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="hba" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="hra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+<!-- Driver app -->
+<rect x="10" y="30" width="100" height="60" rx="7" fill="#131c2e" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="60" y="54" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fef3c7">🚗 Driver</text>
+<text x="60" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GPS every 4s</text>
+<text x="60" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fbbf24">WebSocket</text>
+
+<!-- Rider app -->
+<rect x="10" y="160" width="100" height="60" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="60" y="184" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">📱 Rider</text>
+<text x="60" y="198" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">request trip</text>
+<text x="60" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">HTTPS + WS</text>
+
+<!-- Location Service -->
+<rect x="130" y="20" width="140" height="80" rx="7" fill="#131c2e" stroke="#fbbf24" stroke-width="2"/>
+<text x="200" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fef3c7">📍 Location Svc</text>
+<text x="200" y="59" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">250K updates/sec</text>
+<text x="200" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Kafka pub</text>
+<text x="200" y="85" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fbbf24">→ Redis GEO update</text>
+
+<!-- Kafka -->
+<rect x="290" y="20" width="120" height="80" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="350" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">Kafka</text>
+<text x="350" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">driver-locations</text>
+<text x="350" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">trip-events</text>
+<text x="350" y="85" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">partitioned by city</text>
+
+<!-- Redis Geo -->
+<rect x="130" y="120" width="140" height="70" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="200" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">Redis GEO</text>
+<text x="200" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">H3 cell → drivers</text>
+<text x="200" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GEORADIUS queries</text>
+<text x="200" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">TTL 30s per driver</text>
+
+<!-- Matching Service -->
+<rect x="430" y="80" width="160" height="120" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="510" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🎯 Matching Svc</text>
+<text x="510" y="119" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">H3 cell lookup</text>
+<text x="510" y="133" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ETA computation</text>
+<text x="510" y="147" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">batched 500ms</text>
+<text x="510" y="161" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">driver notification</text>
+<text x="510" y="175" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">acceptance timeout</text>
+<text x="510" y="189" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">&lt;2s end-to-end</text>
+
+<!-- ETA Service -->
+<rect x="610" y="30" width="140" height="70" rx="7" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="680" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c4b5fd">🗺 ETA Service</text>
+<text x="680" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">road graph A*</text>
+<text x="680" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">real-time traffic weights</text>
+<text x="680" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">in-memory per city</text>
+
+<!-- Surge Service -->
+<rect x="610" y="120" width="140" height="70" rx="7" fill="#131c2e" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="680" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fef3c7">⚡ Surge Svc</text>
+<text x="680" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">demand/supply ratio</text>
+<text x="680" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">per H3 zone, 60s</text>
+<text x="680" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fbbf24">Redis: surge:{zone}</text>
+
+<!-- Trip DB -->
+<rect x="610" y="210" width="140" height="70" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="680" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#bae6fd">🗄 Trip DB</text>
+<text x="680" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">PostgreSQL + Redis</text>
+<text x="680" y="262" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">state machine</td></tr>
+<text x="680" y="272" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">REQUESTED→MATCHED→...</text>
+
+<!-- Notification Service -->
+<rect x="430" y="230" width="160" height="70" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="510" y="252" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">🔔 Push Svc</text>
+<text x="510" y="266" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">WebSocket pool</text>
+<text x="510" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">driver accept/decline</text>
+<text x="510" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">10s accept window</text>
+
+<!-- Arrows -->
+<line x1="110" y1="55" x2="128" y2="55" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#hya)"/>
+<line x1="110" y1="190" x2="128" y2="170" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#hra)"/>
+<line x1="270" y1="55" x2="288" y2="55" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hba)"/>
+<line x1="200" y1="100" x2="200" y2="118" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#hra)"/>
+<line x1="270" y1="155" x2="428" y2="140" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#hya)"/>
+<line x1="590" y1="130" x2="608" y2="80" stroke="#a855f7" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hya)"/>
+<line x1="590" y1="160" x2="608" y2="155" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hya)"/>
+<line x1="510" y1="200" x2="510" y2="228" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#hra)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Ride Matching — Java: Geo lookup + ETA-based match
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">MatchingService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisGeoOps</span>  geoOps;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">EtaService</span>    etaService;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">H3Index</span>       h3;
+
+    <span class="cm">/**
+     * Find and dispatch the best driver for a ride request.
+     * 1. Get nearby available drivers via H3 + Redis GEO
+     * 2. Compute ETA for top candidates (parallel)
+     * 3. Score and select best match
+     * 4. Send offer to driver (WebSocket)
+     */</span>
+    <span class="kw">public</span> <span class="cls">MatchResult</span> <span class="fn2">matchRider</span>(<span class="cls">RideRequest</span> req) {
+        <span class="cls">Location</span> riderLoc = req.getPickupLocation();
+
+        <span class="cm">// 1. H3 cell lookup — find nearby drivers in radius 1</span>
+        <span class="kw">long</span> riderCell  = h3.geoToH3(riderLoc.getLat(), riderLoc.getLng(), <span class="num">8</span>); <span class="cm">// res 8</span>
+        <span class="cls">List</span>&lt;<span class="kw">long</span>&gt; cells = h3.kRing(riderCell, <span class="num">1</span>);    <span class="cm">// center + 6 neighbors</span>
+
+        <span class="cls">List</span>&lt;<span class="cls">Driver</span>&gt; candidates = cells.stream()
+            .flatMap(cell -> geoOps.getAvailableDrivers(cell).stream())
+            .filter(<span class="cls">Driver</span>::isAvailable)
+            .limit(<span class="num">30</span>)  <span class="cm">// cap candidates for ETA computation</span>
+            .collect(<span class="cls">Collectors</span>.toList());
+
+        <span class="cm">// If not enough drivers, expand to radius 2</span>
+        <span class="kw">if</span> (candidates.size() < <span class="num">3</span>) {
+            cells = h3.kRing(riderCell, <span class="num">2</span>);
+            candidates = cells.stream()
+                .flatMap(cell -> geoOps.getAvailableDrivers(cell).stream())
+                .filter(<span class="cls">Driver</span>::isAvailable).limit(<span class="num">30</span>).collect(<span class="cls">Collectors</span>.toList());
+        }
+
+        <span class="kw">if</span> (candidates.isEmpty()) <span class="kw">return</span> <span class="cls">MatchResult</span>.noDrivers();
+
+        <span class="cm">// 2. Parallel ETA computation for all candidates</span>
+        <span class="cls">List</span>&lt;<span class="cls">CompletableFuture</span>&lt;<span class="cls">DriverEta</span>&gt;&gt; etaFutures = candidates.stream()
+            .map(driver -> <span class="cls">CompletableFuture</span>.supplyAsync(
+                () -> etaService.computePickupEta(driver.getLocation(), riderLoc)))
+            .collect(<span class="cls">Collectors</span>.toList());
+
+        <span class="cls">List</span>&lt;<span class="cls">DriverEta</span>&gt; etas = etaFutures.stream()
+            .map(<span class="cls">CompletableFuture</span>::join)
+            .collect(<span class="cls">Collectors</span>.toList());
+
+        <span class="cm">// 3. Score drivers: ETA + heading alignment + wait time</span>
+        <span class="cls">DriverEta</span> best = etas.stream()
+            .min(<span class="cls">Comparator</span>.comparingDouble(e -> <span class="fn2">score</span>(e, req)))
+            .orElseThrow();
+
+        <span class="cm">// 4. Send offer and wait for acceptance (10s timeout)</span>
+        <span class="kw">return</span> <span class="fn2">offerAndAwait</span>(best.getDriver(), req);
+    }
+
+    <span class="cm">/** Scoring: lower is better. ETA-dominant with adjustments. */</span>
+    <span class="kw">private double</span> <span class="fn2">score</span>(<span class="cls">DriverEta</span> eta, <span class="cls">RideRequest</span> req) {
+        <span class="kw">double</span> etaSeconds    = eta.getEtaSeconds();
+        <span class="kw">double</span> headingBonus  = <span class="fn2">headingAlignment</span>(eta.getDriver(), req.getPickupLocation()) * <span class="num">30</span>;
+        <span class="kw">double</span> waitBonus     = eta.getDriver().getIdleSeconds() * <span class="num">0.1</span>;
+        <span class="kw">return</span> etaSeconds - headingBonus - waitBonus;
+    }
+
+    <span class="cm">/** headingAlignment: 1.0 if driver heading toward pickup, 0.0 if away */</span>
+    <span class="kw">private double</span> <span class="fn2">headingAlignment</span>(<span class="cls">Driver</span> driver, <span class="cls">Location</span> pickup) {
+        <span class="kw">double</span> bearingToPickup = <span class="fn2">bearing</span>(driver.getLocation(), pickup);
+        <span class="kw">double</span> diff = <span class="cls">Math</span>.abs(driver.getHeading() - bearingToPickup);
+        <span class="kw">if</span> (diff > <span class="num">180</span>) diff = <span class="num">360</span> - diff;
+        <span class="kw">return</span> <span class="num">1.0</span> - (diff / <span class="num">180.0</span>);
+    }
+}
+
+<span class="cm">// ── Driver Location Update ────────────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">LocationService</span> {
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">H3Index</span> h3;
+
+    <span class="kw">public void</span> <span class="fn2">updateDriverLocation</span>(<span class="cls">String</span> driverId, <span class="kw">double</span> lat, <span class="kw">double</span> lng) {
+        <span class="kw">long</span> cell = h3.geoToH3(lat, lng, <span class="num">8</span>);
+
+        <span class="cm">// Remove from old cell if changed</span>
+        <span class="cls">String</span> oldCell = redis.opsForValue().get(<span class="str">"driver_cell:"</span> + driverId);
+        <span class="kw">if</span> (oldCell != <span class="kw">null</span> && !oldCell.equals(<span class="cls">String</span>.valueOf(cell))) {
+            redis.opsForHash().delete(<span class="str">"cell:"</span> + oldCell, driverId);
+        }
+
+        <span class="cm">// Update current cell</span>
+        redis.opsForValue().set(<span class="str">"driver_cell:"</span> + driverId, <span class="cls">String</span>.valueOf(cell), <span class="num">30</span>, <span class="cls">TimeUnit</span>.SECONDS);
+        redis.opsForHash().put(<span class="str">"cell:"</span> + cell, driverId,
+            lat + <span class="str">","</span> + lng + <span class="str">","</span> + <span class="cls">System</span>.currentTimeMillis());
+        redis.expire(<span class="str">"cell:"</span> + cell, <span class="num">30</span>, <span class="cls">TimeUnit</span>.SECONDS);
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Ride Matching — Python: H3 geo lookup + matching
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> h3, redis, asyncio, math
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> List, Optional
+
+r = redis.Redis()
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Driver</span>:
+    driver_id: str
+    lat:       float
+    lng:       float
+    heading:   float  <span class="cm"># degrees 0-360</span>
+    idle_secs: int
+    available: bool
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">RideRequest</span>:
+    rider_id:   str
+    pickup_lat: float
+    pickup_lng: float
+    dest_lat:   float
+    dest_lng:   float
+
+
+<span class="kw">def</span> <span class="fn2">update_driver_location</span>(driver_id: str, lat: float, lng: float):
+    <span class="str">"""Called every 4s per driver. Update H3 cell assignment."""</span>
+    cell = h3.geo_to_h3(lat, lng, resolution=<span class="num">8</span>)
+    old_cell = r.get(f<span class="str">\'driver_cell:{driver_id}\'</span>)
+    <span class="kw">if</span> old_cell <span class="kw">and</span> old_cell.decode() != cell:
+        r.hdel(f<span class="str">\'cell:{old_cell.decode()}\'</span>, driver_id)
+    r.setex(f<span class="str">\'driver_cell:{driver_id}\'</span>, <span class="num">30</span>, cell)
+    r.hset(f<span class="str">\'cell:{cell}\'</span>, driver_id, f<span class="str">\'{lat},{lng}\'</span>)
+    r.expire(f<span class="str">\'cell:{cell}\'</span>, <span class="num">30</span>)
+
+
+<span class="kw">def</span> <span class="fn2">get_nearby_drivers</span>(lat: float, lng: float, radius: int = <span class="num">1</span>) -> List[<span class="cls">Driver</span>]:
+    <span class="str">"""H3 k-ring search for available drivers."""</span>
+    rider_cell = h3.geo_to_h3(lat, lng, resolution=<span class="num">8</span>)
+    cells      = h3.k_ring(rider_cell, radius)
+    drivers    = []
+    <span class="kw">for</span> cell <span class="kw">in</span> cells:
+        data = r.hgetall(f<span class="str">\'cell:{cell}\'</span>)
+        <span class="kw">for</span> did, pos <span class="kw">in</span> data.items():
+            driver_lat, driver_lng = map(float, pos.decode().split(<span class="str">\',\'</span>))
+            <span class="cm"># Check availability flag</span>
+            status = r.get(f<span class="str">\'driver_status:{did.decode()}\'</span>)
+            <span class="kw">if</span> status <span class="kw">and</span> status.decode() == <span class="str">\'available\'</span>:
+                drivers.append(<span class="cls">Driver</span>(
+                    driver_id=did.decode(), lat=driver_lat, lng=driver_lng,
+                    heading=<span class="num">0</span>, idle_secs=<span class="num">0</span>, available=<span class="kw">True</span>))
+    <span class="kw">return</span> drivers[:30]
+
+
+<span class="kw">def</span> <span class="fn2">haversine_km</span>(lat1, lng1, lat2, lng2) -> float:
+    R = <span class="num">6371</span>
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat/<span class="num">2</span>)**<span class="num">2</span> + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlng/<span class="num">2</span>)**<span class="num">2</span>
+    <span class="kw">return</span> R * <span class="num">2</span> * math.asin(math.sqrt(a))
+
+
+<span class="kw">def</span> <span class="fn2">estimate_eta_seconds</span>(driver: <span class="cls">Driver</span>, pickup_lat: float, pickup_lng: float) -> float:
+    <span class="str">"""Simplified ETA: distance / avg speed. Production: A* on road graph."""</span>
+    dist_km   = haversine_km(driver.lat, driver.lng, pickup_lat, pickup_lng)
+    avg_kmh   = <span class="num">25</span>  <span class="cm"># city average speed</span>
+    <span class="kw">return</span> (dist_km / avg_kmh) * <span class="num">3600</span>
+
+
+<span class="kw">def</span> <span class="fn2">match_driver</span>(req: <span class="cls">RideRequest</span>) -> Optional[<span class="cls">Driver</span>]:
+    <span class="str">"""Full matching pipeline."""</span>
+    drivers = get_nearby_drivers(req.pickup_lat, req.pickup_lng, radius=<span class="num">1</span>)
+    <span class="kw">if</span> len(drivers) < <span class="num">3</span>:
+        drivers = get_nearby_drivers(req.pickup_lat, req.pickup_lng, radius=<span class="num">2</span>)
+    <span class="kw">if not</span> drivers:
+        <span class="kw">return None</span>
+
+    <span class="cm"># Score each driver (lower = better)</span>
+    <span class="kw">def</span> <span class="fn2">score</span>(driver: <span class="cls">Driver</span>) -> float:
+        eta   = estimate_eta_seconds(driver, req.pickup_lat, req.pickup_lng)
+        wait_bonus = driver.idle_secs * <span class="num">0.1</span>
+        <span class="kw">return</span> eta - wait_bonus
+
+    best = min(drivers, key=score)
+    <span class="cm"># In production: send WebSocket push, wait 10s for acceptance</span>
+    <span class="kw">return</span> best
+
+
+<span class="cm"># ── Surge pricing ────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">compute_surge</span>(zone_cell: str) -> float:
+    demand = int(r.get(f<span class="str">\'demand:{zone_cell}\'</span>) <span class="kw">or</span> <span class="num">0</span>)
+    supply = int(r.get(f<span class="str">\'supply:{zone_cell}\'</span>) <span class="kw">or</span> <span class="num">1</span>)
+    ratio  = demand / max(supply, <span class="num">1</span>)
+    <span class="kw">if</span>   ratio < <span class="num">1.2</span>: <span class="kw">return</span> <span class="num">1.0</span>
+    <span class="kw">elif</span> ratio < <span class="num">2.0</span>: <span class="kw">return</span> <span class="num">1.5</span>
+    <span class="kw">elif</span> ratio < <span class="num">3.0</span>: <span class="kw">return</span> <span class="num">2.0</span>
+    <span class="kw">else</span>:             <span class="kw">return</span> min(<span class="num">4.0</span>, <span class="num">1.0</span> + ratio * <span class="num">0.6</span>)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🗺 Geospatial Index: H3 vs S2 vs Geohash vs PostGIS</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ H3 Hexagons</div><p>Uber's own standard. Equal-area hexagons with uniform neighbour distance. 7-cell k-ring covers ~7 km² at res 8. Excellent for proximity queries. Open source. Python, Java, Go bindings. Best for ride-sharing because hexagons have no "corner" distortion.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">S2 Geometry (Google)</div><p>Quad-tree subdivision of the sphere. Used by Google Maps, Foursquare. Excellent for arbitrary polygon containment queries. Cells are squares — corner cells are farther from centre than edge cells, making proximity queries slightly less uniform than H3. Robust, battle-tested.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Geohash</div><p>Z-order curve encoding lat/lng as a base-32 string. Simple, human-readable (e.g., "u4pruyd"). Adjacent cells can have very different geohash prefixes at boundaries — requires checking 8 neighbours instead of 6. Sufficient for simple use cases. Not uniform area. Avoid for production ride-sharing at scale.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🎯 Matching: Greedy vs Batched Optimal</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Greedy (first-come, min-ETA)</div><p>Match each request independently as it arrives. Simple, low latency (&lt;200ms). But: can make globally suboptimal choices — two drivers may "cross" to serve two riders when swapping would save 4 minutes total. Works fine at low density.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Batched (500ms window)</div><p>Collect all requests in a 500ms window. Run bipartite matching (Hungarian algorithm or linear programming relaxation) to optimise total ETA across all pending requests simultaneously. ~5% better than greedy at city scale. Uber uses this in production. Adds 500ms latency — acceptable given the 2s total budget.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">ML-based matching</div><p>Train a model on historical data (demand patterns, traffic, driver behaviour). Predict which driver is most likely to accept and complete the trip efficiently. Better than ETA alone. Higher engineering complexity. Uber uses ML for cancellation prediction, not raw matching.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

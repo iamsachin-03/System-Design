@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #30 — Distributed Task Scheduler</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#a78bfa;--a2:#7c3aed;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#ede9fe;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#0c0714 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(167,139,250,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#f5f3ff 0%,#a78bfa 50%,#5b21b6 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(167,139,250,.07);color:#ede9fe;border:1px solid rgba(167,139,250,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(167,139,250,.1);color:var(--ecolor);border:1.5px solid rgba(167,139,250,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(167,139,250,.08);color:var(--accent);border:1px solid rgba(167,139,250,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#ede9fe;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(167,139,250,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(167,139,250,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#a78bfa;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>30 / Distributed Task Scheduler</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">⏰</div>
+    <div>
+      <div class="h-title">Distributed Task Scheduler</div>
+      <div class="h-desc">Design a system that runs millions of scheduled jobs reliably — cron expressions, one-time delayed tasks, recurring jobs — with exactly-once execution guarantees, failure recovery, at-least-once delivery fallback, distributed worker coordination, and the ability to scale to 1M concurrent scheduled tasks without a single point of failure.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Exactly-Once</span>
+        <span class="badge b-tag">Idempotency</span>
+        <span class="badge b-tag">Leader Election</span>
+        <span class="badge b-tag">Distributed Lock</span>
+        <span class="badge b-tag">Cron at Scale</span>
+        <span class="badge b-tag">Failure Recovery</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('execution',this)">⚙️ Execution</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Distributed task scheduling is harder than it looks.</strong> The core challenge: with many scheduler nodes, how do you prevent the same job from firing twice at the same second? With worker failures, how do you ensure a job that was "in flight" gets re-executed without running twice in total? These are fundamentally distributed systems problems.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Schedule one-time jobs (execute at T+600s)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Schedule recurring jobs (cron: "0 9 * * 1-5")</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Cancel / pause / update scheduled jobs</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Job execution: HTTP callback, queue message, or RPC</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Execution history: status, start/end time, output, errors</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Retry policy: on failure, retry up to N times with backoff</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>1M scheduled jobs in the system</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Trigger accuracy: ±1 second of scheduled time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>At-most-once execution by default; at-least-once with idempotency key</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>No single point of failure — scheduler nodes are redundant</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>10K job triggers/sec peak throughput</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Preventing Double Execution</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · EXACTLY-ONCE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You have 5 scheduler nodes. All 5 check the jobs table at 12:00:00. All 5 see job X is due. How do you prevent all 5 from executing it?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      This is the thundering herd + double execution problem. Three solutions:<br><br>
+      <b>1. Database optimistic locking (SELECT FOR UPDATE SKIP LOCKED):</b> All scheduler nodes run:<br>
+      <code>SELECT * FROM jobs WHERE next_run_at &lt;= NOW() AND status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 100</code><br>
+      The <code>FOR UPDATE</code> takes a row lock; <code>SKIP LOCKED</code> means other transactions skip already-locked rows rather than waiting. Each scheduler node picks a disjoint set of jobs. First node to lock job X "wins" — others skip it. This is the simplest and most reliable approach. PostgreSQL and MySQL both support this pattern.<br><br>
+      <b>2. Distributed lock (Redis SETNX):</b> Before executing a job, acquire a distributed lock:<br>
+      <code>SET lock:job:{job_id}:{run_id} 1 NX EX 300</code><br>
+      Only one node acquires this lock (NX = only if not exists). The node that succeeds executes the job; others get a lock failure and skip. Lock expires after 300s (cleanup if executor dies). TTL must be longer than max job execution time.<br><br>
+      <b>3. Leader election (single scheduler):</b> Elect one scheduler node as leader (via ZooKeeper or etcd). Only the leader scans and triggers jobs. Followers watch for leader failure and re-elect. Simplest correctness guarantee — no concurrent scheduling. Downside: single point of throughput (mitigated by leader batching and pushing work to a queue).
+    </div></div>
+    <div class="tip-box"><strong>💡 Production approach:</strong> SKIP LOCKED for job claiming at the DB level + Redis distributed lock as a second guard before execution. Belt and suspenders — DB lock prevents most duplicates, Redis lock catches any edge cases.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔄 Phase 2 — At-Least-Once + Idempotency</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · FAILURE RECOVERY</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A worker picks up a job and crashes halfway through. How do you recover without executing the job twice?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      When a worker picks up a job, it sets <code>status = RUNNING, locked_by = worker_id, lock_expires_at = NOW() + 300s</code>.<br><br>
+      <b>Heartbeat mechanism:</b> The worker sends a heartbeat every 30s: <code>UPDATE jobs SET lock_expires_at = NOW() + 300s WHERE job_id = ?</code>. If the worker dies, heartbeats stop and the lock expires.<br><br>
+      <b>Reaper process:</b> A background reaper runs every 60s: <code>SELECT * FROM jobs WHERE status = 'RUNNING' AND lock_expires_at &lt; NOW()</code>. For each found job: reset to <code>status = PENDING</code> for re-execution. The job will be picked up by another worker on the next scan.<br><br>
+      <b>The problem:</b> This gives at-least-once execution — the job may have partially completed before the crash. If we re-run it, we might double-charge a customer, send two emails, etc.<br><br>
+      <b>Solution — idempotency keys:</b> Jobs include an <code>idempotency_key = {job_id}:{attempt_number}</code>. The target service (e.g., payment processor) stores a record of this key and rejects duplicate requests: if <code>idempotency_key</code> was already processed, return the original result. For HTTP callbacks: pass the key in the <code>X-Idempotency-Key</code> header and have the target service handle dedup.<br><br>
+      This combination gives us <b>effective exactly-once semantics</b>: the scheduler is at-least-once, but with idempotent targets, re-execution is safe.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⏳ Phase 3 — Cron at Scale</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · CRON SCHEDULING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You have 1M cron jobs, each with a different schedule. Some fire every minute (1M/min at worst). How do you store and efficiently query "which jobs are due in the next 10 seconds?"</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Key insight: we store the <b>next computed run time</b> as a concrete timestamp, not the cron expression. When a job fires, we compute the next run time from the cron expression and update the DB. Queries become simple timestamp comparisons.<br><br>
+      <b>Data model:</b> <code>jobs(job_id, cron_expr, next_run_at [INDEXED], status, last_run_at, ...)</code>. Index on <code>next_run_at WHERE status = 'PENDING'</code>.<br><br>
+      <b>Scanning pattern:</b> Scheduler polls every 5s: <code>SELECT ... WHERE next_run_at BETWEEN NOW() AND NOW() + 10s AND status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 500</code>. With a B-tree index on <code>next_run_at</code>, this query is O(log N + K) where K=results — extremely fast even at 1M jobs.<br><br>
+      <b>The thundering herd at minute boundaries:</b> Every minute, potentially millions of "run every minute" jobs all have next_run_at = :00. With SKIP LOCKED, workers compete fairly. But at extreme scale (10M+ jobs firing at once), partition the jobs table: hash job_id modulo number of scheduler partitions. Each scheduler pod is responsible for only its partition. Linear scaling.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="execution" class="panel">
+  <div class="sec"><div class="sec-head">⚙️ Job State Machine & Execution Flow</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+<defs>
+<marker id="va" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+<marker id="vg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="vr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="vy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+
+<!-- State machine title -->
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#a78bfa" font-weight="700">JOB STATE MACHINE</text>
+
+<!-- States -->
+<rect x="10" y="28" width="100" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="2"/>
+<text x="60" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ede9fe">SCHEDULED</text>
+
+<rect x="140" y="28" width="100" height="40" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="190" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">CLAIMING</text>
+
+<rect x="270" y="28" width="100" height="40" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="320" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">RUNNING</text>
+
+<rect x="400" y="28" width="100" height="40" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="450" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">SUCCEEDED</text>
+
+<rect x="400" y="100" width="100" height="40" rx="6" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="450" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">FAILED</text>
+
+<rect x="270" y="100" width="100" height="40" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="320" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">RETRYING</text>
+
+<rect x="530" y="28" width="100" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="580" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ede9fe">SCHEDULED</text>
+<text x="580" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(next run)</text>
+
+<!-- Arrows -->
+<line x1="110" y1="48" x2="138" y2="48" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#va)"/>
+<text x="120" y="44" font-family="JetBrains Mono" font-size="7" fill="#4e6070">SKIP LOCKED</text>
+<line x1="240" y1="48" x2="268" y2="48" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#va)"/>
+<text x="244" y="44" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Redis lock OK</text>
+<line x1="370" y1="48" x2="398" y2="48" stroke="#10b981" stroke-width="1.5" marker-end="url(#vg)"/>
+<text x="372" y="44" font-family="JetBrains Mono" font-size="7" fill="#10b981">HTTP 2xx</text>
+<line x1="500" y1="48" x2="528" y2="48" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#va)"/>
+<text x="500" y="44" font-family="JetBrains Mono" font-size="7" fill="#4e6070">cron: compute next</text>
+<line x1="370" y1="60" x2="402" y2="100" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#vr)"/>
+<text x="374" y="88" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">HTTP 5xx</text>
+<line x1="400" y1="120" x2="372" y2="120" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#vy)"/>
+<text x="374" y="116" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">retry &lt; max</text>
+<line x1="320" y1="100" x2="320" y2="70" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#vy)"/>
+<text x="324" y="90" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">backoff delay</text>
+
+<!-- Execution flow detail -->
+<text x="10" y="168" font-family="JetBrains Mono" font-size="10" fill="#a78bfa" font-weight="700">EXECUTION FLOW (per scheduler pod)</text>
+<rect x="10" y="178" width="840" height="190" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+
+<!-- Step blocks -->
+<rect x="22" y="192" width="120" height="60" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="82" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ede9fe">① Poller</text>
+<text x="82" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">every 5s</text>
+<text x="82" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SKIP LOCKED</text>
+
+<rect x="162" y="192" width="140" height="60" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="232" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">② Claim Lock</text>
+<text x="232" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Redis SETNX</text>
+<text x="232" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lock:job:{id}:{run}</text>
+
+<rect x="322" y="192" width="150" height="60" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="397" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">③ Execute</text>
+<text x="397" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HTTP/RPC/queue</text>
+<text x="397" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">heartbeat 30s</text>
+
+<rect x="492" y="192" width="150" height="60" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="567" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">④ Update DB</text>
+<text x="567" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">status=SUCCEEDED</text>
+<text x="567" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">next_run_at=compute</text>
+
+<rect x="662" y="192" width="150" height="60" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="737" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ede9fe">⑤ Release</text>
+<text x="737" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Redis DEL lock</text>
+<text x="737" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">log execution</text>
+
+<!-- Failure recovery box -->
+<rect x="22" y="268" width="820" height="90" rx="6" fill="rgba(244,63,94,.04)" stroke="rgba(244,63,94,.1)"/>
+<text x="32" y="284" font-family="JetBrains Mono" font-size="8" fill="#f43f5e" font-weight="700">FAILURE RECOVERY (Reaper process, every 60s):</text>
+<text x="32" y="300" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">SELECT * FROM jobs WHERE status='RUNNING' AND lock_expires_at &lt; NOW()</text>
+<text x="32" y="314" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">For each stale job:</text>
+<text x="32" y="328" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  IF attempts &lt; max_retries: UPDATE SET status='PENDING', next_run_at=NOW()+backoff, attempts=attempts+1</text>
+<text x="32" y="342" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  ELSE:                       UPDATE SET status='FAILED', error='Max retries exceeded'</text>
+<text x="32" y="356" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Exponential backoff: attempt 1=30s, 2=90s, 3=270s, 4=810s (base 3)</text>
+
+<!-- Arrows between steps -->
+<line x1="142" y1="222" x2="160" y2="222" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#va)"/>
+<line x1="302" y1="222" x2="320" y2="222" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#va)"/>
+<line x1="472" y1="222" x2="490" y2="222" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#va)"/>
+<line x1="642" y1="222" x2="660" y2="222" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#va)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Jobs table:</span>
+  <span class="label">1M jobs × 1KB per record                         = </span><span class="val">1 GB</span>  <span class="label">fits easily in Postgres</span>
+  <span class="label">Index on next_run_at: B-tree, ~100MB               → </span><span class="val">trivial</span>
+
+<span class="label">Polling query (every 5s):</span>
+  <span class="label">SKIP LOCKED + index scan for due jobs              = </span><span class="val">O(log N + K)</span>
+  <span class="label">With index: 1M jobs, 1000 due at once = 1000 rows → </span><span class="val">~5ms</span>
+
+<span class="label">Throughput:</span>
+  <span class="label">10K jobs/sec × 1 DB write per job                 = </span><span class="val">10K writes/sec</span>
+  <span class="label">Postgres handles: 50K+ writes/sec                 → </span><span class="val">comfortable</span>
+
+<span class="label">Execution history:</span>
+  <span class="label">10K jobs/sec × avg 30s runtime × 500B log         = </span><span class="val">150 MB/sec</span>  <span class="label">log writes</span>
+  <span class="label">Partition history table by month; retain 90 days  = </span><span class="val">~400 GB</span>  <span class="label">history storage</span>
+
+<span class="label">Redis lock overhead:</span>
+  <span class="label">10K SETNX/sec × 1ms each                          = </span><span class="val">10 Redis ops/sec</span>  <span class="label">trivial</span>
+
+<span class="result">→ Single Postgres + Redis handles 1M jobs, 10K/sec. Partition jobs table at 10M+ scale.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Jobs table (Postgres)</td><td class="hi">1M rows</td><td>Index on next_run_at + status; SKIP LOCKED</td></tr>
+      <tr><td>Scheduler pods</td><td class="hi">3-10 pods</td><td>Each polls different partition; horizontal scale</td></tr>
+      <tr><td>Redis (distributed lock)</td><td class="hi">10K SETNX/sec</td><td>Sub-ms per lock, 300s TTL</td></tr>
+      <tr><td>Worker pool</td><td class="hi">N × M threads</td><td>N pods × M concurrent job threads per pod</td></tr>
+      <tr><td>Reaper</td><td class="hi">Every 60s</td><td>Scans for stale RUNNING jobs, resets them</td></tr>
+      <tr><td>Execution history</td><td class="hi">~400 GB/90 days</td><td>Partitioned table, old partitions archived to S3</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 870 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:310px">
+<defs>
+<marker id="pva" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
+<marker id="pvg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="pvr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="pvy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+
+<!-- Clients -->
+<rect x="10" y="80" width="100" height="60" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="60" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ede9fe">📱 Clients</text>
+<text x="60" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">schedule jobs</text>
+<text x="60" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">REST API</text>
+
+<!-- Job API -->
+<rect x="130" y="70" width="130" height="80" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="2"/>
+<text x="195" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#ede9fe">Job API</text>
+<text x="195" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">CRUD jobs</text>
+<text x="195" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">parse cron expr</text>
+<text x="195" y="137" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">compute next_run_at</text>
+
+<!-- Postgres -->
+<rect x="280" y="50" width="150" height="130" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="355" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🗄 Postgres</text>
+<text x="355" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">jobs table</text>
+<text x="355" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">idx: next_run_at,status</text>
+<text x="355" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SKIP LOCKED</text>
+<text x="355" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">execution_history</text>
+<text x="355" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">partitioned monthly</text>
+<text x="355" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">primary + 2 replicas</text>
+
+<!-- Scheduler pods -->
+<rect x="450" y="40" width="170" height="150" rx="8" fill="rgba(167,139,250,.02)" stroke="rgba(167,139,250,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="535" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a78bfa">SCHEDULER PODS (3-10)</text>
+<rect x="460" y="68" width="150" height="110" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="2"/>
+<text x="535" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#ede9fe">⏰ Scheduler</text>
+<text x="535" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">poll every 5s</text>
+<text x="535" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SKIP LOCKED claim</text>
+<text x="535" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Redis SETNX lock</text>
+<text x="535" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">heartbeat 30s</text>
+<text x="535" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">execution + update</text>
+
+<!-- Redis -->
+<rect x="450" y="210" width="170" height="70" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="535" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">⚡ Redis</text>
+<text x="535" y="250" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lock:job:{id}:{run}</text>
+<text x="535" y="264" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SETNX EX 300</text>
+<text x="535" y="274" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">distributed guard</text>
+
+<!-- Target Services -->
+<rect x="640" y="60" width="210" height="130" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="745" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">Target Services</text>
+<text x="745" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HTTP callback</text>
+<text x="745" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">X-Idempotency-Key header</text>
+<text x="745" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">target deduplicates retries</text>
+<text x="745" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">— or —</text>
+<text x="745" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Kafka/SQS message drop</text>
+<text x="745" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">effectively exactly-once</text>
+
+<!-- Reaper -->
+<rect x="640" y="210" width="210" height="70" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="745" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">🧹 Reaper Process</text>
+<text x="745" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">every 60s</text>
+<text x="745" y="262" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">reset stale RUNNING jobs</text>
+<text x="745" y="274" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">retry or mark FAILED</text>
+
+<!-- Arrows -->
+<line x1="110" y1="110" x2="128" y2="110" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#pva)"/>
+<line x1="260" y1="110" x2="278" y2="110" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#pvy)"/>
+<line x1="430" y1="110" x2="448" y2="110" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#pva)"/>
+<line x1="535" y1="178" x2="535" y2="208" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#pvr)"/>
+<line x1="620" y1="130" x2="638" y2="130" stroke="#10b981" stroke-width="1.5" marker-end="url(#pvg)"/>
+<line x1="745" y1="190" x2="745" y2="208" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#pvy)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Distributed Task Scheduler — Java: Scheduler + Reaper
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">SchedulerPod</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">JobRepository</span>    jobRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">JobExecutor</span>      executor;
+
+    <span class="cm">/**
+     * Poll for due jobs every 5 seconds.
+     * SKIP LOCKED ensures this pod gets a disjoint set of jobs
+     * even when multiple scheduler pods run concurrently.
+     */</span>
+    <span class="ann">@Scheduled</span>(fixedDelay = <span class="num">5000</span>)
+    <span class="kw">public void</span> <span class="fn2">pollAndExecute</span>() {
+        <span class="cls">List</span>&lt;<span class="cls">Job</span>&gt; dueJobs = jobRepo.claimDueJobs(<span class="cls">Instant</span>.now(), <span class="num">100</span>);
+        dueJobs.forEach(job -> <span class="cls">CompletableFuture</span>.runAsync(() -> <span class="fn2">executeJob</span>(job)));
+    }
+
+    <span class="kw">private void</span> <span class="fn2">executeJob</span>(<span class="cls">Job</span> job) {
+        <span class="cls">String</span> lockKey = <span class="str">"lock:job:"</span> + job.getId() + <span class="str">":"</span> + job.getRunAttempt();
+
+        <span class="cm">// Double-check with Redis distributed lock (belt and suspenders)</span>
+        <span class="cls">Boolean</span> acquired = redis.opsForValue()
+            .setIfAbsent(lockKey, <span class="str">"locked"</span>, <span class="cls">Duration</span>.ofSeconds(<span class="num">300</span>));
+        <span class="kw">if</span> (!<span class="cls">Boolean</span>.TRUE.equals(acquired)) {
+            <span class="kw">return</span>; <span class="cm">// another pod already executing this run</span>
+        }
+
+        <span class="kw">try</span> {
+            <span class="cm">// Heartbeat thread: keep lock alive during execution</span>
+            <span class="cls">ScheduledFuture</span>&lt;?&gt; heartbeat = <span class="fn2">startHeartbeat</span>(job.getId(), lockKey);
+
+            <span class="cls">ExecutionResult</span> result = executor.execute(job);
+            heartbeat.cancel(<span class="kw">true</span>);
+
+            <span class="kw">if</span> (result.isSuccess()) {
+                <span class="cls">Instant</span> nextRun = <span class="fn2">computeNextRun</span>(job);
+                jobRepo.markSucceeded(job.getId(), result, nextRun);
+            } <span class="kw">else</span> {
+                <span class="fn2">handleFailure</span>(job, result);
+            }
+        } <span class="kw">catch</span> (<span class="cls">Exception</span> e) {
+            <span class="fn2">handleFailure</span>(job, <span class="cls">ExecutionResult</span>.error(e.getMessage()));
+        } <span class="kw">finally</span> {
+            redis.delete(lockKey);
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">handleFailure</span>(<span class="cls">Job</span> job, <span class="cls">ExecutionResult</span> result) {
+        <span class="kw">if</span> (job.getAttempts() < job.getMaxRetries()) {
+            <span class="cm">// Exponential backoff: 30s, 90s, 270s, ...</span>
+            <span class="kw">long</span> backoffSecs = (<span class="kw">long</span>) (<span class="num">30</span> * <span class="cls">Math</span>.pow(<span class="num">3</span>, job.getAttempts()));
+            <span class="cls">Instant</span> retryAt  = <span class="cls">Instant</span>.now().plusSeconds(backoffSecs);
+            jobRepo.markRetrying(job.getId(), result, retryAt);
+        } <span class="kw">else</span> {
+            jobRepo.markFailed(job.getId(), result);
+        }
+    }
+
+    <span class="kw">private</span> <span class="cls">Instant</span> <span class="fn2">computeNextRun</span>(<span class="cls">Job</span> job) {
+        <span class="kw">if</span> (job.getCronExpr() == <span class="kw">null</span>) <span class="kw">return null</span>; <span class="cm">// one-time job</span>
+        <span class="kw">return</span> <span class="cls">CronSequenceGenerator</span>.nextExecution(job.getCronExpr(), <span class="cls">Instant</span>.now());
+    }
+}
+
+<span class="cm">// ── Job Repository (SKIP LOCKED) ──────────────────────</span>
+<span class="kw">public interface</span> <span class="cls">JobRepository</span> {
+
+    <span class="ann">@Query</span>(value = <span class="str">"""
+        SELECT * FROM jobs
+        WHERE next_run_at <= :now AND status = 'PENDING'
+        ORDER BY next_run_at
+        LIMIT :limit
+        FOR UPDATE SKIP LOCKED
+        """</span>, nativeQuery = <span class="kw">true</span>)
+    <span class="ann">@Transactional</span>
+    <span class="cls">List</span>&lt;<span class="cls">Job</span>&gt; <span class="fn2">claimDueJobs</span>(<span class="ann">@Param</span>(<span class="str">"now"</span>) <span class="cls">Instant</span> now, <span class="ann">@Param</span>(<span class="str">"limit"</span>) <span class="kw">int</span> limit);
+}
+
+<span class="cm">// ── Reaper process ────────────────────────────────────</span>
+<span class="ann">@Scheduled</span>(fixedDelay = <span class="num">60_000</span>)
+<span class="kw">public void</span> <span class="fn2">reaperScan</span>() {
+    <span class="cls">List</span>&lt;<span class="cls">Job</span>&gt; staleJobs = jobRepo.findStaleRunning(<span class="cls">Instant</span>.now());
+    staleJobs.forEach(job -> <span class="fn2">handleFailure</span>(job, <span class="cls">ExecutionResult</span>.error(<span class="str">"Executor timed out"</span>)));
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Distributed Task Scheduler — Python
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, threading, requests, redis, math
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime, timedelta
+<span class="kw">from</span> croniter <span class="kw">import</span> croniter
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+<span class="kw">import</span> psycopg2
+
+r = redis.Redis()
+
+
+<span class="kw">def</span> <span class="fn2">claim_due_jobs</span>(conn, limit: int = <span class="num">100</span>) -> list:
+    <span class="str">"""SKIP LOCKED: grab a disjoint batch of due jobs atomically."""</span>
+    <span class="kw">with</span> conn.cursor() <span class="kw">as</span> cur:
+        cur.execute(<span class="str">"""
+            SELECT id, job_type, payload, cron_expr, attempts, max_retries,
+                   run_attempt, idempotency_key, callback_url
+            FROM jobs
+            WHERE next_run_at <= NOW() AND status = \'PENDING\'
+            ORDER BY next_run_at
+            LIMIT %s
+            FOR UPDATE SKIP LOCKED
+        """</span>, (limit,))
+        <span class="kw">return</span> cur.fetchall()
+
+
+<span class="kw">def</span> <span class="fn2">acquire_lock</span>(job_id: str, run_attempt: int, ttl: int = <span class="num">300</span>) -> bool:
+    key = f<span class="str">\'lock:job:{job_id}:{run_attempt}\'</span>
+    <span class="kw">return</span> r.set(key, <span class="str">\'1\'</span>, nx=<span class="kw">True</span>, ex=ttl) <span class="kw">is not None</span>
+
+<span class="kw">def</span> <span class="fn2">release_lock</span>(job_id: str, run_attempt: int):
+    r.delete(f<span class="str">\'lock:job:{job_id}:{run_attempt}\'</span>)
+
+<span class="kw">def</span> <span class="fn2">refresh_lock</span>(job_id: str, run_attempt: int, ttl: int = <span class="num">300</span>):
+    r.expire(f<span class="str">\'lock:job:{job_id}:{run_attempt}\'</span>, ttl)
+
+
+<span class="kw">def</span> <span class="fn2">execute_job</span>(conn, job: tuple):
+    job_id, _, _, cron_expr, attempts, max_retries, run_attempt, idem_key, url = job
+
+    <span class="cm"># Distributed lock guard</span>
+    <span class="kw">if not</span> acquire_lock(job_id, run_attempt):
+        <span class="kw">return</span>  <span class="cm"># another pod got it</span>
+
+    <span class="cm"># Start heartbeat thread</span>
+    stop_heartbeat = threading.Event()
+    <span class="kw">def</span> <span class="fn2">heartbeat</span>():
+        <span class="kw">while not</span> stop_heartbeat.wait(timeout=<span class="num">30</span>):
+            refresh_lock(job_id, run_attempt)
+            update_lock_expiry(conn, job_id)
+    threading.Thread(target=heartbeat, daemon=<span class="kw">True</span>).start()
+
+    <span class="kw">try</span>:
+        <span class="cm"># Execute: HTTP callback with idempotency key</span>
+        resp = requests.post(url, timeout=<span class="num">60</span>,
+                             headers={<span class="str">\'X-Idempotency-Key\'</span>: idem_key},
+                             json={<span class="str">\'job_id\'</span>: job_id})
+        stop_heartbeat.set()
+
+        <span class="kw">if</span> resp.status_code < <span class="num">300</span>:
+            next_run = compute_next_run(cron_expr)
+            mark_succeeded(conn, job_id, next_run)
+        <span class="kw">else</span>:
+            handle_failure(conn, job_id, attempts, max_retries, resp.text)
+
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        stop_heartbeat.set()
+        handle_failure(conn, job_id, attempts, max_retries, str(e))
+    <span class="kw">finally</span>:
+        release_lock(job_id, run_attempt)
+
+
+<span class="kw">def</span> <span class="fn2">handle_failure</span>(conn, job_id: str, attempts: int, max_retries: int, error: str):
+    <span class="kw">if</span> attempts < max_retries:
+        backoff = <span class="num">30</span> * (3 ** attempts)  <span class="cm"># 30s, 90s, 270s...</span>
+        retry_at = datetime.utcnow() + timedelta(seconds=backoff)
+        mark_retrying(conn, job_id, retry_at, error)
+    <span class="kw">else</span>:
+        mark_failed(conn, job_id, error)
+
+
+<span class="kw">def</span> <span class="fn2">compute_next_run</span>(cron_expr: Optional[str]) -> Optional[datetime]:
+    <span class="kw">if not</span> cron_expr: <span class="kw">return None</span>  <span class="cm"># one-time job</span>
+    <span class="kw">return</span> croniter(cron_expr, datetime.utcnow()).get_next(datetime)
+
+
+<span class="kw">def</span> <span class="fn2">scheduler_loop</span>(conn):
+    <span class="str">"""Main poll loop — run this on each scheduler pod."""</span>
+    <span class="kw">while True</span>:
+        jobs = claim_due_jobs(conn, limit=<span class="num">100</span>)
+        threads = [threading.Thread(target=execute_job, args=(conn, j)) <span class="kw">for</span> j <span class="kw">in</span> jobs]
+        [t.start() <span class="kw">for</span> t <span class="kw">in</span> threads]
+        [t.join() <span class="kw">for</span> t <span class="kw">in</span> threads]
+        <span class="kw">if not</span> jobs: time.sleep(<span class="num">5</span>)  <span class="cm"># back off if nothing due</span>
+
+
+<span class="kw">def</span> <span class="fn2">reaper_loop</span>(conn):
+    <span class="str">"""Scan for stale RUNNING jobs every 60s and reset them."""</span>
+    <span class="kw">while True</span>:
+        time.sleep(<span class="num">60</span>)
+        <span class="kw">with</span> conn.cursor() <span class="kw">as</span> cur:
+            cur.execute(<span class="str">"""
+                SELECT id, attempts, max_retries FROM jobs
+                WHERE status = \'RUNNING\' AND lock_expires_at < NOW()
+            """</span>)
+            stale = cur.fetchall()
+        <span class="kw">for</span> job_id, attempts, max_retries <span class="kw">in</span> stale:
+            handle_failure(conn, job_id, attempts, max_retries, <span class="str">\'Lock expired: executor timed out\'</span>)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🔒 Coordination: SKIP LOCKED vs Leader Election vs Partitioning</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ SKIP LOCKED (chosen)</div><p>PostgreSQL/MySQL feature: multiple workers compete for rows; each gets a disjoint set. No coordination layer needed. Works beautifully up to ~50K jobs/sec. Simple — no ZooKeeper, no leader election protocol. The database does the coordination. Airflow, Celery, and Quartz use this pattern.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Leader election (etcd/ZK)</div><p>One scheduler node is the leader and does all scheduling. Followers are on standby. Eliminates all race conditions — serial execution. Bottleneck: single node throughput. Mitigated by pushing execution to worker queues. Used by Kubernetes CronJob controller. Simpler reasoning about correctness.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Hash partitioning (at scale)</div><p>jobs split by hash(job_id) % N. Each scheduler pod owns exactly 1/N of jobs. No overlap possible — zero coordination needed. Scales linearly. Complexity: pod assignment must be stable; resharding is painful. Best for >1M jobs/sec. Uber's Cadence/Temporal uses workflow partitioning.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">⚡ Execution: Exactly-Once vs At-Least-Once vs At-Most-Once</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">At-Most-Once</div><p>Job fires, any failure → never retried. Suitable for: metric aggregation, non-critical cleanup jobs. Loses executions on worker crash. Simple but unreliable for business-critical work.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">At-Least-Once + Idempotency</div><p>Retry on failure. Target service must be idempotent (safe to call multiple times with same idempotency_key). Ideal for: emails (check before send), payments (payment processor handles dedup), notifications. This is the practical "exactly-once" for most real-world systems.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ True Exactly-Once (Workflow engines)</div><p>Temporal, Apache Airflow: track every workflow step in a state machine. Re-execution replays from last checkpoint. True exactly-once even across crashes. 10× more complex than simple scheduler. Worth it for multi-step financial workflows. Overkill for simple cron jobs.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

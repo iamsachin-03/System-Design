@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #38 — Search Engine (Web Scale)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#22d3ee;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#cffafe;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(34,211,238,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ecfeff 0%,#22d3ee 50%,#164e63 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(34,211,238,.07);color:#cffafe;border:1px solid rgba(34,211,238,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(34,211,238,.1);color:var(--ecolor);border:1.5px solid rgba(34,211,238,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(34,211,238,.08);color:var(--accent);border:1px solid rgba(34,211,238,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(34,211,238,.05);border:1px solid rgba(34,211,238,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#cffafe;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(34,211,238,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#22d3ee;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Search › <span>38 / Search Engine</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔎</div>
+    <div>
+      <div class="h-title">Web-Scale Search Engine (Google)</div>
+      <div class="h-desc">Design a web-scale search engine — a crawler that discovers and indexes billions of pages, an inverted index that stores which pages contain which words, a ranking system using PageRank and hundreds of signals, a query processor that answers 100K queries/second in under 200ms, and a pipeline to keep the index fresh with continuous recrawling.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Inverted Index</span>
+        <span class="badge b-tag">PageRank</span>
+        <span class="badge b-tag">Web Crawler</span>
+        <span class="badge b-tag">MapReduce</span>
+        <span class="badge b-tag">TF-IDF</span>
+        <span class="badge b-tag">Index Sharding</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('index',this)">📑 Inverted Index</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>A search engine is a pipeline, not a single system.</strong> Crawl → parse → index → rank → serve. Each phase is independently scalable and has different latency requirements. The indexing pipeline can take days; the query path must answer in milliseconds. The key design insight: precompute everything you can during indexing so the query path is as cheap as possible.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Crawl the web: discover and download billions of web pages</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Index pages: build an inverted index (word → list of pages)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Rank results: most relevant pages first (PageRank + content signals)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Query processing: given a query, return top-10 relevant pages</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Continuous recrawl: keep index fresh as pages change</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>50 billion pages indexed (Google scale)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>100K search queries/sec, &lt;200ms p99</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Crawler: 1 billion pages/day throughput</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Index freshness: major pages recrawled within hours</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Crawl politeness: respect robots.txt, crawl-delay</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — The Crawler</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · WEB CRAWLER</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Design a web crawler that can crawl 1 billion pages per day. What are the key design challenges?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      1 billion pages/day = ~11,600 pages/sec. At avg page size 200KB: 2.3 GB/sec bandwidth. The challenges:<br><br>
+      <b>URL Frontier (priority queue):</b> Start with seed URLs. Parse each page for links, add new URLs to the frontier. Use a distributed priority queue (Kafka + Redis sorted set) prioritising: (1) high PageRank domains, (2) URLs not recently crawled, (3) URLs from sitemaps. Dedup with a Bloom filter to avoid re-crawling known URLs.<br><br>
+      <b>Politeness:</b> Never hammer a single host. Per-domain rate limiting: at most 1 request every 5 seconds per domain. Store "next_crawl_time" per domain in Redis. Respect robots.txt — cache each site's robots.txt and check before every crawl.<br><br>
+      <b>Distributed crawling:</b> Partition URL frontier by domain hash → each crawler worker owns a subset of domains. This naturally provides politeness (one worker per domain partition) and prevents duplicate crawling.<br><br>
+      <b>Deduplication:</b> Web has massive duplicate content (mirrors, boilerplate). SimHash (locality-sensitive hash) detects near-duplicates efficiently — two documents with SimHash Hamming distance &lt; 3 are near-duplicates.<br><br>
+      <b>Scale:</b> 10,000 crawler workers × 1.16 pages/sec each = 11,600 pages/sec. Each worker is a simple HTTP client — stateless, horizontally scalable.
+    </div></div>
+    <div class="tip-box"><strong>💡 Crawler traps:</strong> Infinite URL spaces (e.g., calendars with infinitely deep "next month" links), recursive redirects, very large pages. Mitigate with: max URL path depth, URL normalization, max page size limit (5MB), redirect loop detection.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📑 Phase 2 — Inverted Index Construction</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · INDEXING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You have 50 billion pages. How do you build an inverted index at this scale?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      An inverted index maps: <code>word → [(doc_id, tf, positions), ...]</code> — "tf" = term frequency (how often the word appears), positions = where in the document (needed for phrase queries).<br><br>
+      <b>Building with MapReduce:</b><br>
+      <b>Map phase:</b> Input = (URL, page_content). For each word in the page (after tokenization, stemming, stop-word removal): emit <code>(word, (doc_id, tf, positions))</code>.<br>
+      <b>Reduce phase:</b> For each word, collect all (doc_id, tf, positions) tuples, sort by PageRank score descending, write out the posting list.<br><br>
+      <b>Index sharding:</b> 50B pages × avg 1000 unique words × 6 bytes per posting = ~300 TB of posting lists. Shard by word hash across 300+ index servers (term-partitioned index). A query for "machine learning" hits the shard containing "machine" and the shard containing "learning" in parallel, then intersects the result sets.<br><br>
+      <b>Tiered index:</b> Sort documents by PageRank within each posting list. During query serving, scan only the top-K docs in each list (typically top 10,000 per term). Only extend the scan if not enough results found. This makes queries fast — most queries hit only the first tier of each posting list.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🏆 Phase 3 — Ranking with PageRank</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · RANKING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does PageRank work and how do you compute it for 50 billion pages?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      PageRank models the web as a directed graph. A page's importance = how many important pages link to it. Formally:<br><br>
+      <code>PR(A) = (1-d) + d × Σ (PR(B) / outlinks(B)) for all B linking to A</code><br><br>
+      Where d=0.85 (damping factor = probability of following a link vs jumping randomly). This is an iterative algorithm — start all pages with PR=1/N, iterate until convergence (typically 50-100 iterations).<br><br>
+      <b>Computing at scale:</b> The web graph for 50B pages has trillions of edges. Too large for a single machine. Solution: sparse matrix-vector multiplication with MapReduce (or Spark). Each iteration: Map: for each page A with links to [B, C, D]: emit <code>(B, PR(A)/3), (C, PR(A)/3), (D, PR(A)/3)</code>. Reduce: for each page, sum all incoming contributions.<br><br>
+      <b>Practical ranking:</b> PageRank is one of ~200 ranking signals Google uses. Others include: TF-IDF relevance, page freshness (recency), click-through rate (CTR) from search logs, HTTPS (security signal), page load speed (Core Web Vitals), mobile-friendliness. Modern search uses ML models (neural ranking, BERT for semantic understanding) that combine hundreds of features.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="index" class="panel">
+  <div class="sec"><div class="sec-head">📑 Inverted Index Deep Dive</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+<defs><marker id="sea" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#22d3ee"/></marker></defs>
+
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#22d3ee" font-weight="700">INVERTED INDEX STRUCTURE</text>
+
+<!-- Document set -->
+<rect x="10" y="28" width="300" height="160" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(34,211,238,.1)"/>
+<text x="20" y="48" font-family="JetBrains Mono" font-size="8" fill="#22d3ee">DOCUMENTS:</text>
+<text x="20" y="64" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Doc 1: "machine learning is amazing"</text>
+<text x="20" y="78" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Doc 2: "deep learning transforms AI"</text>
+<text x="20" y="92" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Doc 3: "machine vision and AI systems"</text>
+<text x="20" y="110" font-family="JetBrains Mono" font-size="8" fill="#22d3ee">TOKENIZE + STEM:</text>
+<text x="20" y="126" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">machinelearn amaz  (Doc 1)</text>
+<text x="20" y="140" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">deeplearn transform ai  (Doc 2)</text>
+<text x="20" y="154" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">machinevision ai system  (Doc 3)</text>
+<text x="20" y="174" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(stop words removed: "is", "and")</text>
+
+<!-- Inverted index -->
+<rect x="330" y="28" width="500" height="220" rx="8" fill="rgba(34,211,238,.03)" stroke="rgba(34,211,238,.12)"/>
+<text x="340" y="48" font-family="JetBrains Mono" font-size="8" fill="#22d3ee">INVERTED INDEX (posting lists):</text>
+<text x="340" y="66" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Term        Posting list (doc_id, tf, positions, pagerank)</text>
+<line x1="330" y1="72" x2="830" y2="72" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+<text x="340" y="88" font-family="JetBrains Mono" font-size="8" fill="#22d3ee">learn   →   [(1, tf=1, pos=[2], pr=0.8), (2, tf=1, pos=[2], pr=0.6)]</text>
+<text x="340" y="104" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">machine →   [(1, tf=1, pos=[1], pr=0.8), (3, tf=1, pos=[1], pr=0.5)]</text>
+<text x="340" y="120" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">ai      →   [(2, tf=1, pos=[4], pr=0.6), (3, tf=1, pos=[2], pr=0.5)]</text>
+<text x="340" y="136" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">deep    →   [(2, tf=1, pos=[1], pr=0.6)]</text>
+<text x="340" y="154" font-family="JetBrains Mono" font-size="8" fill="#22d3ee">Query: "machine learning"</text>
+<text x="340" y="170" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  1. Lookup "machine" posting list → {Doc1, Doc3}</text>
+<text x="340" y="184" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  2. Lookup "learn"   posting list → {Doc1, Doc2}</text>
+<text x="340" y="198" font-family="JetBrains Mono" font-size="8" fill="#34d399">  3. AND intersection               → {Doc1}</text>
+<text x="340" y="212" font-family="JetBrains Mono" font-size="8" fill="#34d399">  4. Score Doc1 by tf-idf × pagerank → return Doc1 (rank #1)</text>
+<text x="340" y="228" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  Total: ~5ms — posting lists sorted by pagerank so top results are scanned first</text>
+
+<!-- MapReduce pipeline -->
+<text x="10" y="210" font-family="JetBrains Mono" font-size="10" fill="#22d3ee" font-weight="700">MAPREDUCE INDEXING PIPELINE</text>
+<rect x="10" y="220" width="820" height="130" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+
+<rect x="20" y="234" width="140" height="70" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="90" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">Crawled Pages</text>
+<text x="90" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">50B pages</text>
+<text x="90" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">stored in GFS/S3</text>
+
+<rect x="180" y="234" width="140" height="70" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="250" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Map Phase</text>
+<text x="250" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">(word, doc_id, tf)</text>
+<text x="250" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">50K mappers parallel</text>
+
+<rect x="340" y="234" width="140" height="70" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="410" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Sort / Shuffle</text>
+<text x="410" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">group by word</text>
+<text x="410" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">distributed sort</text>
+
+<rect x="500" y="234" width="140" height="70" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="570" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Reduce Phase</text>
+<text x="570" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">build posting list</text>
+<text x="570" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">sort by pagerank</text>
+
+<rect x="660" y="234" width="150" height="70" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="735" y="256" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">Sharded Index</text>
+<text x="735" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">300 TB across</text>
+<text x="735" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">300+ servers</text>
+
+<line x1="160" y1="269" x2="178" y2="269" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sea)"/>
+<line x1="320" y1="269" x2="338" y2="269" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sea)"/>
+<line x1="480" y1="269" x2="498" y2="269" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sea)"/>
+<line x1="640" y1="269" x2="658" y2="269" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sea)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Index size:</span>
+  <span class="label">50B pages × avg 1000 unique terms per page      = </span><span class="val">50 trillion (word, doc) pairs</span>
+  <span class="label">Avg posting entry: 6B (doc_id 4B + tf 1B + pr 1B)= </span><span class="val">300 TB</span>  <span class="label">raw posting lists</span>
+  <span class="label">With compression (delta-encoded doc IDs):        = </span><span class="val">~100 TB</span>  <span class="label">compressed</span>
+  <span class="label">Sharded to 300 servers × 330 GB each</span>
+
+<span class="label">Query throughput:</span>
+  <span class="label">100K queries/sec × avg 3 terms/query            = </span><span class="val">300K posting lookups/sec</span>
+  <span class="label">300 index servers: 300K / 300                   = </span><span class="val">1K lookups/sec/server</span>  <span class="label">trivial</span>
+  <span class="label">Fan-out: query hits ~3 index shards in parallel</span>
+
+<span class="label">Crawler throughput:</span>
+  <span class="label">1B pages/day = 11,600 pages/sec</span>
+  <span class="label">Avg page 200KB: 11,600 × 200KB                  = </span><span class="val">2.3 GB/sec</span>  <span class="label">download bandwidth</span>
+  <span class="label">10,000 crawlers × 1.16 pages/sec each</span>
+
+<span class="label">PageRank computation:</span>
+  <span class="label">50B pages × 50 iterations × 2 MapReduce jobs    = </span><span class="val">~hours on 10,000 reducers</span>
+  <span class="label">Recomputed weekly (or incrementally with fresh crawl)</span>
+
+<span class="result">→ 300 TB index across 300 servers. Query fan-out to 3 servers. 100K QPS easily handled.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Crawlers</td><td class="hi">10K workers</td><td>Stateless HTTP clients; partitioned by domain hash</td></tr>
+      <tr><td>Raw page storage</td><td class="hi">~10 PB</td><td>Compressed HTML in GFS/S3; used for re-indexing</td></tr>
+      <tr><td>Inverted index</td><td class="hi">100 TB compressed</td><td>300 servers; term-partitioned sharding</td></tr>
+      <tr><td>Query servers</td><td class="hi">~1000 nodes</td><td>Each caches hot posting lists; aggregates shard results</td></tr>
+      <tr><td>Query latency</td><td class="hi">&lt;200ms p99</td><td>Fan-out + intersection + scoring in parallel</td></tr>
+      <tr><td>Index freshness</td><td class="hi">Hours for hot pages</td><td>Tiered crawl: news sites hourly, static pages weekly</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 330" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:330px">
+<defs>
+<marker id="sma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#22d3ee"/></marker>
+<marker id="smg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="smr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+
+<!-- User query path (top) -->
+<rect x="10" y="10" width="100" height="50" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="60" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🔍 User</text>
+<text x="60" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">search query</text>
+
+<rect x="130" y="10" width="150" height="50" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="2"/>
+<text x="205" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">Query Processor</text>
+<text x="205" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">tokenize, spell-correct, fan-out</text>
+
+<rect x="300" y="10" width="200" height="50" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="400" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">Index Shards (300 servers)</text>
+<text x="400" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">posting list lookup, partial results</text>
+
+<rect x="520" y="10" width="170" height="50" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="605" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">Aggregator + Ranker</text>
+<text x="605" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">merge, score, top-10</text>
+
+<rect x="710" y="10" width="150" height="50" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="785" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Results Page</text>
+<text x="785" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">title, snippet, URL</text>
+
+<!-- Indexing pipeline (bottom) -->
+<rect x="10" y="100" width="130" height="80" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="75" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">URL Frontier</text>
+<text x="75" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Kafka + Redis</text>
+<text x="75" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">priority queue</text>
+<text x="75" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">Bloom filter dedup</text>
+
+<rect x="160" y="100" width="130" height="80" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="225" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Crawlers (10K)</text>
+<text x="225" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">HTTP download</text>
+<text x="225" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">robots.txt check</text>
+<text x="225" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">politeness per domain</text>
+
+<rect x="310" y="100" width="130" height="80" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="375" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Parser / NLP</text>
+<text x="375" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">HTML parse</text>
+<text x="375" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">tokenize + stem</text>
+<text x="375" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">extract links → frontier</text>
+
+<rect x="460" y="100" width="150" height="80" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="535" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">MapReduce</text>
+<text x="535" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">build inverted index</text>
+<text x="535" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">compute PageRank</text>
+<text x="535" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#22d3ee">runs on 10K machines</text>
+
+<rect x="630" y="100" width="150" height="80" rx="6" fill="#131c2e" stroke="#22d3ee" stroke-width="2"/>
+<text x="705" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#cffafe">Index Servers</text>
+<text x="705" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#22d3ee">300 TB / 300 shards</text>
+<text x="705" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">term-partitioned</text>
+<text x="705" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">hot lists in RAM</text>
+
+<!-- Page store -->
+<rect x="10" y="210" width="860" height="60" rx="7" fill="#131c2e" stroke="#4e6070" stroke-width="1"/>
+<text x="440" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">🗄 GFS / S3 Page Store (10 PB) — raw HTML for all crawled pages</text>
+<text x="440" y="250" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Crawlers write here. MapReduce reads from here for indexing. Snapshots kept for audit and recrawl.</text>
+<text x="440" y="262" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#22d3ee">Freshness: news sites recrawled hourly, others weekly. Priority queue by change frequency.</text>
+
+<!-- Arrows query path -->
+<line x1="110" y1="35" x2="128" y2="35" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sma)"/>
+<line x1="280" y1="35" x2="298" y2="35" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sma)"/>
+<line x1="500" y1="35" x2="518" y2="35" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sma)"/>
+<line x1="690" y1="35" x2="708" y2="35" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sma)"/>
+<!-- Arrows pipeline -->
+<line x1="140" y1="140" x2="158" y2="140" stroke="#10b981" stroke-width="1.5" marker-end="url(#smg)"/>
+<line x1="290" y1="140" x2="308" y2="140" stroke="#10b981" stroke-width="1.5" marker-end="url(#smg)"/>
+<line x1="440" y1="140" x2="458" y2="140" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sma)"/>
+<line x1="610" y1="140" x2="628" y2="140" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#sma)"/>
+<!-- Index to query path -->
+<line x1="705" y1="100" x2="400" y2="60" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#sma)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — Inverted Index + Query Processor</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Search Engine — Java: Inverted Index + Query Processing
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── Posting List Entry ────────────────────────────────</span>
+<span class="kw">public record</span> <span class="cls">Posting</span>(
+    <span class="kw">long</span>     docId,
+    <span class="kw">int</span>      termFreq,
+    <span class="kw">double</span>   pageRank,
+    <span class="kw">int</span>[]    positions    <span class="cm">// for phrase queries</span>
+) <span class="kw">implements</span> <span class="cls">Comparable</span>&lt;<span class="cls">Posting</span>&gt; {
+    <span class="ann">@Override</span> <span class="kw">public int</span> <span class="fn2">compareTo</span>(<span class="cls">Posting</span> o) {
+        <span class="kw">return</span> <span class="cls">Double</span>.compare(o.pageRank(), <span class="kw">this</span>.pageRank()); <span class="cm">// sorted descending by PageRank</span>
+    }
+}
+
+<span class="cm">// ── In-memory Inverted Index ──────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">InvertedIndex</span> {
+
+    <span class="cm">// term → sorted posting list (sorted by pageRank desc)</span>
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">List</span>&lt;<span class="cls">Posting</span>&gt;&gt; index = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">Long</span>, <span class="cls">Double</span>&gt;          idf   = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;(); <span class="cm">// term → IDF</span>
+    <span class="kw">private</span> <span class="kw">long</span> totalDocs;
+
+    <span class="kw">public void</span> <span class="fn2">addDocument</span>(<span class="kw">long</span> docId, <span class="cls">String</span> content, <span class="kw">double</span> pageRank) {
+        <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Integer</span>&gt; termFreqs = <span class="fn2">tokenize</span>(content);
+        termFreqs.forEach((term, tf) -> {
+            <span class="cls">List</span>&lt;<span class="cls">Posting</span>&gt; list = index.computeIfAbsent(term, __ -> <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;());
+            list.add(<span class="kw">new</span> <span class="cls">Posting</span>(docId, tf, pageRank, <span class="kw">new</span> <span class="kw">int</span>[<span class="num">0</span>]));
+            list.sort(<span class="cls">Comparator</span>.naturalOrder());
+        });
+        totalDocs++;
+    }
+
+    <span class="cm">/** Query: AND semantics — find documents containing ALL query terms. */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">ScoredDoc</span>&gt; <span class="fn2">query</span>(<span class="cls">String</span> queryText, <span class="kw">int</span> topK) {
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; terms = <span class="fn2">tokenizeQuery</span>(queryText);
+        <span class="kw">if</span> (terms.isEmpty()) <span class="kw">return</span> <span class="cls">List</span>.of();
+
+        <span class="cm">// 1. Get posting list for each term (scan only top 10K)</span>
+        <span class="cls">List</span>&lt;<span class="cls">Set</span>&lt;<span class="cls">Long</span>&gt;&gt; sets = terms.stream()
+            .map(t -> index.getOrDefault(t, <span class="cls">List</span>.of()).stream()
+                .limit(<span class="num">10_000</span>).map(<span class="cls">Posting</span>::docId).collect(<span class="cls">Collectors</span>.toSet()))
+            .collect(<span class="cls">Collectors</span>.toList());
+
+        <span class="cm">// 2. AND intersection</span>
+        <span class="cls">Set</span>&lt;<span class="cls">Long</span>&gt; candidates = sets.get(<span class="num">0</span>);
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">1</span>; i < sets.size(); i++) candidates.retainAll(sets.get(i));
+
+        <span class="cm">// 3. Score each candidate: TF-IDF × PageRank</span>
+        <span class="kw">return</span> candidates.stream()
+            .map(docId -> <span class="kw">new</span> <span class="cls">ScoredDoc</span>(docId, <span class="fn2">score</span>(docId, terms)))
+            .sorted(<span class="cls">Comparator</span>.comparingDouble((<span class="cls">ScoredDoc</span> s) -> s.score()).reversed())
+            .limit(topK)
+            .collect(<span class="cls">Collectors</span>.toList());
+    }
+
+    <span class="kw">private double</span> <span class="fn2">score</span>(<span class="kw">long</span> docId, <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; terms) {
+        <span class="kw">double</span> tfidf = terms.stream().mapToDouble(term -> {
+            <span class="cls">Posting</span> p = <span class="fn2">getPosting</span>(term, docId);
+            <span class="kw">if</span> (p == <span class="kw">null</span>) <span class="kw">return</span> <span class="num">0.0</span>;
+            <span class="kw">double</span> tf  = <span class="cls">Math</span>.log(<span class="num">1</span> + p.termFreq());
+            <span class="kw">double</span> idf = <span class="cls">Math</span>.log(totalDocs / (<span class="kw">double</span>) index.getOrDefault(term, <span class="cls">List</span>.of()).size());
+            <span class="kw">return</span> tf * idf;
+        }).sum();
+        <span class="kw">double</span> pageRank = <span class="fn2">getPageRank</span>(docId);
+        <span class="kw">return</span> tfidf * <span class="cls">Math</span>.log(<span class="num">1</span> + pageRank); <span class="cm">// combine TF-IDF and PageRank</span>
+    }
+
+    <span class="kw">private</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Integer</span>&gt; <span class="fn2">tokenize</span>(<span class="cls">String</span> text) {
+        <span class="kw">return</span> <span class="cls">Arrays</span>.stream(text.toLowerCase().split(<span class="str">"\\W+"</span>))
+            .filter(w -> !<span class="cls">STOP_WORDS</span>.contains(w) && w.length() > <span class="num">2</span>)
+            .collect(<span class="cls">Collectors</span>.toMap(w -> <span class="fn2">stem</span>(w), w -> <span class="num">1</span>, <span class="cls">Integer</span>::sum));
+    }
+}
+
+<span class="cm">// ── MapReduce Mapper ──────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">IndexMapper</span> <span class="kw">extends</span> <span class="cls">Mapper</span>&lt;<span class="cls">LongWritable</span>, <span class="cls">Text</span>, <span class="cls">Text</span>, <span class="cls">PostingWritable</span>&gt; {
+
+    <span class="ann">@Override</span>
+    <span class="kw">protected void</span> <span class="fn2">map</span>(<span class="cls">LongWritable</span> key, <span class="cls">Text</span> value, <span class="cls">Context</span> context) <span class="kw">throws</span> <span class="cls">IOException</span>, <span class="cls">InterruptedException</span> {
+        <span class="cls">PageRecord</span> page = <span class="cls">PageRecord</span>.parse(value.toString());
+        <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Integer</span>&gt; terms = <span class="fn2">tokenize</span>(page.getContent());
+        <span class="kw">for</span> (<span class="kw">var</span> entry : terms.entrySet()) {
+            <span class="cm">// Emit: key=term, value=(docId, tf, pageRank)</span>
+            context.write(<span class="kw">new</span> <span class="cls">Text</span>(entry.getKey()),
+                <span class="kw">new</span> <span class="cls">PostingWritable</span>(page.getDocId(), entry.getValue(), page.getPageRank()));
+        }
+    }
+}
+
+<span class="cm">// ── MapReduce Reducer ─────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">IndexReducer</span> <span class="kw">extends</span> <span class="cls">Reducer</span>&lt;<span class="cls">Text</span>, <span class="cls">PostingWritable</span>, <span class="cls">Text</span>, <span class="cls">PostingListWritable</span>&gt; {
+
+    <span class="ann">@Override</span>
+    <span class="kw">protected void</span> <span class="fn2">reduce</span>(<span class="cls">Text</span> term, <span class="cls">Iterable</span>&lt;<span class="cls">PostingWritable</span>&gt; postings, <span class="cls">Context</span> ctx) {
+        <span class="cls">List</span>&lt;<span class="cls">PostingWritable</span>&gt; list = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+        postings.forEach(list::add);
+        <span class="cm">// Sort by PageRank descending so query can scan top results first</span>
+        list.sort((a, b) -> <span class="cls">Double</span>.compare(b.pageRank, a.pageRank));
+        ctx.write(term, <span class="kw">new</span> <span class="cls">PostingListWritable</span>(list));
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Search Engine — Python: Inverted Index + Crawler
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> math, re, heapq, hashlib
+<span class="kw">from</span> collections <span class="kw">import</span> defaultdict, Counter
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> Dict, List, Tuple, Set
+
+STOP_WORDS = {<span class="str">"the"</span>, <span class="str">"a"</span>, <span class="str">"an"</span>, <span class="str">"is"</span>, <span class="str">"in"</span>, <span class="str">"on"</span>, <span class="str">"at"</span>, <span class="str">"to"</span>, <span class="str">"for"</span>, <span class="str">"of"</span>, <span class="str">"and"</span>}
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Posting</span>:
+    doc_id:    int
+    term_freq: int
+    page_rank: float
+    positions: List[int] = field(default_factory=list)
+
+
+<span class="kw">class</span> <span class="cls">InvertedIndex</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self.index:      Dict[str, List[<span class="cls">Posting</span>]] = defaultdict(list)
+        self.total_docs: int                        = <span class="num">0</span>
+        self.page_ranks: Dict[int, float]           = {}
+
+    <span class="kw">def</span> <span class="fn2">add_document</span>(self, doc_id: int, content: str, page_rank: float = <span class="num">1.0</span>):
+        self.page_ranks[doc_id] = page_rank
+        terms = self._tokenize(content)
+        tf    = Counter(terms)
+        <span class="kw">for</span> term, freq <span class="kw">in</span> tf.items():
+            positions = [i <span class="kw">for</span> i, t <span class="kw">in</span> enumerate(terms) <span class="kw">if</span> t == term]
+            self.index[term].append(<span class="cls">Posting</span>(doc_id, freq, page_rank, positions))
+        self.total_docs += <span class="num">1</span>
+        <span class="cm"># Keep posting lists sorted by pagerank descending</span>
+        <span class="kw">for</span> term <span class="kw">in</span> tf:
+            self.index[term].sort(key=<span class="kw">lambda</span> p: -p.page_rank)
+
+    <span class="kw">def</span> <span class="fn2">query</span>(self, query_text: str, top_k: int = <span class="num">10</span>) -> List[Tuple[int, float]]:
+        terms = self._tokenize(query_text)
+        <span class="kw">if not</span> terms: <span class="kw">return</span> []
+
+        <span class="cm"># AND semantics: find docs containing all terms (scan top 10K per term)</span>
+        sets = [
+            {p.doc_id <span class="kw">for</span> p <span class="kw">in</span> self.index.get(t, [])[:10_000]}
+            <span class="kw">for</span> t <span class="kw">in</span> terms
+        ]
+        candidates = sets[<span class="num">0</span>].intersection(*sets[<span class="num">1</span>:]) <span class="kw">if</span> len(sets) > <span class="num">1</span> <span class="kw">else</span> sets[<span class="num">0</span>]
+
+        <span class="cm"># Score: TF-IDF × log(1 + PageRank)</span>
+        scored = [(doc_id, self._score(doc_id, terms)) <span class="kw">for</span> doc_id <span class="kw">in</span> candidates]
+        <span class="kw">return</span> sorted(scored, key=<span class="kw">lambda</span> x: -x[<span class="num">1</span>])[:top_k]
+
+    <span class="kw">def</span> <span class="fn2">_score</span>(self, doc_id: int, terms: List[str]) -> float:
+        tfidf = <span class="num">0.0</span>
+        <span class="kw">for</span> term <span class="kw">in</span> terms:
+            posting = next((p <span class="kw">for</span> p <span class="kw">in</span> self.index.get(term, []) <span class="kw">if</span> p.doc_id == doc_id), <span class="kw">None</span>)
+            <span class="kw">if not</span> posting: <span class="kw">continue</span>
+            tf  = math.log1p(posting.term_freq)
+            df  = len(self.index.get(term, []))
+            idf = math.log(self.total_docs / max(df, <span class="num">1</span>))
+            tfidf += tf * idf
+        pr = self.page_ranks.get(doc_id, <span class="num">1.0</span>)
+        <span class="kw">return</span> tfidf * math.log1p(pr)
+
+    <span class="kw">def</span> <span class="fn2">_tokenize</span>(self, text: str) -> List[str]:
+        words = re.findall(r<span class="str">'\b[a-zA-Z]{3,}\b'</span>, text.lower())
+        <span class="kw">return</span> [w <span class="kw">for</span> w <span class="kw">in</span> words <span class="kw">if</span> w <span class="kw">not in</span> STOP_WORDS]
+
+
+<span class="cm"># ── PageRank (iterative) ──────────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">compute_pagerank</span>(graph: Dict[int, List[int]], d: float = <span class="num">0.85</span>, iters: int = <span class="num">50</span>) -> Dict[int, float]:
+    <span class="str">"""Iterative PageRank: graph[page] = [outlink_pages]."""</span>
+    N  = len(graph)
+    pr = {node: <span class="num">1.0</span> / N <span class="kw">for</span> node <span class="kw">in</span> graph}
+
+    <span class="kw">for</span> _ <span class="kw">in</span> range(iters):
+        new_pr: Dict[int, float] = {}
+        <span class="kw">for</span> node <span class="kw">in</span> graph:
+            <span class="cm"># Random jump component</span>
+            new_pr[node] = (<span class="num">1.0</span> - d) / N
+        <span class="cm"># Link contribution</span>
+        <span class="kw">for</span> src, outlinks <span class="kw">in</span> graph.items():
+            <span class="kw">if not</span> outlinks: <span class="kw">continue</span>
+            share = pr[src] / len(outlinks)
+            <span class="kw">for</span> dest <span class="kw">in</span> outlinks:
+                new_pr[dest] = new_pr.get(dest, (<span class="num">1</span>-d)/N) + d * share
+        pr = new_pr
+
+    <span class="kw">return</span> pr
+
+
+<span class="cm"># ── Minimal crawler skeleton ──────────────────────────</span>
+<span class="kw">import</span> heapq, time
+
+<span class="kw">class</span> <span class="cls">URLFrontier</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self.queue: list       = []
+        self.seen:  Set[str]   = set()
+        self.next_crawl: Dict[str, float] = {}
+
+    <span class="kw">def</span> <span class="fn2">push</span>(self, url: str, priority: float = <span class="num">1.0</span>):
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        <span class="kw">if</span> url_hash <span class="kw">in</span> self.seen: <span class="kw">return</span>  <span class="cm"># Bloom filter substitute</span>
+        self.seen.add(url_hash)
+        heapq.heappush(self.queue, (-priority, time.time(), url))
+
+    <span class="kw">def</span> <span class="fn2">pop</span>(self) -> str:
+        _, _, url = heapq.heappop(self.queue)
+        domain = url.split(<span class="str">"/"</span>)[<span class="num">2</span>]
+        <span class="cm"># Politeness: backoff if we crawled this domain recently</span>
+        next_ok = self.next_crawl.get(domain, <span class="num">0</span>)
+        <span class="kw">if</span> time.time() < next_ok:
+            time.sleep(next_ok - time.time())
+        self.next_crawl[domain] = time.time() + <span class="num">5</span>  <span class="cm"># 5s per-domain delay</span>
+        <span class="kw">return</span> url
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">📊 Index Partitioning: Term-Partitioned vs Doc-Partitioned</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Term-Partitioned (chosen)</div><p>Each server owns a subset of terms. A query for "machine learning" hits 2 servers. Advantage: complete posting list for a term is on one server — efficient sorted intersection. Disadvantage: query fan-out scales with query length. A 10-term query hits 10 servers. Used by Google's original architecture.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Doc-Partitioned</div><p>Each server owns a subset of documents. All terms for a document are co-located on the same server. A query for "machine learning" hits ALL servers (each checks if its documents match). Each server returns top-K local results. Aggregator picks global top-K. Advantage: no large posting lists to transfer. Disadvantage: query hits all servers every time. Used by Bing's architecture for some components.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Hybrid</div><p>Two-level hierarchy. Global index: top-K documents per term (serves 99% of queries). Local index: full posting list per shard for rare/long-tail queries. Combines fast common-case with correct rare-case handling. Best for query latency but most complex to implement and maintain.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🔄 Index Freshness: Full Rebuild vs Incremental</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Full Rebuild</div><p>Rebuild the entire index from scratch via MapReduce. Clean, no stale data, correct PageRank. Problem: takes days for 50B pages. Unacceptable for news (needs hourly freshness). Practical only for the base "deep web" index.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Tiered Crawl</div><p>Separate the index into tiers: (1) Real-time: news sites recrawled every hour, serving freshest content; (2) Recent: high-traffic sites every day; (3) Static: slow-changing sites weekly. Query blends results from all tiers. This is what Google does — separate freshness and quality signals.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Incremental Index</div><p>Stream changed documents from the crawler → delta indexer → merge into existing index. Elasticsearch uses this pattern (segment merging). Allows near-realtime indexing (&lt;1min) for important pages. Complexity: must handle deletions/updates correctly. Required for competitive freshness.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

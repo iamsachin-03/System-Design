@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #28 — Leaderboard / Gaming System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#60a5fa;--a2:#3b82f6;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#a855f7;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#bfdbfe;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#07090f 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(96,165,250,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#eff6ff 0%,#60a5fa 50%,#1d4ed8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(96,165,250,.07);color:#bfdbfe;border:1px solid rgba(96,165,250,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(96,165,250,.1);color:var(--ecolor);border:1.5px solid rgba(96,165,250,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(96,165,250,.08);color:var(--accent);border:1px solid rgba(96,165,250,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#bfdbfe;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(96,165,250,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(96,165,250,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#60a5fa;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Gaming › <span>28 / Leaderboard</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🏆</div>
+    <div>
+      <div class="h-title">Leaderboard / Gaming System</div>
+      <div class="h-desc">Design a real-time global leaderboard for a game with 10 million active players — storing scores, ranking players globally and within friend groups, handling 100K score updates per second, answering "what is my rank?" in under 10ms, and resetting leaderboards at season boundaries.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium</span>
+        <span class="badge b-tag">Redis ZSet</span>
+        <span class="badge b-tag">ZADD / ZRANK</span>
+        <span class="badge b-tag">Sharding</span>
+        <span class="badge b-tag">Score Aggregation</span>
+        <span class="badge b-tag">Season Reset</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('zset',this)">📊 Redis ZSet</button>
+  <button class="nbtn" onclick="show('cap',this)">📐 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>The leaderboard problem is deceptively simple until you hit scale.</strong> Redis sorted sets are the canonical answer — O(log N) inserts and O(log N) rank queries. The challenge is what to do when 10M players don't fit in one Redis instance, and how to support "friends leaderboard" without scanning all friends' scores.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Submit score update for a player</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Get global top-N players (leaderboard page)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Get player's own global rank + score</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Get players around me (±5 ranks)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Friends leaderboard (rank among my friends)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Weekly/seasonal reset with archiving</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>10M active players, 100K score updates/sec</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Rank query: &lt;10ms p99</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Top-N query: &lt;20ms for N≤100</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Eventual consistency for rank (±few seconds lag is OK)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Season reset: complete within 5 minutes</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Core Data Structure</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · REDIS SORTED SET</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What data structure would you use and why?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Redis Sorted Set (ZSet) is purpose-built for this problem:<br><br>
+      <b>ZADD leaderboard {score} {player_id}:</b> Insert or update a player's score. O(log N). If the player already exists, updates the score and re-sorts. Idempotent — safe to call repeatedly.<br><br>
+      <b>ZREVRANK leaderboard {player_id}:</b> Get player's rank (0-indexed, descending by score). O(log N). This is the core operation — it's O(log N) not O(N) because ZSets are backed by a skip list internally.<br><br>
+      <b>ZREVRANGE leaderboard 0 99:</b> Get top 100 players. O(log N + 100). Extremely fast.<br><br>
+      <b>ZREVRANGEBYSCORE leaderboard +inf {min_score} WITHSCORES:</b> Get all players with score ≥ threshold. Used for finding players around me: get my score, then find players within score±delta.<br><br>
+      <b>ZSCORE leaderboard {player_id}:</b> Get raw score. O(1).<br><br>
+      The ZSet is backed by two structures: a hash map for O(1) score lookup per member, and a skip list for O(log N) rank queries. It's the perfect data structure for leaderboards — no need to reinvent it.
+    </div></div>
+    <div class="tip-box"><strong>💡 The key thing to know:</strong> ZREVRANK is O(log N), not O(N). Redis's skip list gives you rank queries in logarithmic time. This is why Redis ZSet is the standard answer for leaderboards.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔧 Phase 2 — Scaling to 10M Players</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · SCALE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>10M players × ~20 bytes per entry = 200MB. That fits in one Redis node. But 100K updates/sec — does one Redis handle that?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      200MB data fits fine. The bottleneck is throughput. Redis single-threaded: ~100-150K commands/sec ceiling. At 100K ZADD/sec we're at the limit — any additional load (reads, monitoring, replication) pushes over the edge.<br><br>
+      <b>Three approaches:</b><br><br>
+      <b>1. Batch writes (best for throughput):</b> Instead of a ZADD per score update, buffer updates in the application layer for 1 second, then apply as a pipeline: <code>PIPELINE [ZADD leaderboard s1 p1, ZADD s2 p2, ...] EXEC</code>. Reduces Redis commands by 100× (100K individual → 1K batches of 100). Redis pipeline avoids round-trip latency overhead. Best option — reduces Redis load while maintaining near-real-time freshness.<br><br>
+      <b>2. Read replicas for rank queries:</b> Score writes go to primary. Rank reads (ZREVRANK) can go to read replicas. Typical ratio: 80% reads, 20% writes. 4 read replicas → 80% of traffic handled by replicas, primary handles 20%.<br><br>
+      <b>3. Sharding for extreme scale (100M+ players):</b> Hash player_id modulo N shards: player goes to shard=hash(player_id)%N. Score updates go to their assigned shard. But: getting global rank now requires querying all N shards, getting count of players with higher score on each shard, summing them. Adds complexity but enables virtually unlimited scale.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">👥 Phase 3 — Friends Leaderboard</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · FRIENDS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you show a player their rank among their friends? They might have 500 friends.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Two approaches:<br><br>
+      <b>1. Dynamic friends ZSet (per-user, ephemeral):</b> At query time, fetch player's friend list from the social graph DB. Get their scores via <code>ZMSCORE leaderboard [friend1, friend2, ...]</code> (O(N) where N=friend count). Create an ephemeral ZSet with just friend scores, run ZREVRANK on it. Compute in application memory rather than Redis. For 500 friends × 1ms each = 500ms — too slow as written, but ZMSCORE is a single command that returns all 500 scores at once.<br><br>
+      <b>2. Per-user friends ZSet in Redis:</b> Maintain a separate ZSet per player: <code>friends_lb:{player_id}</code>. When a friend updates their score, also update all their friends' friend-ZSets (fan-out on write). If a player has 500 friends, one score update writes to 501 ZSets. At 100K updates/sec × avg 200 friends = 20M ZSet writes/sec — this is write amplification, and it's expensive. Better for read-heavy patterns (player checks friends leaderboard frequently).<br><br>
+      <b>Recommended:</b> Hybrid. ZMSCORE approach for players querying friends leaderboard (read-time). Pre-computed fan-out only for top influencers (players with >10K friends) because they are queried constantly. Simple approach first, optimise when profiling shows it's needed.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="zset" class="panel">
+  <div class="sec"><div class="sec-head">📊 Redis Sorted Set — All Operations</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 820 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:320px">
+<defs>
+<marker id="ba" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#60a5fa"/></marker>
+</defs>
+
+<!-- Leaderboard visual -->
+<text x="10" y="20" font-family="JetBrains Mono" font-size="10" fill="#60a5fa" font-weight="700">REDIS SORTED SET: leaderboard</text>
+<rect x="10" y="28" width="360" height="220" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(96,165,250,.15)" stroke-width="1"/>
+
+<!-- Rank column header -->
+<text x="22" y="48" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">RANK</text>
+<text x="75" y="48" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">PLAYER_ID</text>
+<text x="200" y="48" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">SCORE</text>
+<text x="280" y="48" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">DELTA</text>
+<line x1="10" y1="52" x2="370" y2="52" stroke="rgba(96,165,250,.2)" stroke-width="1"/>
+
+<!-- Rows -->
+<text x="22" y="68" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">🥇 #1</text>
+<text x="75" y="68" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">player_8823</text>
+<text x="200" y="68" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">98,420</text>
+<text x="280" y="68" font-family="JetBrains Mono" font-size="8" fill="#34d399">+120 ↑</text>
+
+<text x="22" y="84" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">#2</text>
+<text x="75" y="84" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">player_1204</text>
+<text x="200" y="84" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">97,850</text>
+
+<text x="22" y="100" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">#3</text>
+<text x="75" y="100" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">player_5591</text>
+<text x="200" y="100" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">96,200</text>
+
+<text x="22" y="116" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">...</text>
+
+<rect x="12" y="122" width="356" height="22" rx="4" fill="rgba(96,165,250,.08)" stroke="rgba(96,165,250,.25)" stroke-width="1"/>
+<text x="22" y="136" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">#84,231</text>
+<text x="75" y="136" font-family="JetBrains Mono" font-size="8" fill="#bfdbfe">YOU → player_4471</text>
+<text x="200" y="136" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">42,100</text>
+<text x="280" y="136" font-family="JetBrains Mono" font-size="8" fill="#34d399">+500 ↑</text>
+
+<text x="22" y="158" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">#84,232</text>
+<text x="75" y="158" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">player_9012</text>
+<text x="200" y="158" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">42,050</text>
+
+<text x="22" y="174" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">...</text>
+<text x="22" y="192" font-family="JetBrains Mono" font-size="8" fill="#4e6070">#10,000,000  player_9999  100  (last place)</text>
+
+<!-- Operations panel -->
+<rect x="390" y="28" width="420" height="220" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(96,165,250,.1)" stroke-width="1"/>
+<text x="400" y="48" font-family="JetBrains Mono" font-size="9" fill="#60a5fa" font-weight="700">REDIS COMMANDS + COMPLEXITY</text>
+
+<text x="400" y="68" font-family="JetBrains Mono" font-size="8" fill="#10b981">Write:</text>
+<text x="400" y="82" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">ZADD leaderboard 42600 player_4471</text>
+<text x="400" y="94" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  → O(log N)  Update score, re-rank</text>
+
+<text x="400" y="112" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">My rank:</text>
+<text x="400" y="126" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">ZREVRANK leaderboard player_4471</text>
+<text x="400" y="138" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  → O(log N)  Returns: 84230 (0-indexed)</text>
+
+<text x="400" y="156" font-family="JetBrains Mono" font-size="8" fill="#a855f7">Top 100:</text>
+<text x="400" y="170" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">ZREVRANGE leaderboard 0 99 WITHSCORES</text>
+<text x="400" y="182" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  → O(log N + 100)  Get top 100</text>
+
+<text x="400" y="200" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">Around me:</text>
+<text x="400" y="214" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">ZREVRANGE leaderboard 84226 84236</text>
+<text x="400" y="226" font-family="JetBrains Mono" font-size="8" fill="#4e6070">  → O(log N + 10)  ±5 neighbours</text>
+
+<text x="400" y="244" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">Season reset:</text>
+<text x="400" y="256" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">RENAME leaderboard leaderboard:season:42</text>
+<text x="400" y="268" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">DEL leaderboard  (atomic reset)</text>
+
+<!-- Memory calculation -->
+<rect x="10" y="265" width="790" height="50" rx="6" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="20" y="282" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">MEMORY: 10M players × ~64 bytes (player_id 32B + score 8B + skiplist overhead ~24B) = </text>
+<text x="20" y="282" font-family="JetBrains Mono" font-size="8" fill="#60a5fa">                                                                                          640 MB</text>
+<text x="20" y="296" font-family="JetBrains Mono" font-size="8" fill="#fbbf24">640 MB fits in ONE Redis node (typically 32-64 GB RAM). No sharding needed for most games.</text>
+<text x="20" y="310" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">100M players → 6.4 GB → still fits single node. 1B players → shard needed.</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📐 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Memory:</span>
+  <span class="label">10M players × 64 bytes                           = </span><span class="val">640 MB</span>  <span class="label">fits single Redis node</span>
+
+<span class="label">Write throughput:</span>
+  <span class="label">100K score updates/sec (raw)                     → </span><span class="val">too hot</span>  <span class="label">for single-threaded Redis</span>
+  <span class="label">With 1s batching: 100K updates → 1K pipeline ops → </span><span class="val">1K commands/sec</span>  <span class="label">trivial</span>
+
+<span class="label">Read throughput:</span>
+  <span class="label">ZREVRANK: 100K reads/sec easily handled by Redis primary + 2 replicas</span>
+
+<span class="label">Friends leaderboard:</span>
+  <span class="label">ZMSCORE 500 friends: ~500 × 1B overhead           = </span><span class="val">~2ms</span>  <span class="label">single command</span>
+  <span class="label">Sort 500 scores in memory: O(500 log 500)          = </span><span class="val">~0.5ms</span>
+
+<span class="label">Season reset:</span>
+  <span class="label">RENAME (atomic): O(1)                             = </span><span class="val">&lt;1ms</span>  <span class="label">zero downtime</span>
+  <span class="label">Archive old ZSet to Postgres (export): ~5 minutes</span>
+
+<span class="result">→ Single Redis node handles 10M players easily. 100M players: add read replicas. 1B: shard.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Operation</th><th>Command</th><th>Latency</th><th>Complexity</th></tr>
+      <tr><td>Score update</td><td class="hi">ZADD</td><td class="ans">&lt;0.1ms</td><td>O(log N)</td></tr>
+      <tr><td>My rank</td><td class="hi">ZREVRANK</td><td class="ans">&lt;0.1ms</td><td>O(log N)</td></tr>
+      <tr><td>Top 100</td><td class="hi">ZREVRANGE 0 99</td><td class="ans">&lt;1ms</td><td>O(log N + 100)</td></tr>
+      <tr><td>Around me (±5)</td><td class="hi">ZREVRANGE rank-5 rank+5</td><td class="ans">&lt;0.5ms</td><td>O(log N + 10)</td></tr>
+      <tr><td>Friends rank (500)</td><td class="hi">ZMSCORE + in-mem sort</td><td class="ans">&lt;3ms</td><td>O(N)</td></tr>
+      <tr><td>Season reset</td><td class="hi">RENAME + async export</td><td class="ans">&lt;1ms</td><td>O(1)</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:300px">
+<defs>
+<marker id="bla" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#60a5fa"/></marker>
+<marker id="blg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="bly" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+
+<!-- Game Clients -->
+<rect x="10" y="100" width="90" height="60" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="55" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🎮 Game</text>
+<text x="55" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">clients</text>
+<text x="55" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">100K events/s</text>
+
+<!-- Score API -->
+<rect x="120" y="80" width="140" height="100" rx="7" fill="#131c2e" stroke="#60a5fa" stroke-width="2"/>
+<text x="190" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#bfdbfe">Score API</text>
+<text x="190" y="119" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">validate scores</text>
+<text x="190" y="133" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">anti-cheat check</text>
+<text x="190" y="147" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">batch buffer (1s)</text>
+<text x="190" y="161" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#60a5fa">PIPELINE ZADD</text>
+
+<!-- Redis Primary -->
+<rect x="280" y="50" width="170" height="130" rx="8" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="365" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">⚡ Redis Primary</text>
+<text x="365" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">leaderboard (ZSet)</text>
+<text x="365" y="103" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10M players, 640 MB</text>
+<text x="365" y="117" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ZADD (writes)</text>
+<text x="365" y="131" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Persistence: AOF</text>
+<text x="365" y="145" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Replica → 2 nodes</text>
+<text x="365" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">Season: RENAME (atomic)</text>
+
+<!-- Redis Replicas -->
+<rect x="470" y="50" width="140" height="60" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="540" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Redis Replica ×2</text>
+<text x="540" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ZREVRANK (reads)</text>
+<text x="540" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">ZREVRANGE top-N</text>
+
+<!-- Leaderboard API -->
+<rect x="470" y="128" width="140" height="52" rx="7" fill="#131c2e" stroke="#60a5fa" stroke-width="1.5"/>
+<text x="540" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bfdbfe">Leaderboard API</text>
+<text x="540" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">rank, top-N, around-me</text>
+<text x="540" y="174" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#60a5fa">friends: ZMSCORE</text>
+
+<!-- Archive DB -->
+<rect x="630" y="80" width="150" height="100" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="705" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">PostgreSQL Archive</text>
+<text x="705" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">historical seasons</text>
+<text x="705" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">player stats over time</text>
+<text x="705" y="146" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">exported after reset</text>
+<text x="705" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">async background job</text>
+
+<!-- Season reset flow -->
+<rect x="10" y="220" width="830" height="70" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="22" y="238" font-family="JetBrains Mono" font-size="8" fill="#f43f5e" font-weight="700">SEASON RESET (weekly, Sunday midnight):</text>
+<text x="22" y="254" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">1. RENAME leaderboard leaderboard:season:42  (atomic, O(1), zero downtime)</text>
+<text x="22" y="268" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2. New leaderboard starts empty. First ZADD creates it implicitly.</text>
+<text x="22" y="282" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">3. Background job exports leaderboard:season:42 to PostgreSQL archive (5 min). Then DEL.</text>
+
+<!-- Arrows -->
+<line x1="100" y1="130" x2="118" y2="130" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#bla)"/>
+<line x1="260" y1="130" x2="278" y2="100" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#bla)"/>
+<line x1="450" y1="80" x2="468" y2="80" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#blg)"/>
+<line x1="450" y1="140" x2="468" y2="150" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#bla)"/>
+<line x1="450" y1="115" x2="628" y2="115" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#bly)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Leaderboard — Java: Redis ZSet operations
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">LeaderboardService</span> {
+
+    <span class="kw">private static final</span> <span class="cls">String</span> LB_KEY    = <span class="str">"leaderboard"</span>;
+    <span class="kw">private static final int</span>    BATCH_SIZE = <span class="num">200</span>; <span class="cm">// buffer before pipeline flush</span>
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">SocialGraphService</span> socialGraph;
+
+    <span class="cm">// Pending updates buffer (flushed every 1s by scheduler)</span>
+    <span class="kw">private final</span> <span class="cls">ConcurrentLinkedQueue</span>&lt;<span class="cls">ScoreUpdate</span>&gt; pending = <span class="kw">new</span> <span class="cls">ConcurrentLinkedQueue</span>&lt;&gt;();
+
+    <span class="cm">/** Add score update to buffer. Thread-safe, non-blocking. */</span>
+    <span class="kw">public void</span> <span class="fn2">submitScore</span>(<span class="cls">String</span> playerId, <span class="kw">double</span> score) {
+        pending.offer(<span class="kw">new</span> <span class="cls">ScoreUpdate</span>(playerId, score));
+    }
+
+    <span class="cm">/** Flush buffered updates to Redis via pipeline. Called every 1s. */</span>
+    <span class="ann">@Scheduled</span>(fixedRate = <span class="num">1000</span>)
+    <span class="kw">public void</span> <span class="fn2">flushPending</span>() {
+        <span class="cls">List</span>&lt;<span class="cls">ScoreUpdate</span>&gt; batch = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+        <span class="cls">ScoreUpdate</span> update;
+        <span class="kw">while</span> ((update = pending.poll()) != <span class="kw">null</span> && batch.size() < BATCH_SIZE) {
+            batch.add(update);
+        }
+        <span class="kw">if</span> (batch.isEmpty()) <span class="kw">return</span>;
+
+        <span class="cm">// Redis pipeline: send all ZADDs in one round-trip</span>
+        redis.executePipelined(conn -> {
+            batch.forEach(u -> conn.zSetCommands()
+                .zAdd(LB_KEY.getBytes(), u.score(), u.playerId().getBytes()));
+            <span class="kw">return null</span>;
+        });
+    }
+
+    <span class="cm">/** Get player's global rank (1-indexed). O(log N). */</span>
+    <span class="kw">public long</span> <span class="fn2">getGlobalRank</span>(<span class="cls">String</span> playerId) {
+        <span class="cls">Long</span> rank = redis.opsForZSet().reverseRank(LB_KEY, playerId);
+        <span class="kw">return</span> rank == <span class="kw">null</span> ? -<span class="num">1</span> : rank + <span class="num">1</span>;
+    }
+
+    <span class="cm">/** Get top N players with scores. O(log N + N). */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">PlayerRank</span>&gt; <span class="fn2">getTopN</span>(<span class="kw">int</span> n) {
+        <span class="cls">Set</span>&lt;<span class="cls">ZSetOperations</span>.<span class="cls">TypedTuple</span>&lt;<span class="cls">String</span>&gt;&gt; top =
+            redis.opsForZSet().reverseRangeWithScores(LB_KEY, <span class="num">0</span>, n - <span class="num">1</span>);
+        <span class="kw">int</span>[] rank = {<span class="num">1</span>};
+        <span class="kw">return</span> top.stream()
+            .map(t -> <span class="kw">new</span> <span class="cls">PlayerRank</span>(t.getValue(), t.getScore(), rank[<span class="num">0</span>]++))
+            .collect(<span class="cls">Collectors</span>.toList());
+    }
+
+    <span class="cm">/** Get players surrounding a player (±count positions). */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">PlayerRank</span>&gt; <span class="fn2">getAround</span>(<span class="cls">String</span> playerId, <span class="kw">int</span> count) {
+        <span class="cls">Long</span> rank = redis.opsForZSet().reverseRank(LB_KEY, playerId);
+        <span class="kw">if</span> (rank == <span class="kw">null</span>) <span class="kw">return</span> <span class="cls">List</span>.of();
+        <span class="kw">long</span> start = <span class="cls">Math</span>.max(<span class="num">0</span>, rank - count);
+        <span class="kw">long</span> end   = rank + count;
+        <span class="cls">Set</span>&lt;<span class="cls">ZSetOperations</span>.<span class="cls">TypedTuple</span>&lt;<span class="cls">String</span>&gt;&gt; around =
+            redis.opsForZSet().reverseRangeWithScores(LB_KEY, start, end);
+        <span class="kw">int</span>[] r = {(<span class="kw">int</span>) start + <span class="num">1</span>};
+        <span class="kw">return</span> around.stream()
+            .map(t -> <span class="kw">new</span> <span class="cls">PlayerRank</span>(t.getValue(), t.getScore(), r[<span class="num">0</span>]++))
+            .collect(<span class="cls">Collectors</span>.toList());
+    }
+
+    <span class="cm">/** Friends leaderboard: rank among friends. */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">PlayerRank</span>&gt; <span class="fn2">getFriendsLeaderboard</span>(<span class="cls">String</span> playerId) {
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; friends = socialGraph.getFriends(playerId);
+        friends.add(playerId); <span class="cm">// include self</span>
+
+        <span class="cm">// Bulk score fetch — single Redis command</span>
+        <span class="cls">List</span>&lt;<span class="cls">Double</span>&gt; scores = redis.opsForZSet().score(LB_KEY, friends.toArray());
+        <span class="cls">List</span>&lt;<span class="cls">PlayerScore</span>&gt; friendScores = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < friends.size(); i++) {
+            <span class="kw">if</span> (scores.get(i) != <span class="kw">null</span>) {
+                friendScores.add(<span class="kw">new</span> <span class="cls">PlayerScore</span>(friends.get(i), scores.get(i)));
+            }
+        }
+        <span class="cm">// Sort in-memory by score descending</span>
+        friendScores.sort((<span class="cls">Comparator</span>.comparingDouble(<span class="cls">PlayerScore</span>::score).reversed()));
+        <span class="kw">int</span>[] r = {<span class="num">1</span>};
+        <span class="kw">return</span> friendScores.stream()
+            .map(ps -> <span class="kw">new</span> <span class="cls">PlayerRank</span>(ps.playerId(), ps.score(), r[<span class="num">0</span>]++))
+            .collect(<span class="cls">Collectors</span>.toList());
+    }
+
+    <span class="cm">/** Season reset: atomic rename, async archive. */</span>
+    <span class="kw">public void</span> <span class="fn2">resetSeason</span>(<span class="kw">int</span> seasonNumber) {
+        <span class="cls">String</span> archiveKey = <span class="str">"leaderboard:season:"</span> + seasonNumber;
+        <span class="cm">// Atomic RENAME — zero downtime, new leaderboard starts empty</span>
+        redis.rename(LB_KEY, archiveKey);
+        <span class="cm">// Async: export archive to PostgreSQL for history</span>
+        <span class="cls">CompletableFuture</span>.runAsync(() -> archiveService.export(archiveKey, seasonNumber));
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Leaderboard — Python: Redis ZSet + friends
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> redis, threading, time
+<span class="kw">from</span> collections <span class="kw">import</span> deque
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> List, Optional
+
+r = redis.Redis(decode_responses=True)
+LB_KEY = <span class="str">"leaderboard"</span>
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">PlayerRank</span>:
+    player_id: str
+    score:     float
+    rank:      int
+
+
+<span class="kw">class</span> <span class="cls">LeaderboardService</span>:
+    <span class="str">"""Buffered score writes + all leaderboard queries."""</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self._buffer = deque()
+        self._lock   = threading.Lock()
+        <span class="cm"># Flush buffer every 1 second</span>
+        t = threading.Thread(target=self._flush_loop, daemon=<span class="kw">True</span>)
+        t.start()
+
+    <span class="kw">def</span> <span class="fn2">submit_score</span>(self, player_id: str, score: float):
+        <span class="str">"""Non-blocking: add to buffer."""</span>
+        <span class="kw">with</span> self._lock:
+            self._buffer.append((player_id, score))
+
+    <span class="kw">def</span> <span class="fn2">_flush_loop</span>(self):
+        <span class="kw">while True</span>:
+            time.sleep(<span class="num">1</span>)
+            self._flush()
+
+    <span class="kw">def</span> <span class="fn2">_flush</span>(self):
+        <span class="kw">with</span> self._lock:
+            batch = list(self._buffer)
+            self._buffer.clear()
+        <span class="kw">if not</span> batch: <span class="kw">return</span>
+        <span class="cm"># Pipeline: all ZADDs in one round-trip</span>
+        pipe = r.pipeline()
+        <span class="kw">for</span> player_id, score <span class="kw">in</span> batch:
+            pipe.zadd(LB_KEY, {player_id: score})
+        pipe.execute()
+
+    <span class="kw">def</span> <span class="fn2">get_rank</span>(self, player_id: str) -> Optional[int]:
+        rank = r.zrevrank(LB_KEY, player_id)
+        <span class="kw">return</span> rank + <span class="num">1</span> <span class="kw">if</span> rank <span class="kw">is not None else None</span>
+
+    <span class="kw">def</span> <span class="fn2">get_score</span>(self, player_id: str) -> Optional[float]:
+        <span class="kw">return</span> r.zscore(LB_KEY, player_id)
+
+    <span class="kw">def</span> <span class="fn2">get_top_n</span>(self, n: int = <span class="num">100</span>) -> List[<span class="cls">PlayerRank</span>]:
+        entries = r.zrevrange(LB_KEY, <span class="num">0</span>, n - <span class="num">1</span>, withscores=<span class="kw">True</span>)
+        <span class="kw">return</span> [<span class="cls">PlayerRank</span>(pid, score, i + <span class="num">1</span>)
+                <span class="kw">for</span> i, (pid, score) <span class="kw">in</span> enumerate(entries)]
+
+    <span class="kw">def</span> <span class="fn2">get_around</span>(self, player_id: str, count: int = <span class="num">5</span>) -> List[<span class="cls">PlayerRank</span>]:
+        rank = r.zrevrank(LB_KEY, player_id)
+        <span class="kw">if</span> rank <span class="kw">is None</span>: <span class="kw">return</span> []
+        start = max(<span class="num">0</span>, rank - count)
+        end   = rank + count
+        entries = r.zrevrange(LB_KEY, start, end, withscores=<span class="kw">True</span>)
+        <span class="kw">return</span> [<span class="cls">PlayerRank</span>(pid, score, start + i + <span class="num">1</span>)
+                <span class="kw">for</span> i, (pid, score) <span class="kw">in</span> enumerate(entries)]
+
+    <span class="kw">def</span> <span class="fn2">get_friends_leaderboard</span>(self, player_id: str, friends: List[str]) -> List[<span class="cls">PlayerRank</span>]:
+        <span class="str">"""Rank among friends. ZMSCORE for bulk score fetch."""</span>
+        all_players = friends + [player_id]
+        scores_raw  = r.zmscore(LB_KEY, all_players)  <span class="cm"># O(N) single command</span>
+        ranked = sorted(
+            [(pid, score) <span class="kw">for</span> pid, score <span class="kw">in</span> zip(all_players, scores_raw)
+             <span class="kw">if</span> score <span class="kw">is not None</span>],
+            key=<span class="kw">lambda</span> x: -x[<span class="num">1</span>])
+        <span class="kw">return</span> [<span class="cls">PlayerRank</span>(pid, score, i + <span class="num">1</span>)
+                <span class="kw">for</span> i, (pid, score) <span class="kw">in</span> enumerate(ranked)]
+
+    <span class="kw">def</span> <span class="fn2">reset_season</span>(self, season_number: int):
+        <span class="str">"""Atomic rename → archive. Zero downtime."""</span>
+        archive_key = f<span class="str">\'leaderboard:season:{season_number}\'</span>
+        r.rename(LB_KEY, archive_key)  <span class="cm"># O(1), atomic</span>
+        <span class="cm"># Background: export archive_key to PostgreSQL, then delete</span>
+        print(f<span class="str">\'[RESET] Season {season_number} archived. New season started.\'</span>)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">📊 Score Storage: ZSet vs DB + Sort vs Segment Tree</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Redis ZSet (chosen)</div><p>O(log N) ZADD + O(log N) ZREVRANK. 640MB for 10M players. Ops team knows Redis. Built-in persistence. Production-proven at Riot Games, Discord, Roblox. Zero custom code needed for the core data structure.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">DB with ORDER BY</div><p><code>SELECT COUNT(*) FROM scores WHERE score > ?</code> — O(N) table scan or O(log N) with index. Index helps but doesn't give O(log N) rank like ZSet. Also: 100K writes/sec will overwhelm a relational DB's write path. Only works at small scale (&lt;100K players).</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Segment Tree / Fenwick Tree</div><p>Custom in-memory tree. O(log N) updates and rank queries. Used when score range is bounded (e.g., 0-1,000,000). More memory-efficient than ZSet for dense score ranges. Requires custom implementation. Not necessary when Redis already solves the problem perfectly.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">⏱ Write Strategy: Immediate vs Batched vs Queue</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Immediate (per-event ZADD)</div><p>Every score update instantly hits Redis. Rank always current. But: 100K individual commands/sec → single-threaded Redis at limit. Any other Redis work starves. Not recommended at this scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Batched (1s pipeline)</div><p>Buffer updates, flush every second via pipeline. 100K/sec → 1K pipelines/sec. Redis easily handles. Rank lag: up to 1 second — imperceptible to users. Best throughput/freshness tradeoff. Used by virtually all high-scale game leaderboards.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Kafka queue</div><p>Score events → Kafka → consumer writes to Redis. Adds ~100ms latency but decouples ingest from write pressure. Useful when score sources are distributed across many services. Overkill for single-service scenarios — adds operational complexity without benefit over local batching.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

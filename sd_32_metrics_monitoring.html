@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #32 — Metrics & Monitoring System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#fb923c;--a2:#ea580c;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#ffedd5;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#0f0a07 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(251,146,60,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fff7ed 0%,#fb923c 50%,#9a3412 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(251,146,60,.07);color:#ffedd5;border:1px solid rgba(251,146,60,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(251,146,60,.1);color:var(--ecolor);border:1.5px solid rgba(251,146,60,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(251,146,60,.08);color:var(--accent);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#ffedd5;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(251,146,60,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin}
+.cblock.active{display:block}
+pre{margin:0}code.bl{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(251,146,60,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#fb923c;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>32 / Metrics & Monitoring</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">📈</div>
+    <div>
+      <div class="h-title">Metrics & Monitoring System (Prometheus/Datadog)</div>
+      <div class="h-desc">Design a metrics and monitoring platform — ingesting billions of time-series data points per day from thousands of services, storing them efficiently using columnar compression, querying with PromQL-style range functions, evaluating alerting rules every 15 seconds, and handling the high-cardinality explosion that kills most naive implementations.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Time-Series DB</span>
+        <span class="badge b-tag">High Cardinality</span>
+        <span class="badge b-tag">Delta Encoding</span>
+        <span class="badge b-tag">Alerting</span>
+        <span class="badge b-tag">Downsampling</span>
+        <span class="badge b-tag">Pull vs Push</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('tsdb',this)">🗜 TSDB Storage</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>The hardest problem in metrics at scale is high cardinality.</strong> A metric like <code>http_requests_total{service="api", status="200", pod="api-7d9f-k8s-pod-abc123"}</code> creates one time series per unique label combination. With 10K pods × 500 status codes × 200 services = 1 billion unique series. Most TSDB implementations silently die here.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Ingest metrics from thousands of services (push/pull)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Store time-series data with labels (metric name + key=value pairs)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Query: range queries, aggregation, rate calculations</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Alerting: evaluate rules every 15s, fire on threshold breach</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Dashboards: visualise time-series over custom ranges</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Data retention: 15s resolution for 2 weeks; 1m for 1 year</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>10M time-series (active), 1B+ total ever seen</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Ingest: 1M samples/sec (10M series × 1 sample/10s avg)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Query latency: &lt;1s for last 1h; &lt;10s for last 30d</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Alert evaluation: exactly every 15 seconds, &lt;5s to notify</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Write availability: 99.9% — monitoring must not lose data</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Time-Series Storage</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · STORAGE INTERNALS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>1M samples/sec, each is a (timestamp, float64) pair. How do you store this efficiently? Raw storage would be 12 bytes × 1M/sec = 12 MB/sec = 1 TB/day.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Prometheus TSDB and Gorilla (Facebook/Meta's TSDB) use a technique called <b>double-delta encoding</b> for timestamps and <b>XOR-based compression</b> for values, reducing storage by ~10×.<br><br>
+      <b>Timestamp compression:</b> Metrics arrive at regular intervals (e.g., every 15s). Instead of storing full 8-byte timestamps, store deltas. For a 15s interval: delta=15000ms fits in 1 byte. For irregular intervals: store delta-of-deltas. A perfectly regular time series needs ~1 bit per sample for timestamps. Real-world: ~3-4 bytes per sample vs 8 bytes raw.<br><br>
+      <b>Value compression (Gorilla XOR encoding):</b> Consecutive float64 values in a metric tend to be similar (CPU at 45%, 46%, 45%). XOR the current value with the previous one — the leading and trailing zeros tell you how many bits differ. Store only the changing bits with a prefix code. Real-world: many metrics store in &lt;1 byte per sample vs 8 bytes raw. Overall: 10-12× compression typical.<br><br>
+      <b>Chunk format:</b> Each time series is stored as a sequence of fixed-size chunks (typically 2h of data). Each chunk is compressed independently. Prometheus uses 128-byte chunks. Chunks are immutable once closed — a new chunk starts every 2h. This enables columnar-style access: to query a time range, load only the relevant chunks.
+    </div></div>
+    <div class="tip-box"><strong>💡 Gorilla paper:</strong> Facebook's 2015 VLDB paper "Gorilla: A Fast, Scalable, In-Memory Time Series Database" describes this compression. Prometheus adopted it. Reduced their data by 12× with &lt;1ms decompression overhead.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔥 Phase 2 — High Cardinality</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · CARDINALITY EXPLOSION</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Engineer adds a label "request_id" to a metric. Every HTTP request gets a unique request_id. System falls over in 30 minutes. Why and how do you prevent it?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Why it happens:</b> Each unique label set creates a new time series. Adding "request_id" to a metric with 10K req/sec = 10K new time series per second. After 10 minutes: 6M new time series. The TSDB's in-memory index (inverted index mapping labels → series IDs) balloons. Memory exhausted. Write path slows. Cascading failure.<br><br>
+      <b>Prevention — cardinality limits:</b><br>
+      <ul>
+        <li><b>Per-metric label value limit:</b> If any label has &gt;10K unique values, reject new series creation. Alert the team. Prometheus has <code>--storage.tsdb.max-block-chunk-segment-size</code> and per-metric limits via recording rules.</li>
+        <li><b>Label value allow-listing:</b> Only allow enumerated label values (e.g., status: {200, 400, 500, other}) — catch-all "other" bucket prevents explosion.</li>
+        <li><b>Cardinality dashboard:</b> Monitor the rate of new series creation. Alert on &gt;1K new series/min. Catch the problem before it escalates.</li>
+        <li><b>Drop high-cardinality labels at ingest:</b> A relabelling rule drops the offending label before storing: <code>labelmap drop request_id</code>.</li>
+      </ul>
+      <b>Detection:</b> Track <code>prometheus_tsdb_head_series</code> metric. If it grows faster than baseline, trigger an alert to the metric owner.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🚨 Phase 3 — Alerting</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · ALERTING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You need to evaluate 10K alert rules every 15 seconds across 10M series. How?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Alert evaluation at scale:</b><br><br>
+      Each alert rule is a PromQL query with a threshold: <code>rate(http_errors_total[5m]) > 0.01</code>. Running this across all 10M series every 15s would be expensive — O(10M) work 4× per minute = 40M evaluations/minute.<br><br>
+      <b>Key optimisation — pre-computed recording rules:</b> Instead of evaluating complex queries at alert time, pre-compute them continuously: <code>record: job:http_errors:rate5m = rate(http_errors_total[5m])</code>. This creates a new (lower-cardinality) time series that's already computed. Alert rules just threshold the pre-computed value — O(1) per alert rule. Recording rules run every 15s as streaming jobs.<br><br>
+      <b>Alert manager flow:</b> Evaluation → Alertmanager → route by severity/team → deduplicate (same alert firing repeatedly = 1 notification) → group (30 alerts from same service = 1 pagerduty) → silence (known issue, suppress for 4h) → notify (PagerDuty/Slack/email).<br><br>
+      <b>Avoid alert storms:</b> Alert on <b>symptoms</b> not causes. One alert "user-facing error rate > 1%" is better than 50 alerts "service X returning 5xx" + "DB connection timeout" + etc. This is Google's SRE "symptom-based alerting" principle.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="tsdb" class="panel">
+  <div class="sec"><div class="sec-head">🗜 TSDB Storage — Chunk Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 350" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:350px">
+<defs>
+<marker id="oa" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fb923c"/></marker>
+<marker id="og" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+</defs>
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#fb923c" font-weight="700">PROMETHEUS TSDB ARCHITECTURE</text>
+
+<!-- Memory layer -->
+<rect x="10" y="28" width="380" height="130" rx="8" fill="rgba(251,146,60,.03)" stroke="rgba(251,146,60,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="200" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">IN-MEMORY (HEAD BLOCK — last 2h)</text>
+<rect x="20" y="58" width="360" height="90" rx="6" fill="#131c2e" stroke="#fb923c" stroke-width="2"/>
+<text x="200" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ffedd5">Write-Ahead Log (WAL)</text>
+<text x="200" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">All incoming samples written to WAL first (durability)</text>
+<text x="200" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Chunk: 128-sample window → Gorilla compressed → ~3 bytes/sample avg</text>
+<text x="200" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Inverted index: label_name=value → [series_id1, series_id2, ...]</text>
+<text x="200" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fb923c">O(1) write, O(matching series) query</text>
+
+<!-- Disk blocks -->
+<rect x="410" y="28" width="420" height="130" rx="8" fill="rgba(16,185,129,.03)" stroke="rgba(16,185,129,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="620" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">DISK (IMMUTABLE BLOCKS — 2h to 25h per block)</text>
+<rect x="420" y="58" width="110" height="90" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="475" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">Block 0</text>
+<text x="475" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">t-4h to t-2h</text>
+<text x="475" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">chunks/ dir</text>
+<text x="475" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">index (postings)</text>
+<text x="475" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">meta.json</text>
+<rect x="540" y="58" width="110" height="90" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="595" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">Block 1</text>
+<text x="595" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">t-6h to t-4h</text>
+<text x="595" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">compacted</text>
+<text x="595" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">2h → merged</text>
+<rect x="660" y="58" width="110" height="90" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="715" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#bae6fd">Block N</text>
+<text x="715" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">older blocks</text>
+<text x="715" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">merged to 25h</text>
+<text x="715" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">fewer, larger</text>
+
+<!-- Gorilla encoding detail -->
+<rect x="10" y="170" width="380" height="90" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="22" y="190" font-family="JetBrains Mono" font-size="8" fill="#fb923c">GORILLA COMPRESSION (per chunk):</text>
+<text x="22" y="206" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Timestamps: delta-of-delta encoding</text>
+<text x="22" y="220" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  t0=1700000000 stored as-is (8 bytes)</text>
+<text x="22" y="234" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  t1=15000ms delta → fits in 14 bits → 2 bytes</text>
+<text x="22" y="248" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  t2,t3,... = delta-of-delta ≈ 0 → 1 bit each</text>
+<text x="22" y="258" font-family="JetBrains Mono" font-size="7" fill="#fb923c">→ avg ~3 bits/timestamp vs 64 bits raw = 20× compression</text>
+
+<!-- XOR value encoding -->
+<rect x="410" y="170" width="420" height="90" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="422" y="190" font-family="JetBrains Mono" font-size="8" fill="#10b981">XOR VALUE ENCODING:</text>
+<text x="422" y="206" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">v0 = 45.2 stored as full float64 (8 bytes)</text>
+<text x="422" y="220" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">v1 = 45.3: XOR(v0,v1) has leading zeros → store only diff bits</text>
+<text x="422" y="234" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">v2 = 0.0 (restart): XOR has many leading zeros → 1-2 bytes</text>
+<text x="422" y="248" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Constant metrics (e.g., config = 1): 1 bit per sample</text>
+<text x="422" y="258" font-family="JetBrains Mono" font-size="7" fill="#10b981">→ avg ~12 bits/value vs 64 raw = 5× compression. Combined: 10-12×</text>
+
+<!-- Downsampling -->
+<rect x="10" y="272" width="820" height="70" rx="8" fill="rgba(0,0,0,.12)" stroke="rgba(255,255,255,.04)"/>
+<text x="22" y="290" font-family="JetBrains Mono" font-size="8" fill="#a855f7" font-weight="700">DOWNSAMPLING (long-term retention):</text>
+<text x="22" y="306" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Raw: 15s → keep 2 weeks → 1M samples/series (too much for 1y query)</text>
+<text x="22" y="320" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">1m downsampled: store min/max/avg per minute → keep 1 year → 525K samples/series</text>
+<text x="22" y="334" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">5m downsampled: keep 5 years. Query dashboard for last 30d? Use 5m resolution — fast, accurate enough.</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Ingest:</span>
+  <span class="label">10M active series × 1 sample/15s                 = </span><span class="val">667K samples/sec</span>  <span class="label">≈ 1M/sec at peak</span>
+  <span class="label">Raw: 1M × 12 bytes                                = </span><span class="val">12 MB/sec raw</span>
+  <span class="label">After Gorilla compression (~10×)                  = </span><span class="val">~1.2 MB/sec</span>  <span class="label">actual write throughput</span>
+
+<span class="label">Storage (15s resolution, 2 weeks):</span>
+  <span class="label">2 weeks × 86400s/day × (1/15) samples/s × 10M series × 3B avg</span>
+  <span class="label">= 14 × 5760 samples/series × 10M × 3B            = </span><span class="val">~2.4 TB</span>  <span class="label">for 2-week raw</span>
+
+<span class="label">Storage (1m resolution, 1 year):</span>
+  <span class="label">365 × 1440 min/day × 10M × 3B                    = </span><span class="val">~15 TB</span>  <span class="label">downsampled 1-year</span>
+
+<span class="label">In-memory head block:</span>
+  <span class="label">10M series × 2h × 8 samples/min × 3B avg         = </span><span class="val">~30 GB RAM</span>  <span class="label">per Prometheus node</span>
+
+<span class="label">Alert evaluation:</span>
+  <span class="label">10K rules × 15s cycle: 667 rules/sec to evaluate → trivial with pre-recorded metrics</span>
+
+<span class="result">→ 10-node Prometheus cluster (sharded by service), Thanos for long-term S3 storage.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Prometheus nodes</td><td class="hi">10 nodes</td><td>Each handles 1M series; sharded by scrape target</td></tr>
+      <tr><td>RAM per node</td><td class="hi">32–64 GB</td><td>Head block + index + query execution</td></tr>
+      <tr><td>Disk per node</td><td class="hi">1–2 TB SSD</td><td>2-week raw; NVMe for fast block compaction</td></tr>
+      <tr><td>Long-term (Thanos/Cortex)</td><td class="hi">S3 + ~20 TB</td><td>1-year downsampled; object storage cheap</td></tr>
+      <tr><td>Alertmanager</td><td class="hi">3 HA nodes</td><td>Gossip cluster; deduplicate across nodes</td></tr>
+      <tr><td>Ingest rate</td><td class="hi">1M samples/sec</td><td>Gorilla compressed; WAL for durability</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 870 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:310px">
+<defs>
+<marker id="oma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fb923c"/></marker>
+<marker id="omg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="omr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="omb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+</defs>
+<!-- Services -->
+<rect x="10" y="40" width="80" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Services</text>
+<text x="50" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">/metrics endpoint</text>
+<rect x="10" y="100" width="80" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Agents</text>
+<text x="50" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">push gateway</text>
+
+<!-- Prometheus cluster -->
+<rect x="110" y="30" width="180" height="130" rx="8" fill="rgba(251,146,60,.02)" stroke="rgba(251,146,60,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="200" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">PROMETHEUS (10 nodes)</text>
+<rect x="120" y="58" width="160" height="90" rx="6" fill="#131c2e" stroke="#fb923c" stroke-width="2"/>
+<text x="200" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ffedd5">TSDB + WAL</text>
+<text x="200" y="93" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">scrape (pull) / ingest (push)</text>
+<text x="200" y="107" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Gorilla compression</text>
+<text x="200" y="121" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">inverted label index</text>
+<text x="200" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fb923c">recording rules every 15s</text>
+
+<!-- Thanos (long-term) -->
+<rect x="310" y="30" width="170" height="130" rx="8" fill="#131c2e" stroke="#a855f7" stroke-width="2"/>
+<text x="395" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Thanos / Cortex</text>
+<text x="395" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Sidecar: uploads blocks to S3</text>
+<text x="395" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Querier: fan-out to Prom nodes</text>
+<text x="395" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Compactor: downsamples old</text>
+<text x="395" y="113" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1m & 5m resolution</text>
+<text x="395" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a855f7">enables 1y+ queries</text>
+<text x="395" y="143" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">S3: unlimited cheap storage</text>
+
+<!-- S3 -->
+<rect x="500" y="60" width="120" height="70" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="560" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">S3 Object Store</text>
+<text x="560" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">immutable blocks</text>
+<text x="560" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1y+ history</text>
+<text x="560" y="125" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">~$20/TB/month</text>
+
+<!-- Alertmanager -->
+<rect x="110" y="180" width="180" height="80" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="200" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fda4af">Alertmanager (3 HA)</text>
+<text x="200" y="217" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">deduplicate alerts</text>
+<text x="200" y="231" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">group + route</text>
+<text x="200" y="245" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">→ PagerDuty / Slack / OpsGenie</text>
+
+<!-- Grafana -->
+<rect x="310" y="180" width="170" height="80" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+<text x="395" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ffedd5">Grafana Dashboard</text>
+<text x="395" y="217" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">PromQL queries</text>
+<text x="395" y="231" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">fan-out via Thanos Querier</text>
+<text x="395" y="245" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fb923c">auto time-resolution selection</text>
+
+<!-- Cardinality Guard -->
+<rect x="500" y="150" width="150" height="80" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="575" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fda4af">Cardinality Guard</text>
+<text x="575" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">monitor series growth rate</text>
+<text x="575" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">alert on &gt;1K new/min</text>
+<text x="575" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">drop high-cardinality labels</text>
+<text x="575" y="224" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">prevent explosion</text>
+
+<!-- Arrows -->
+<line x1="90" y1="60" x2="108" y2="90" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#oma)"/>
+<line x1="90" y1="120" x2="108" y2="110" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#oma)"/>
+<line x1="280" y1="100" x2="308" y2="100" stroke="#fb923c" stroke-width="1.5" marker-end="url(#oma)"/>
+<line x1="480" y1="100" x2="498" y2="100" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#omg)"/>
+<line x1="200" y1="160" x2="200" y2="178" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#omr)"/>
+<line x1="280" y1="200" x2="308" y2="210" stroke="#fb923c" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#oma)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java (Metrics Client)</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python (TSDB Core)</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code class="bl"><span class="cm">// ══════════════════════════════════════════════════════
+// Metrics & Monitoring — Java: Spring Boot instrumentation
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Configuration</span>
+<span class="kw">public class</span> <span class="cls">MetricsConfig</span> {
+
+    <span class="cm">// Micrometer registry — bridges to Prometheus exposition format</span>
+    <span class="ann">@Bean</span>
+    <span class="kw">public</span> <span class="cls">PrometheusMeterRegistry</span> <span class="fn2">prometheusRegistry</span>() {
+        <span class="cls">PrometheusConfig</span> config = <span class="cls">PrometheusConfig</span>.DEFAULT;
+        <span class="kw">return new</span> <span class="cls">PrometheusMeterRegistry</span>(config);
+    }
+}
+
+<span class="ann">@RestController</span>
+<span class="kw">public class</span> <span class="cls">OrderController</span> {
+
+    <span class="kw">private final</span> <span class="cls">Counter</span>   ordersTotal;
+    <span class="kw">private final</span> <span class="cls">Timer</span>    orderLatency;
+    <span class="kw">private final</span> <span class="cls">Gauge</span>    pendingOrders;
+    <span class="kw">private final</span> <span class="cls">Histogram</span> orderValue;
+
+    <span class="kw">public</span> <span class="cls">OrderController</span>(<span class="cls">MeterRegistry</span> registry) {
+        <span class="cm">// Counter: monotonically increasing count</span>
+        ordersTotal = <span class="cls">Counter</span>.builder(<span class="str">"orders_created_total"</span>)
+            .tag(<span class="str">"service"</span>, <span class="str">"order-svc"</span>)
+            .description(<span class="str">"Total orders created"</span>)
+            .register(registry);
+
+        <span class="cm">// Timer: latency histogram with standard buckets</span>
+        orderLatency = <span class="cls">Timer</span>.builder(<span class="str">"order_processing_seconds"</span>)
+            .tag(<span class="str">"service"</span>, <span class="str">"order-svc"</span>)
+            .publishPercentiles(<span class="num">0.5</span>, <span class="num">0.95</span>, <span class="num">0.99</span>)
+            .register(registry);
+
+        <span class="cm">// Gauge: current value (not cumulative)</span>
+        pendingOrders = <span class="cls">Gauge</span>.builder(<span class="str">"orders_pending"</span>, orderQueue, <span class="cls">Queue</span>::size)
+            .tag(<span class="str">"service"</span>, <span class="str">"order-svc"</span>)
+            .register(registry);
+
+        <span class="cm">// Histogram: distribution of order values</span>
+        orderValue = <span class="cls">DistributionSummary</span>.builder(<span class="str">"order_value_dollars"</span>)
+            .serviceLevelObjectives(<span class="num">10</span>, <span class="num">50</span>, <span class="num">100</span>, <span class="num">500</span>, <span class="num">1000</span>)
+            .register(registry);
+    }
+
+    <span class="ann">@PostMapping</span>(<span class="str">"/orders"</span>)
+    <span class="kw">public</span> <span class="cls">Order</span> <span class="fn2">createOrder</span>(<span class="ann">@RequestBody</span> <span class="cls">OrderRequest</span> req) {
+        <span class="kw">return</span> orderLatency.record(() -> {
+            <span class="cls">Order</span> order = orderService.create(req);
+            ordersTotal.increment();
+            orderValue.record(req.getTotalAmount());
+            <span class="kw">return</span> order;
+        });
+    }
+}
+
+<span class="cm">// ── Prometheus scrape endpoint (auto-generated by Micrometer) ──
+// GET /actuator/prometheus returns:
+//
+// orders_created_total{service="order-svc"} 4872.0
+// order_processing_seconds_bucket{le="0.005"} 2341.0
+// order_processing_seconds_bucket{le="0.01"} 3891.0
+// order_processing_seconds_p99 0.089
+// orders_pending{service="order-svc"} 42.0</span>
+
+<span class="cm">// ── Alert Rule (Prometheus YAML) ──────────────────────
+// groups:
+//   - name: order-svc
+//     rules:
+//       - alert: HighOrderLatency
+//         expr: histogram_quantile(0.99, rate(order_processing_seconds_bucket[5m])) > 0.5
+//         for: 2m                    # must fire for 2m before alerting
+//         labels:
+//           severity: warning
+//         annotations:
+//           summary: "Order p99 latency > 500ms"</span>
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code class="bl"><span class="cm"># ══════════════════════════════════════════════════════
+# Metrics System — Python: minimal TSDB with Gorilla-style
+# compression concept + alerting engine
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, struct, threading
+<span class="kw">from</span> collections <span class="kw">import</span> defaultdict
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> List, Dict, Optional, Callable
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Sample</span>:
+    timestamp: int   <span class="cm"># unix ms</span>
+    value:     float
+
+
+<span class="kw">class</span> <span class="cls">TimeSeries</span>:
+    <span class="str">"""In-memory time series with delta-encoded timestamp storage."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, labels: dict):
+        self.labels    = labels
+        self.samples:  List[<span class="cls">Sample</span>] = []
+        self._last_ts  = <span class="num">0</span>
+        self._last_val = <span class="num">0.0</span>
+
+    <span class="kw">def</span> <span class="fn2">append</span>(self, ts: int, val: float):
+        self.samples.append(<span class="cls">Sample</span>(ts, val))
+        <span class="cm"># In real Gorilla: store delta(ts) and XOR(val) in compressed chunk</span>
+        self._last_ts  = ts
+        self._last_val = val
+
+    <span class="kw">def</span> <span class="fn2">query_range</span>(self, start_ms: int, end_ms: int) -> List[<span class="cls">Sample</span>]:
+        <span class="kw">return</span> [s <span class="kw">for</span> s <span class="kw">in</span> self.samples <span class="kw">if</span> start_ms <= s.timestamp <= end_ms]
+
+
+<span class="kw">class</span> <span class="cls">TSDB</span>:
+    <span class="str">"""Minimal time-series database with label-based lookup."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self._series: Dict[str, <span class="cls">TimeSeries</span>] = {}
+        self._index:  Dict[str, Dict[str, List[str]]] = defaultdict(<span class="kw">lambda</span>: defaultdict(list))
+        self._lock = threading.RLock()
+
+    <span class="kw">def</span> <span class="fn2">_labels_to_key</span>(self, labels: dict) -> str:
+        <span class="kw">return</span> <span class="str">","</span>.join(f<span class="str">"{k}={v}"</span> <span class="kw">for</span> k, v <span class="kw">in</span> sorted(labels.items()))
+
+    <span class="kw">def</span> <span class="fn2">write</span>(self, labels: dict, ts_ms: int, value: float):
+        key = self._labels_to_key(labels)
+        <span class="kw">with</span> self._lock:
+            <span class="kw">if</span> key <span class="kw">not in</span> self._series:
+                self._series[key] = <span class="cls">TimeSeries</span>(labels)
+                <span class="cm"># Update inverted index: label_name=value → series_keys</span>
+                <span class="kw">for</span> name, val <span class="kw">in</span> labels.items():
+                    self._index[name][val].append(key)
+            self._series[key].append(ts_ms, value)
+
+    <span class="kw">def</span> <span class="fn2">select</span>(self, label_matchers: dict) -> List[<span class="cls">TimeSeries</span>]:
+        <span class="str">"""Find all series matching ALL label matchers."""</span>
+        <span class="kw">with</span> self._lock:
+            candidate_keys = <span class="kw">None</span>
+            <span class="kw">for</span> name, val <span class="kw">in</span> label_matchers.items():
+                matches = set(self._index[name].get(val, []))
+                candidate_keys = matches <span class="kw">if</span> candidate_keys <span class="kw">is None else</span> candidate_keys & matches
+            <span class="kw">return</span> [self._series[k] <span class="kw">for</span> k <span class="kw">in</span> (candidate_keys <span class="kw">or</span> set())]
+
+
+<span class="kw">class</span> <span class="cls">AlertEngine</span>:
+    <span class="str">"""Evaluates PromQL-style threshold alerts every 15s."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, tsdb: <span class="cls">TSDB</span>, notify: <span class="cls">Callable</span>):
+        self.tsdb    = tsdb
+        self.notify  = notify
+        self.rules:  list = []
+        self.firing: set  = set()
+
+    <span class="kw">def</span> <span class="fn2">add_rule</span>(self, name: str, matchers: dict, threshold: float,
+                 window_s: int = <span class="num">300</span>, comparator: str = <span class="str">">"</span>):
+        self.rules.append({<span class="str">"name"</span>: name, <span class="str">"matchers"</span>: matchers,
+                           <span class="str">"threshold"</span>: threshold, <span class="str">"window_s"</span>: window_s,
+                           <span class="str">"comparator"</span>: comparator})
+
+    <span class="kw">def</span> <span class="fn2">evaluate_all</span>(self):
+        now_ms = int(time.time() * <span class="num">1000</span>)
+        <span class="kw">for</span> rule <span class="kw">in</span> self.rules:
+            series_list = self.tsdb.select(rule[<span class="str">"matchers"</span>])
+            <span class="kw">for</span> ts <span class="kw">in</span> series_list:
+                window_start = now_ms - rule[<span class="str">"window_s"</span>] * <span class="num">1000</span>
+                samples = ts.query_range(window_start, now_ms)
+                <span class="kw">if not</span> samples: <span class="kw">continue</span>
+                avg_val = sum(s.value <span class="kw">for</span> s <span class="kw">in</span> samples) / len(samples)
+                alert_key = (rule[<span class="str">"name"</span>], str(ts.labels))
+                firing_now = (rule[<span class="str">"comparator"</span>] == <span class="str">">"</span> <span class="kw">and</span> avg_val > rule[<span class="str">"threshold"</span>])
+                <span class="kw">if</span> firing_now <span class="kw">and</span> alert_key <span class="kw">not in</span> self.firing:
+                    self.firing.add(alert_key)
+                    self.notify(rule[<span class="str">"name"</span>], ts.labels, avg_val)
+                <span class="kw">elif not</span> firing_now <span class="kw">and</span> alert_key <span class="kw">in</span> self.firing:
+                    self.firing.discard(alert_key)  <span class="cm"># resolved</span>
+
+    <span class="kw">def</span> <span class="fn2">run</span>(self, interval_s: int = <span class="num">15</span>):
+        <span class="kw">while True</span>:
+            self.evaluate_all()
+            time.sleep(interval_s)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">📥 Collection: Pull (Prometheus) vs Push (Datadog/InfluxDB)</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Pull (Prometheus)</div><p>Prometheus scrapes each service's /metrics endpoint. Scraper knows which targets are up — if a target doesn't respond, that's itself a signal (down). Service discovery via Kubernetes SD / Consul / EC2 tags. No firewall rules needed from service to monitoring. Standard for Kubernetes-native infra.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Push (Datadog/StatsD)</div><p>Services push metrics to a local agent, which batches and forwards. Works for short-lived processes (serverless, cron jobs) that may not be alive when the scraper polls. Works across NAT/firewalls. Scales better at high metric volume. Datadog, InfluxDB, OpenTelemetry all support push. Better for heterogeneous environments.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Hybrid (both)</div><p>Prometheus for long-running services (pull), OTel collector for push from short-lived services, lambdas, batch jobs. OTel has become the industry standard for vendor-neutral metric/trace/log collection. Use Prometheus as the storage backend regardless of collection method.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🗄 TSDB: Prometheus vs Thanos vs VictoriaMetrics vs Grafana Mimir</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Prometheus (single node)</div><p>Single binary, easy to run. 2-week storage, 10-20M series max. No HA — if node dies, metrics are unavailable. The starting point for every monitoring system. Needs Thanos/Cortex for HA and long-term.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Thanos / Grafana Mimir</div><p>HA Prometheus clusters with global query view. Thanos: fan-out query across multiple Prometheus instances. Mimir: fully horizontally scalable TSDB (Cortex successor). Both use object storage (S3) for long-term. Industry standard for large-scale production monitoring.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ VictoriaMetrics</div><p>Drop-in Prometheus replacement with 2-3× better compression and lower RAM. Single binary handles 100M+ series. Prometheus-compatible query API. Better at high cardinality than Prometheus. Gaining adoption for cost-conscious teams. Used by Grammarly, Gitlab, Adidas.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

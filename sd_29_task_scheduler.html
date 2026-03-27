@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #29 — Distributed Task Scheduler</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#06b6d4;--a2:#0891b2;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#a855f7;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#a5f3fc;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f,#07100f 40%,#07090f)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(6,182,212,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;background:linear-gradient(90deg,#cffafe,#06b6d4 50%,#0e7490);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(6,182,212,.07);color:#a5f3fc;border:1px solid rgba(6,182,212,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(6,182,212,.1);color:var(--ecolor);border:1.5px solid rgba(6,182,212,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(6,182,212,.08);color:var(--accent);border:1px solid rgba(6,182,212,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(6,182,212,.05);border:1px solid rgba(6,182,212,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a5f3fc;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(6,182,212,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(6,182,212,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#06b6d4;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>29 / Distributed Task Scheduler</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">⏰</div>
+    <div>
+      <div class="h-title">Distributed Task Scheduler</div>
+      <div class="h-desc">Design a distributed cron / task scheduler that executes millions of scheduled jobs reliably at scale — handling at-least-once execution guarantees, idempotency, clock skew across nodes, missed-run catch-up, exactly-once semantics via distributed locking, and graceful handling of long-running tasks and worker failures.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">At-Least-Once</span>
+        <span class="badge b-tag">Idempotency</span>
+        <span class="badge b-tag">Distributed Lock</span>
+        <span class="badge b-tag">Cron Expression</span>
+        <span class="badge b-tag">Missed Run</span>
+        <span class="badge b-tag">Leader Election</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('design',this)">🔧 Core Design</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<!-- REQUIREMENTS -->
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Clarify Scope</div><div class="sec-body">
+    <div class="info-box"><strong>A task scheduler is deceptively hard.</strong> Single-machine cron is trivial; distributed cron requires solving: which node fires the job (leader election), what if two nodes both fire it (exactly-once), what if a node crashes mid-job (at-least-once + idempotency), what if a job was missed during downtime (catch-up), and how to scale to millions of scheduled jobs.</div>
+    <div class="rq-grid" style="margin-top:14px">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask First</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>At-least-once or exactly-once execution semantics?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>What is the minimum scheduling granularity — per-second, per-minute?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How long can jobs run? Are long-running jobs (hours) supported?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Should missed runs (e.g. during downtime) be caught up?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Pull model (workers poll) or push model (scheduler pushes)?</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>At-least-once. Callers must implement idempotent job logic.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Per-minute granularity (like traditional cron). Sub-minute via delay queues.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Short-lived tasks (&lt;10 min). Long-running via worker heartbeats.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Yes — catch up missed runs up to 24h back.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Push model: scheduler enqueues jobs → workers pull from queue.</div></div>
+      </div>
+    </div>
+    <br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Register cron jobs (cron expression, HTTP callback or queue message)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Trigger execution at scheduled time, at-least-once</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Retry failed jobs with exponential backoff</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Execution history, job status, alerts</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Pause / resume / delete jobs</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>10M registered jobs, 100K triggers/min peak</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Trigger latency: job fires within 10s of scheduled time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>No double-trigger for the same job in the same window</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>99.99% uptime — scheduler failure handled via HA leader election</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Horizontal scale: add workers without changing scheduler</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- Q&A -->
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — The Double-Trigger Problem</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · EXACTLY-ONCE TRIGGER</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You have 3 scheduler nodes for high availability. At 2:00 PM, all three wake up to scan for jobs. How do you prevent the same job firing three times?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      This is the exactly-one-trigger problem. Three strategies:<br><br>
+      <b>1. Leader election (single scheduler):</b> Use ZooKeeper or etcd to elect one leader among the scheduler nodes. Only the leader scans and fires jobs. Followers watch the leader's heartbeat — if it dies, they hold a new election in seconds. Simplest to reason about. Weakness: slight gap between leader death and new leader election (10–30s with ZooKeeper).<br><br>
+      <b>2. Optimistic locking in the job DB:</b> Each scheduler node tries to claim a job with an atomic compare-and-swap:
+      <code>UPDATE jobs SET status='RUNNING', claimed_by='{node_id}', claimed_at=NOW() WHERE id=? AND status='PENDING' AND next_run_at &lt;= NOW()</code>. Only the node where <code>rowsAffected == 1</code> actually runs the job. Others get 0 rows affected and skip. Works without a separate coordination service. Requires a DB that supports row-level locking.<br><br>
+      <b>3. Distributed lock (Redis SET NX):</b> Before firing, acquire a Redis lock: <code>SET lock:job:{job_id}:{run_window} true NX PX 300000</code> (300s TTL). Only one node gets the lock; others skip. Clean, stateless. Weakness: if the winner crashes before completing, the lock expires and another node can claim it — this gives at-least-once, not exactly-once.<br><br>
+      <b>Production approach:</b> Leader election for normal operation (only one scanner), optimistic DB locking as an additional safety layer. Defense in depth.
+    </div></div>
+    <div class="tip-box"><strong>💡 At-least-once is the practical choice.</strong> Exactly-once requires two-phase commits or distributed transactions. At-least-once + idempotent job logic = correctness without coordination overhead. The job handler must be designed to be safe to run twice.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⏰ Phase 2 — Scaling to 10M Jobs</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · SCALE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does the scheduler efficiently find which jobs need to fire in the next minute, out of 10M registered jobs?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      A full table scan of 10M rows every minute is too slow. Three efficient approaches:<br><br>
+      <b>1. DB index on next_run_at:</b> <code>SELECT * FROM jobs WHERE next_run_at BETWEEN NOW() AND NOW()+60s AND status='ACTIVE'</code> with an index on <code>(status, next_run_at)</code>. At 100K jobs firing per minute, this returns 100K rows quickly via index seek. After firing, update <code>next_run_at</code> to the next scheduled time. Simple and effective for moderate scale.<br><br>
+      <b>2. Redis Sorted Set as a priority queue:</b> Maintain a ZSet where score = next_run_at (Unix timestamp). Every minute: <code>ZRANGEBYSCORE due_jobs 0 {now_unix}</code> — returns all jobs due up to now. Pop them atomically with <code>ZREMRANGEBYSCORE</code>. Re-add each job with its next_run_at as the new score. Extremely fast — O(log N + K) where K is jobs due. Handles 10M jobs in ~100ms scan. This is how Sidekiq and Celery implement delayed job queues.<br><br>
+      <b>3. Time-bucketed sharding:</b> Partition jobs into time buckets: <code>bucket_{YYYY-MM-DD-HH-MM}</code>. Each bucket is a list of jobs due in that minute. The scanner only reads the current bucket — no scanning needed at all, O(1) lookup. Requires pre-computing all future schedules at job creation time (manageable for jobs scheduled months out).
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">💀 Phase 3 — Worker Failure & Missed Runs</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · FAILURE HANDLING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A worker picks up a job and crashes after 30 seconds — job is half done. Also: the entire scheduler goes down for 2 hours. What happens?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Worker crash (in-flight job):</b><br>
+      The job is in <code>status=RUNNING</code> with a <code>claimed_at</code> timestamp and a heartbeat. Workers must send a heartbeat every 30 seconds: <code>UPDATE executions SET heartbeat_at=NOW() WHERE id=?</code>. A background reaper process scans for jobs where <code>heartbeat_at &lt; NOW() - 120s</code> (2× heartbeat interval) → these are stuck/crashed. The reaper resets them to <code>status=PENDING</code> and increments <code>retry_count</code>. Worker picks them up again. Job must be idempotent to handle re-execution.<br><br>
+      <b>Scheduler downtime for 2 hours:</b><br>
+      When scheduler restarts, it detects missed runs by scanning: <code>SELECT * FROM jobs WHERE next_run_at &lt; NOW() AND status='ACTIVE' AND missed_catch_up=true</code>. For each missed job, fire once regardless of how many scheduled times were missed (one catch-up run). Record the catch-up execution. Then advance <code>next_run_at</code> to the next future scheduled time.<br><br>
+      For jobs where it's critical to fire every missed run (e.g., hourly billing), compute all missed intervals and fire once per interval. This is configurable per job: <code>miss_policy: FIRE_ONCE | FIRE_ALL | SKIP</code>.
+    </div></div>
+  </div></div>
+</div>
+
+<!-- DESIGN -->
+<div id="design" class="panel">
+  <div class="sec"><div class="sec-head">🔧 Core Scheduling Loop</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:400px">
+<defs>
+<marker id="ca" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#06b6d4"/></marker>
+<marker id="cg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="cr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+<marker id="cy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+<!-- TICK LOOP -->
+<text x="20" y="18" font-family="JetBrains Mono" font-size="10" fill="#06b6d4" font-weight="700">SCHEDULER TICK LOOP (every 10s, leader only)</text>
+<!-- Step boxes -->
+<rect x="20" y="30" width="130" height="54" rx="7" fill="#131c2e" stroke="#06b6d4" stroke-width="2"/>
+<text x="85" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a5f3fc">1. Acquire</text>
+<text x="85" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">leader lock (ZK)</text>
+<text x="85" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">skip if not leader</text>
+
+<rect x="170" y="30" width="130" height="54" rx="7" fill="#131c2e" stroke="#06b6d4" stroke-width="2"/>
+<text x="235" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a5f3fc">2. Scan Due</text>
+<text x="235" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">ZRANGEBYSCORE</text>
+<text x="235" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">due_jobs ZSet</text>
+
+<rect x="320" y="30" width="130" height="54" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="385" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">3. CAS Claim</text>
+<text x="385" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">UPDATE WHERE</text>
+<text x="385" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">status=PENDING → CLAIMED</text>
+
+<rect x="470" y="30" width="130" height="54" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="535" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">4. Enqueue</text>
+<text x="535" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">push to job queue</text>
+<text x="535" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">Kafka / SQS</text>
+
+<rect x="620" y="30" width="130" height="54" rx="7" fill="#131c2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="685" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a5f3fc">5. Reschedule</text>
+<text x="685" y="66" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">compute next_run_at</text>
+<text x="685" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">ZADD back to ZSet</text>
+
+<!-- WORKER LOOP -->
+<text x="20" y="120" font-family="JetBrains Mono" font-size="10" fill="#10b981" font-weight="700">WORKER EXECUTION LOOP</text>
+<rect x="20" y="132" width="130" height="54" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="85" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">1. Poll Queue</text>
+<text x="85" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">long-poll SQS</text>
+<text x="85" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">visibility timeout</text>
+
+<rect x="170" y="132" width="130" height="54" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="235" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">2. Execute Job</text>
+<text x="235" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HTTP callback or</text>
+<text x="235" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">internal handler</text>
+
+<rect x="320" y="132" width="130" height="54" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="385" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">3. Heartbeat</text>
+<text x="385" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">every 30s while</text>
+<text x="385" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">job running</text>
+
+<rect x="470" y="132" width="130" height="54" rx="7" fill="rgba(16,185,129,.1)" stroke="#10b981" stroke-width="2"/>
+<text x="535" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">4a. ✅ SUCCESS</text>
+<text x="535" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">delete from queue</text>
+<text x="535" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">status=COMPLETED</text>
+
+<rect x="620" y="132" width="130" height="54" rx="7" fill="rgba(244,63,94,.08)" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="685" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb7185">4b. ❌ FAIL</text>
+<text x="685" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">visibility expires</text>
+<text x="685" y="180" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">→ retry (exp backoff)</text>
+
+<!-- REAPER -->
+<text x="20" y="222" font-family="JetBrains Mono" font-size="10" fill="#f59e0b" font-weight="700">REAPER (every 60s)</text>
+<rect x="20" y="234" width="830" height="70" rx="8" fill="rgba(0,0,0,.3)" stroke="rgba(245,158,11,.15)"/>
+<text x="32" y="254" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Find stuck jobs: SELECT * FROM executions WHERE heartbeat_at &lt; NOW() - 120s AND status='RUNNING'</text>
+<text x="32" y="270" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">→ If retry_count &lt; max_retries: reset to PENDING, increment retry_count, re-enqueue with delay</text>
+<text x="32" y="286" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">→ If retry_count >= max_retries: mark FAILED, alert, send to dead-letter queue</text>
+<text x="32" y="302" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">Catches: worker OOM, network partition, JVM crash, slow jobs, deployment restarts</text>
+
+<!-- MISSED RUN CATCH-UP -->
+<text x="20" y="328" font-family="JetBrains Mono" font-size="10" fill="#a855f7" font-weight="700">MISSED RUN CATCH-UP (on scheduler startup)</text>
+<rect x="20" y="340" width="830" height="52" rx="8" fill="rgba(0,0,0,.3)" stroke="rgba(168,85,247,.15)"/>
+<text x="32" y="360" font-family="JetBrains Mono" font-size="8" fill="#c4b5fd">SELECT * FROM jobs WHERE next_run_at &lt; NOW() AND status='ACTIVE'  →  for each: fire once (miss_policy=FIRE_ONCE)</text>
+<text x="32" y="377" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">or compute all missed intervals (miss_policy=FIRE_ALL)  →  advance next_run_at to next future scheduled time</text>
+
+<!-- Arrows -->
+<line x1="150" y1="57" x2="168" y2="57" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#ca)"/>
+<line x1="300" y1="57" x2="318" y2="57" stroke="#10b981" stroke-width="1.5" marker-end="url(#cg)"/>
+<line x1="450" y1="57" x2="468" y2="57" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#cy)"/>
+<line x1="600" y1="57" x2="618" y2="57" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#ca)"/>
+<line x1="150" y1="159" x2="168" y2="159" stroke="#10b981" stroke-width="1.5" marker-end="url(#cg)"/>
+<line x1="300" y1="159" x2="318" y2="159" stroke="#10b981" stroke-width="1.5" marker-end="url(#cg)"/>
+<line x1="450" y1="159" x2="468" y2="159" stroke="#10b981" stroke-width="1.5" marker-end="url(#cg)"/>
+<line x1="600" y1="159" x2="618" y2="159" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#cr)"/>
+</svg>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📅 Cron Expression to Next-Run Computation</div><div class="sec-body">
+    <div class="two-col">
+      <div class="flow-box">
+        <div class="flow-title" style="color:#a5f3fc">CRON EXPRESSION ANATOMY</div>
+        <div style="background:var(--code);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2;color:#94a3b8">
+          <div><span style="color:#06b6d4">0 2 * * 1</span>   = <span style="color:#6ee7b7">Every Monday at 02:00</span></div>
+          <div><span style="color:#06b6d4">*/15 * * * *</span> = <span style="color:#6ee7b7">Every 15 minutes</span></div>
+          <div><span style="color:#06b6d4">0 0 1 * *</span>   = <span style="color:#6ee7b7">1st of every month</span></div>
+          <div><span style="color:#06b6d4">0 9-17 * * 1-5</span> = <span style="color:#6ee7b7">9–5 weekdays</span></div>
+          <div style="color:#4e6070">Format: min hr dom month dow</div>
+        </div>
+      </div>
+      <div class="flow-box">
+        <div class="flow-title" style="color:#6ee7b7">JOB TABLE SCHEMA</div>
+        <div style="background:var(--code);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.8;color:#94a3b8">
+          <div><span style="color:#06b6d4">jobs</span> table:</div>
+          <div>  id          UUID PK</div>
+          <div>  name        VARCHAR</div>
+          <div>  cron_expr   VARCHAR  <span style="color:#4e6070">-- "0 2 * * 1"</span></div>
+          <div>  callback    VARCHAR  <span style="color:#4e6070">-- HTTP URL or queue</span></div>
+          <div>  <span style="color:#fbbf24">next_run_at TIMESTAMPTZ  ← indexed</span></div>
+          <div>  status      ENUM(ACTIVE,PAUSED)</div>
+          <div>  miss_policy ENUM(FIRE_ONCE,FIRE_ALL,SKIP)</div>
+          <div>  max_retries INT DEFAULT 3</div>
+          <div>  timezone    VARCHAR DEFAULT 'UTC'</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- CAPACITY -->
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity Estimation</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Jobs: 10M registered, 100K triggers/min peak</span>
+<span class="label">  100K/min = </span><span class="val">1,667 triggers/sec</span>  <span class="label">peak</span>
+
+<span class="label">Scheduler loop (every 10s, Redis ZSet scan):</span>
+<span class="label">  ZRANGEBYSCORE O(log N + K) where K = 100K/6 per 10s</span>
+<span class="label">  K ≈ 16,667 jobs per 10s scan                 = </span><span class="val">trivial for Redis</span>
+<span class="label">  10M jobs in ZSet × 24 bytes/entry             = </span><span class="val">240 MB</span>  <span class="label">fits in RAM</span>
+
+<span class="label">Job queue (Kafka / SQS):</span>
+<span class="label">  1,667 messages/sec × 512 bytes/message        = </span><span class="val">~850 KB/sec</span>  <span class="label">trivial</span>
+
+<span class="label">Workers:</span>
+<span class="label">  avg job runtime 5s, 1 job/thread</span>
+<span class="label">  100K/min ÷ 60 = 1,667/sec × 5s              = </span><span class="val">8,335 concurrent jobs</span>
+<span class="label">  at 50 threads/worker: </span><span class="val">167 worker pods</span>
+
+<span class="label">Execution history DB writes:</span>
+<span class="label">  100K rows/min + 30s heartbeats × 8K running = </span><span class="val">~18K writes/sec</span>
+<span class="label">  Use Cassandra (write-optimised) or partition by date</span>
+
+<span class="result">→ Redis ZSet is the hot path. 240 MB for 10M jobs. 167 worker pods at peak.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Registered jobs</td><td class="hi">10M</td><td>240 MB in Redis ZSet</td></tr>
+      <tr><td>Triggers/sec (peak)</td><td class="hi">1,667</td><td>100K/min ÷ 60</td></tr>
+      <tr><td>Concurrent jobs</td><td class="hi">8,335</td><td>avg 5s runtime</td></tr>
+      <tr><td>Worker pods</td><td class="hi">167</td><td>50 threads each</td></tr>
+      <tr><td>Scheduler nodes</td><td class="hi">3 (1 leader)</td><td>ZK leader election</td></tr>
+      <tr><td>Trigger latency p99</td><td class="hi">&lt;10s</td><td>10s scan interval</td></tr>
+      <tr><td>Execution history writes</td><td class="hi">~18K/sec</td><td>Cassandra, partitioned by date</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<!-- HLD -->
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 High-Level Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:400px">
+<defs>
+<marker id="hca" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#06b6d4"/></marker>
+<marker id="hcg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="hcy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+<marker id="hcr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+<!-- Admin API -->
+<rect x="10" y="60" width="110" height="60" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="65" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Admin API</text>
+<text x="65" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">CRUD jobs</text>
+<text x="65" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">pause/resume</text>
+
+<!-- Job DB -->
+<rect x="140" y="40" width="150" height="100" rx="7" fill="#131c2e" stroke="#06b6d4" stroke-width="2"/>
+<text x="215" y="64" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#a5f3fc">🗄 Job DB</text>
+<text x="215" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">PostgreSQL</text>
+<text x="215" y="94" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">10M jobs</text>
+<text x="215" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">status, cron_expr</text>
+<text x="215" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">idx: status+next_run</text>
+
+<!-- Redis ZSet -->
+<rect x="140" y="160" width="150" height="80" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="215" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">⚡ Redis ZSet</text>
+<text x="215" y="197" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">due_jobs</text>
+<text x="215" y="211" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">score=next_run_at</text>
+<text x="215" y="225" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">240 MB, hot path</text>
+
+<!-- Scheduler nodes -->
+<rect x="310" y="80" width="200" height="160" rx="8" fill="rgba(6,182,212,.02)" stroke="rgba(6,182,212,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="410" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#06b6d4">SCHEDULER CLUSTER (×3)</text>
+<rect x="320" y="108" width="180" height="40" rx="5" fill="#131c2e" stroke="#06b6d4" stroke-width="2"/>
+<text x="410" y="127" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a5f3fc">🏆 Leader (ZK election)</text>
+<text x="410" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">scans Redis ZSet every 10s</text>
+<rect x="320" y="156" width="180" height="34" rx="5" fill="#131c2e" stroke="#4e6070" stroke-width="1"/>
+<text x="410" y="175" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">Follower × 2 (standby)</text>
+<text x="410" y="187" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">watch leader heartbeat via ZK</text>
+<rect x="320" y="198" width="180" height="34" rx="5" fill="#131c2e" stroke="#a855f7" stroke-width="1.5"/>
+<text x="410" y="217" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">🔁 Reaper Thread</text>
+<text x="410" y="230" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">finds stuck jobs every 60s</text>
+
+<!-- ZooKeeper -->
+<rect x="530" y="20" width="150" height="60" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="605" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">🦓 ZooKeeper</text>
+<text x="605" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">leader election lease</text>
+<text x="605" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">30s heartbeat</text>
+
+<!-- Job Queue -->
+<rect x="530" y="100" width="150" height="80" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="605" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 Job Queue</text>
+<text x="605" y="137" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">SQS / Kafka</text>
+<text x="605" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">visibility timeout</text>
+<text x="605" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">auto-retry on timeout</text>
+
+<!-- Workers -->
+<rect x="530" y="200" width="150" height="100" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="605" y="222" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">⚙️ Workers ×167</text>
+<text x="605" y="238" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">poll queue</text>
+<text x="605" y="253" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">execute job</text>
+<text x="605" y="267" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">heartbeat 30s</text>
+<text x="605" y="281" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">50 threads each</text>
+
+<!-- Execution DB -->
+<rect x="700" y="100" width="190" height="100" rx="7" fill="#131c2e" stroke="#06b6d4" stroke-width="1.5"/>
+<text x="795" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#a5f3fc">📊 Execution DB</text>
+<text x="795" y="138" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Cassandra</text>
+<text x="795" y="153" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">execution history</text>
+<text x="795" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">heartbeat timestamps</text>
+<text x="795" y="183" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">partitioned by date</text>
+
+<!-- Alerting -->
+<rect x="700" y="220" width="190" height="70" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="795" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb7185">🚨 Alert Engine</text>
+<text x="795" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">failed jobs → PagerDuty</text>
+<text x="795" y="273" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">dead-letter queue</text>
+
+<!-- Arrows -->
+<line x1="120" y1="90" x2="138" y2="90" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#hca)"/>
+<line x1="215" y1="140" x2="215" y2="158" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#hca)"/>
+<line x1="290" y1="200" x2="308" y2="170" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#hca)"/>
+<line x1="510" y1="160" x2="528" y2="145" stroke="#10b981" stroke-width="1.5" marker-end="url(#hcg)"/>
+<line x1="510" y1="160" x2="528" y2="60" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hcy)"/>
+<line x1="680" y1="240" x2="698" y2="185" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hca)"/>
+<line x1="680" y1="260" x2="698" y2="260" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hcr)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<!-- CODE -->
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ═══════════════════════════════════════════════════════
+// Distributed Task Scheduler — Java (Spring Boot)
+// ═══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── Scheduler Tick (leader only, every 10s) ─────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">SchedulerService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">JobRepository</span>  jobRepo;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">SqsTemplate</span>    sqs;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">LeaderElection</span> leader;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">CronParser</span>     cronParser;
+
+    <span class="ann">@Scheduled</span>(fixedDelay = <span class="num">10_000</span>)
+    <span class="kw">public void</span> <span class="fn2">tick</span>() {
+        <span class="kw">if</span> (!leader.isLeader()) <span class="kw">return</span>; <span class="cm">// followers skip</span>
+
+        <span class="kw">long</span> nowUnix = <span class="cls">Instant</span>.now().getEpochSecond();
+
+        <span class="cm">// 1. Pull all due jobs from ZSet</span>
+        <span class="cls">Set</span>&lt;<span class="cls">String</span>&gt; dueIds = redis.opsForZSet()
+            .rangeByScore(<span class="str">"due_jobs"</span>, <span class="num">0</span>, nowUnix);
+        <span class="kw">if</span> (dueIds == <span class="kw">null</span> || dueIds.isEmpty()) <span class="kw">return</span>;
+
+        <span class="cm">// 2. Atomic claim via CAS — prevents double-trigger</span>
+        dueIds.forEach(jobId -> {
+            <span class="kw">int</span> claimed = jobRepo.claimJob(jobId, <span class="cls">Instant</span>.now());
+            <span class="kw">if</span> (claimed == <span class="num">0</span>) <span class="kw">return</span>; <span class="cm">// already claimed by another node</span>
+
+            <span class="cls">Job</span> job = jobRepo.findById(jobId).orElse(<span class="kw">null</span>);
+            <span class="kw">if</span> (job == <span class="kw">null</span>) <span class="kw">return</span>;
+
+            <span class="cm">// 3. Enqueue to SQS</span>
+            sqs.send(<span class="str">"job-execution-queue"</span>, <span class="kw">new</span> <span class="cls">JobPayload</span>(job));
+
+            <span class="cm">// 4. Compute next run & re-add to ZSet</span>
+            <span class="cls">Instant</span> nextRun = cronParser.nextAfter(job.getCronExpr(), <span class="cls">Instant</span>.now());
+            redis.opsForZSet().add(<span class="str">"due_jobs"</span>, jobId, nextRun.getEpochSecond());
+            jobRepo.updateNextRun(jobId, nextRun);
+        });
+
+        <span class="cm">// 5. Remove fired jobs from ZSet</span>
+        redis.opsForZSet().removeRangeByScore(<span class="str">"due_jobs"</span>, <span class="num">0</span>, nowUnix);
+    }
+}
+
+<span class="cm">// ── Job Repository — CAS claim ────────────────────────</span>
+<span class="kw">public interface</span> <span class="cls">JobRepository</span> <span class="kw">extends</span> <span class="cls">JpaRepository</span>&lt;<span class="cls">Job</span>, <span class="cls">String</span>&gt; {
+
+    <span class="cm">// Atomic: claim only if still PENDING</span>
+    <span class="ann">@Modifying</span>
+    <span class="ann">@Query</span>(<span class="str">"""
+        UPDATE Job j SET j.status = 'RUNNING',
+            j.claimedAt = :now, j.claimedBy = :nodeId
+        WHERE j.id = :jobId AND j.status = 'PENDING'
+        """</span>)
+    <span class="kw">int</span> <span class="fn2">claimJob</span>(<span class="ann">@Param</span>(<span class="str">"jobId"</span>) <span class="cls">String</span> jobId, <span class="ann">@Param</span>(<span class="str">"now"</span>) <span class="cls">Instant</span> now);
+}
+
+<span class="cm">// ── Worker — execution + heartbeat ──────────────────</span>
+<span class="ann">@SqsListener</span>(<span class="str">"job-execution-queue"</span>)
+<span class="kw">public void</span> <span class="fn2">executeJob</span>(<span class="cls">JobPayload</span> payload) {
+    <span class="cls">String</span> execId = <span class="fn2">createExecution</span>(payload.getJobId());
+
+    <span class="cm">// Heartbeat thread — keep execution alive</span>
+    <span class="cls">ScheduledFuture</span>&lt;?&gt; heartbeat = heartbeatExecutor.scheduleAtFixedRate(
+        () -> executionRepo.updateHeartbeat(execId, <span class="cls">Instant</span>.now()),
+        <span class="num">0</span>, <span class="num">30</span>, <span class="cls">TimeUnit</span>.SECONDS);
+
+    <span class="kw">try</span> {
+        <span class="kw">if</span> (<span class="str">"HTTP"</span>.equals(payload.getType())) {
+            httpClient.post(payload.getCallback(), payload.getBody());
+        } <span class="kw">else</span> {
+            internalHandlers.get(payload.getHandlerClass()).run(payload);
+        }
+        executionRepo.markCompleted(execId);
+    } <span class="kw">catch</span> (<span class="cls">Exception</span> e) {
+        executionRepo.markFailed(execId, e.getMessage());
+        <span class="kw">throw</span> e; <span class="cm">// SQS visibility expires → automatic retry</span>
+    } <span class="kw">finally</span> {
+        heartbeat.cancel(<span class="kw">false</span>);
+    }
+}
+
+<span class="cm">// ── Reaper — recover stuck jobs every 60s ─────────────</span>
+<span class="ann">@Scheduled</span>(fixedDelay = <span class="num">60_000</span>)
+<span class="kw">public void</span> <span class="fn2">reapStuckJobs</span>() {
+    <span class="cls">Instant</span> staleThreshold = <span class="cls">Instant</span>.now().minus(<span class="cls">Duration</span>.ofSeconds(<span class="num">120</span>));
+    <span class="cls">List</span>&lt;<span class="cls">Execution</span>&gt; stuck = executionRepo
+        .findRunningWithHeartbeatBefore(staleThreshold);
+
+    stuck.forEach(exec -> {
+        <span class="kw">if</span> (exec.getRetryCount() < exec.getJob().getMaxRetries()) {
+            <span class="cls">Duration</span> backoff = <span class="cls">Duration</span>.ofSeconds(
+                (<span class="kw">long</span>) <span class="cls">Math</span>.pow(<span class="num">2</span>, exec.getRetryCount()) * <span class="num">30</span>);
+            sqs.sendDelayed(<span class="str">"job-execution-queue"</span>,
+                <span class="kw">new</span> <span class="cls">JobPayload</span>(exec.getJob(), exec.getRetryCount() + <span class="num">1</span>),
+                backoff.getSeconds());
+        } <span class="kw">else</span> {
+            executionRepo.markFailed(exec.getId(), <span class="str">"max retries exceeded"</span>);
+            alertService.send(exec.getJob().getId(), <span class="str">"Job exhausted retries"</span>);
+        }
+    });
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ═══════════════════════════════════════════════════════
+# Distributed Task Scheduler — Python (FastAPI + Redis)
+# ═══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, threading, logging
+<span class="kw">from</span> croniter <span class="kw">import</span> croniter
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+<span class="kw">import</span> redis, boto3
+
+r   = redis.Redis()
+sqs = boto3.client(<span class="str">\'sqs\'</span>)
+DUE_ZSET   = <span class="str">\'due_jobs\'</span>
+JOB_QUEUE  = <span class="str">\'https://sqs.../job-execution\'</span>
+TICK_SECS  = <span class="num">10</span>
+STALE_SECS = <span class="num">120</span>
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Job</span>:
+    id:          str
+    cron_expr:   str
+    callback:    str
+    max_retries: int = <span class="num">3</span>
+    miss_policy: str = <span class="str">\'FIRE_ONCE\'</span>
+
+
+<span class="kw">def</span> <span class="fn2">next_run_after</span>(cron_expr: str, after: float) -> float:
+    <span class="str">"""Return next unix timestamp for cron expression after given time."""</span>
+    itr = croniter(cron_expr, after)
+    <span class="kw">return</span> itr.get_next(float)
+
+
+<span class="kw">class</span> <span class="cls">Scheduler</span>:
+    <span class="str">"""Runs on leader node only — ticks every 10s."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, is_leader_fn):
+        self.is_leader = is_leader_fn
+
+    <span class="kw">def</span> <span class="fn2">start</span>(self):
+        <span class="kw">while True</span>:
+            <span class="kw">if</span> self.is_leader():
+                self.tick()
+            time.sleep(TICK_SECS)
+
+    <span class="kw">def</span> <span class="fn2">tick</span>(self):
+        now = time.time()
+        <span class="cm"># 1. All due job IDs from ZSet</span>
+        due = r.zrangebyscore(DUE_ZSET, <span class="num">0</span>, now)
+        <span class="kw">if not</span> due: <span class="kw">return</span>
+
+        pipe = r.pipeline(transaction=True)
+        <span class="kw">for</span> job_id_bytes <span class="kw">in</span> due:
+            job_id = job_id_bytes.decode()
+            <span class="cm"># 2. CAS claim: SETNX per (job_id, tick_window)</span>
+            window = int(now // TICK_SECS)
+            lock_key = f<span class="str">\'claim:{job_id}:{window}\'</span>
+            pipe.set(lock_key, <span class="str">\'1\'</span>, nx=True, ex=TICK_SECS * <span class="num">2</span>)
+        results = pipe.execute()
+
+        <span class="kw">for</span> job_id_bytes, claimed <span class="kw">in</span> zip(due, results):
+            <span class="kw">if not</span> claimed: <span class="kw">continue</span>  <span class="cm"># another node claimed it</span>
+            job_id = job_id_bytes.decode()
+            job    = self._load_job(job_id)
+            <span class="kw">if not</span> job: <span class="kw">continue</span>
+
+            <span class="cm"># 3. Enqueue to SQS</span>
+            sqs.send_message(QueueUrl=JOB_QUEUE,
+                MessageBody=f<span class="str">\'{{"job_id": "{job_id}", "retry": 0}}\'</span>)
+
+            <span class="cm"># 4. Compute next run & re-add to ZSet</span>
+            next_ts = next_run_after(job.cron_expr, now)
+            r.zadd(DUE_ZSET, {job_id: next_ts})
+
+        <span class="cm"># 5. Remove fired entries</span>
+        r.zremrangebyscore(DUE_ZSET, <span class="num">0</span>, now)
+
+    <span class="kw">def</span> <span class="fn2">_load_job</span>(self, job_id: str) -> Optional[<span class="cls">Job</span>]:
+        <span class="cm"># Load from PostgreSQL (stub)</span>
+        <span class="kw">return</span> <span class="cls">Job</span>(id=job_id, cron_expr=<span class="str">\'*/5 * * * *\'</span>,
+                   callback=<span class="str">\'https://api.example.com/webhook\'</span>)
+
+
+<span class="kw">class</span> <span class="cls">Worker</span>:
+    <span class="str">"""Polls SQS, executes jobs, sends heartbeats."""</span>
+    <span class="kw">def</span> <span class="fn2">start</span>(self):
+        <span class="kw">while True</span>:
+            msgs = sqs.receive_message(QueueUrl=JOB_QUEUE,
+                MaxNumberOfMessages=<span class="num">10</span>, WaitTimeSeconds=<span class="num">20</span>,
+                VisibilityTimeout=<span class="num">300</span>)  <span class="cm"># 5-min visibility window</span>
+            <span class="kw">for</span> msg <span class="kw">in</span> msgs.get(<span class="str">\'Messages\'</span>, []):
+                self._execute(msg)
+
+    <span class="kw">def</span> <span class="fn2">_execute</span>(self, msg: dict):
+        <span class="kw">import</span> json, requests
+        payload    = json.loads(msg[<span class="str">\'Body\'</span>])
+        receipt    = msg[<span class="str">\'ReceiptHandle\'</span>]
+        job_id     = payload[<span class="str">\'job_id\'</span>]
+        exec_id    = f<span class="str">\'exec:{job_id}:{int(time.time())}\'</span>
+
+        <span class="cm"># Heartbeat thread</span>
+        stop_hb = threading.Event()
+        <span class="kw">def</span> <span class="fn2">heartbeat_loop</span>():
+            <span class="kw">while not</span> stop_hb.wait(<span class="num">30</span>):
+                r.setex(f<span class="str">\'heartbeat:{exec_id}\'</span>, STALE_SECS, <span class="str">\'alive\'</span>)
+        threading.Thread(target=heartbeat_loop, daemon=True).start()
+
+        <span class="kw">try</span>:
+            job = self._load_job(job_id)
+            requests.post(job.callback, json={<span class="str">\'job_id\'</span>: job_id}, timeout=<span class="num">60</span>)
+            <span class="cm"># Delete from queue on success</span>
+            sqs.delete_message(QueueUrl=JOB_QUEUE, ReceiptHandle=receipt)
+            logging.info(f<span class="str">\'Job {job_id} completed\'</span>)
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            logging.error(f<span class="str">\'Job {job_id} failed: {e}\'</span>)
+            <span class="cm"># Don\'t delete → SQS visibility expires → automatic re-queue</span>
+        <span class="kw">finally</span>:
+            stop_hb.set()
+
+
+<span class="kw">class</span> <span class="cls">Reaper</span>:
+    <span class="str">"""Finds stuck jobs (missed heartbeats) and re-queues them."""</span>
+    <span class="kw">def</span> <span class="fn2">run</span>(self):
+        <span class="kw">while True</span>:
+            time.sleep(<span class="num">60</span>)
+            self._reap()
+
+    <span class="kw">def</span> <span class="fn2">_reap</span>(self):
+        <span class="cm"># In production: scan execution DB for running jobs</span>
+        <span class="cm"># where heartbeat_at < NOW() - 120s</span>
+        <span class="cm"># Re-enqueue with incremented retry count</span>
+        pass
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- TRADEOFFS -->
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🔒 Exactly-Once vs At-Least-Once Execution</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">❌ Exactly-Once (complex)</div><p>Requires 2-phase commit between the scheduler DB and the job executor. On worker crash after job completes but before ACK, the coordinator must determine if job actually ran — needs distributed transaction protocol. Extremely complex. Almost never done in practice for task schedulers.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ At-Least-Once + Idempotency</div><p>Job may run more than once on failure. Job logic must be idempotent: <code>INSERT IGNORE</code>, <code>UPDATE WHERE status=NEW</code>, deduplicated by idempotency key. This is the industry standard. Sidekiq, Celery, AWS Step Functions — all at-least-once. Idempotency in the job is the right layer for this guarantee.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Idempotency patterns</div><p>Common approaches: (1) Check-then-act with a unique execution ID: <code>INSERT INTO results (exec_id, ...) ON CONFLICT DO NOTHING</code>. (2) External idempotency key passed to downstream APIs. (3) Conditional write with expected state: <code>UPDATE WHERE status='PENDING'</code>. The job itself owns the idempotency guarantee.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">📅 Job Storage: Redis ZSet vs DB Index vs Time Buckets</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Redis ZSet (chosen)</div><p>O(log N + K) to get all due jobs. 240 MB for 10M jobs. Sub-millisecond scan. Survives scheduler restarts (persistent Redis). Atomic ZRANGEBYSCORE + ZREMRANGEBYSCORE prevents double-trigger. Used by Sidekiq, Celery, Resque for delayed job queues.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">DB index on next_run_at</div><p>Works well at smaller scale (&lt;1M jobs). No extra dependency. DB is the source of truth. At 10M jobs, the index scan can be slow under write pressure when many jobs update next_run simultaneously (at every-minute mark). Fine for moderate scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Time buckets (pre-partitioned)</div><p>Pre-compute all future run times at job creation, store in <code>scheduled_runs(run_at, job_id)</code>. Scanner reads only current minute's partition — O(1) lookup. No scanning at all. Best for very high scale. Cost: complex pre-computation for complex cron expressions and jobs that run for years.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">👑 Leader Election: ZooKeeper vs DB Lock vs Single Node</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ ZooKeeper / etcd</div><p>Industry standard for leader election. Ephemeral nodes auto-expire when node dies. Re-election in 10–30s. Proven at Kafka, HBase, Hadoop scale. Adds operational complexity (ZK cluster to manage) but eliminates split-brain risk.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">DB advisory lock</div><p><code>SELECT pg_try_advisory_lock(1)</code> in PostgreSQL. Simple — no extra service. Leader refreshes lock every 30s. On death, lock expires after session disconnect. Works well for smaller deployments. Risk: DB becomes a SPOF for leader election as well as job storage.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Single node (no HA)</div><p>One scheduler node, no leader election. Simple. Fast failover via Kubernetes pod restart (~30s). Acceptable if the 30s scheduling gap during restart is OK. Many production schedulers (Quartz, APScheduler) start here and add HA later when needed.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

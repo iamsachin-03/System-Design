@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #26 — CDN (Content Delivery Network)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#e879f9;--a2:#d946ef;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#f5d0fe;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#0d070f 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(232,121,249,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fae8ff 0%,#e879f9 50%,#86198f 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(232,121,249,.07);color:#f5d0fe;border:1px solid rgba(232,121,249,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(232,121,249,.1);color:var(--ecolor);border:1.5px solid rgba(232,121,249,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(232,121,249,.08);color:var(--accent);border:1px solid rgba(232,121,249,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(232,121,249,.05);border:1px solid rgba(232,121,249,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#f5d0fe;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(232,121,249,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(232,121,249,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#e879f9;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>26 / CDN</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🌐</div>
+    <div>
+      <div class="h-title">CDN — Content Delivery Network</div>
+      <div class="h-desc">Design a CDN like Cloudflare or Akamai — global PoP placement using anycast routing, pull vs push caching strategy, origin shield, TLS termination at edge, cache invalidation propagation, and how a CDN serves 100 Tbps from thousands of edge nodes while the origin sees almost zero traffic.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Anycast</span>
+        <span class="badge b-tag">PoP Placement</span>
+        <span class="badge b-tag">Origin Shield</span>
+        <span class="badge b-tag">Cache Invalidation</span>
+        <span class="badge b-tag">TLS at Edge</span>
+        <span class="badge b-tag">Pull vs Push</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('routing',this)">🗺 Routing</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>A CDN solves two problems simultaneously:</strong> latency (serve content from the nearest edge, not the origin across the world) and scale (origin can't handle 100M concurrent users — edge nodes absorb the load).</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Cache and serve static assets (images, JS, CSS, video segments) from edge PoPs globally</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Pull caching: on cache miss, fetch from origin and cache at edge</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Push caching: pre-populate edges with known hot content</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Cache invalidation: propagate purge to all edges within 5 seconds</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>TLS termination at edge (no TLS cost to origin for cached content)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Origin shield: funnel all cache misses through a single shield region</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>TTFB (Time To First Byte): &lt;20ms for cached content globally</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Cache hit rate: &gt;95% for static assets</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>100 Tbps aggregate egress capacity across all PoPs</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Invalidation propagation: &lt;5 seconds globally</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>99.99% availability (4 nines) — users can always reach an edge</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Routing: How does a User Hit the Nearest PoP?</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · ANYCAST ROUTING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The CDN has 200 PoPs worldwide. How does a user in Tokyo automatically connect to the Tokyo PoP and not the New York one?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Two mechanisms — CDNs typically use both:<br><br>
+      <b>1. DNS-based routing (GeoDNS):</b> The CDN's authoritative DNS server resolves the CDN hostname (e.g., <code>cdn.example.com</code>) to different IP addresses depending on the resolver's geographic location. Tokyo resolver → Tokyo PoP IP. Simple, works everywhere. Limitation: DNS TTL means routing decisions are sticky for 30-60 seconds — a PoP going down isn't instantly avoided.<br><br>
+      <b>2. Anycast routing (preferred for large CDNs):</b> All PoPs announce the same IP prefix (e.g., 104.20.0.0/20) into BGP. The internet's routing protocol naturally delivers packets to the topologically nearest router announcing that prefix. A user in Tokyo reaches 104.20.0.0 at the Tokyo PoP; a user in London reaches the same IP at the London PoP. No DNS tricks needed. Failover is automatic — if Tokyo PoP fails, BGP reconverges within seconds and Tokyo users route to the next-nearest PoP.<br><br>
+      Cloudflare uses anycast for all traffic. Akamai uses a mix of both. Anycast has one limitation: it routes by BGP hop count, not latency — occasionally a geographically "near" PoP is further in BGP hops. CDNs compensate with their own backbone to bypass sub-optimal internet routing.
+    </div></div>
+    <div class="tip-box"><strong>💡 Anycast is the key differentiator.</strong> It provides instant failover with no DNS TTL wait, handles DDoS mitigation automatically (attacks are spread across all PoPs rather than overwhelming one), and enables global traffic routing without configuration per user location.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🏛 Phase 2 — Origin Shield</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · ORIGIN SHIELD</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>You have 200 PoPs. On a cache miss, all 200 could simultaneously hit your origin. How do you protect the origin?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Without an origin shield: if a new popular asset is requested simultaneously from 200 PoPs, 200 concurrent requests hit the origin. For a large content library (millions of assets), this becomes a serious origin load problem.<br><br>
+      <b>Origin Shield:</b> Designate one intermediate caching layer (the "shield") between edge PoPs and the origin. Typically one shield region per continent (e.g., us-east-1 serves all North American PoPs). All edge PoPs send cache misses to the shield, not directly to the origin. The shield collapses those 200 requests into 1 origin request. The origin now sees at most 1 request per unique asset per shield region, regardless of how many PoPs are requesting it.<br><br>
+      <b>Request collapsing:</b> At the shield, multiple concurrent requests for the same URL are collapsed into one outgoing request to the origin (using a technique called "request coalescing"). While the origin request is in flight, all waiting PoPs are held until the response arrives, then served simultaneously.<br><br>
+      <b>Cost:</b> One extra network hop (edge → shield → origin) on cache miss. Adds 20-50ms. Acceptable since cache hits (95%+) have zero extra hops.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🗑 Phase 3 — Cache Invalidation in &lt;5 Seconds</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · INVALIDATION</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A customer pushes a bad JS file. They call you demanding the CDN stops serving it immediately. How does invalidation propagate globally in under 5 seconds?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Cache invalidation is the hardest part of CDN design. Two approaches:<br><br>
+      <b>1. Soft purge (mark stale):</b> Don't delete the cached file immediately. Mark it as stale. The next request for this URL fetches the fresh version from origin and updates the cache. Old version continues being served until then (seconds to minutes). Works well for graceful rollouts — no traffic spike to origin.<br><br>
+      <b>2. Hard purge (delete immediately):</b> The control plane sends a purge command to all 200 PoPs simultaneously. Each PoP deletes the cached file from disk. After deletion, the next request for that URL is a cache miss → fetches fresh from origin. This causes a brief traffic spike to origin as 200 PoPs simultaneously re-fetch the new asset.<br><br>
+      <b>Propagation mechanism for &lt;5s globally:</b><br>
+      <ul>
+        <li>Customer calls Purge API → control plane publishes purge event to a global message bus (Kafka, or a proprietary system)</li>
+        <li>Each PoP has a purge agent subscribing to this bus. On receipt: delete the cached file atomically</li>
+        <li>200 PoPs × 5ms average purge processing = all done within 1-2 seconds</li>
+        <li>Purge is acknowledged only after all PoPs confirm deletion</li>
+      </ul>
+      <b>Surrogate keys (tag-based invalidation):</b> Advanced feature — tag assets with keys (e.g., <code>product:12345</code>). A single purge command for that tag invalidates all cached variations of that product (different image sizes, locales, etc.) simultaneously across all PoPs.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="routing" class="panel">
+  <div class="sec"><div class="sec-head">🗺 Routing Architecture & PoP Hierarchy</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:400px">
+<defs>
+<marker id="ma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#e879f9"/></marker>
+<marker id="mg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="mb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="my" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+
+<!-- Users -->
+<rect x="10" y="60" width="80" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Tokyo 🗼</text>
+<text x="50" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">user request</text>
+<rect x="10" y="160" width="80" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">London 🇬🇧</text>
+<text x="50" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">user request</text>
+<rect x="10" y="260" width="80" height="40" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="50" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">NYC 🗽</text>
+<text x="50" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">user request</text>
+
+<!-- Anycast label -->
+<text x="100" y="30" font-family="JetBrains Mono" font-size="9" fill="#e879f9">BGP ANYCAST: same IP 104.20.0.0 → nearest PoP</text>
+
+<!-- Edge PoPs -->
+<rect x="110" y="50" width="130" height="60" rx="7" fill="#131c2e" stroke="#e879f9" stroke-width="2"/>
+<text x="175" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f5d0fe">🏢 Tokyo PoP</text>
+<text x="175" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">TLS termination</text>
+<text x="175" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#e879f9">cache hit → serve (&lt;5ms)</text>
+
+<rect x="110" y="150" width="130" height="60" rx="7" fill="#131c2e" stroke="#e879f9" stroke-width="2"/>
+<text x="175" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f5d0fe">🏢 London PoP</text>
+<text x="175" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">TLS termination</text>
+<text x="175" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#e879f9">cache hit → serve (&lt;15ms)</text>
+
+<rect x="110" y="250" width="130" height="60" rx="7" fill="#131c2e" stroke="#e879f9" stroke-width="2"/>
+<text x="175" y="272" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f5d0fe">🏢 NYC PoP</text>
+<text x="175" y="286" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">TLS termination</text>
+<text x="175" y="300" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#e879f9">cache miss → shield</text>
+
+<!-- CDN Backbone label -->
+<text x="255" y="30" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">CDN PRIVATE BACKBONE (bypasses internet)</text>
+
+<!-- Origin Shield -->
+<rect x="310" y="110" width="180" height="120" rx="8" fill="rgba(16,185,129,.04)" stroke="rgba(16,185,129,.15)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="400" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">ORIGIN SHIELD (us-east-1)</text>
+<rect x="320" y="140" width="160" height="80" rx="6" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="400" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🛡 Shield Cache</text>
+<text x="400" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">collapses N miss → 1 origin req</text>
+<text x="400" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">request coalescing</text>
+<text x="400" y="206" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">1 per continent, ~50ms from edge</text>
+
+<!-- Origin -->
+<rect x="550" y="140" width="150" height="80" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="625" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🏠 Origin Server</text>
+<text x="625" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">customer's infrastructure</text>
+<text x="625" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">sees &lt;5% of total traffic</text>
+<text x="625" y="206" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">protected by shield</text>
+
+<!-- Control Plane -->
+<rect x="310" y="270" width="380" height="60" rx="7" fill="#131c2e" stroke="#e879f9" stroke-width="1.5"/>
+<text x="500" y="294" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f5d0fe">🎛 Control Plane (Purge / Config / Analytics)</text>
+<text x="500" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Purge API → message bus → purge agents at all 200 PoPs within &lt;5s</text>
+<text x="500" y="322" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#e879f9">also handles TLS cert provisioning, config push, analytics aggregation</text>
+
+<!-- Cache miss path label -->
+<rect x="10" y="340" width="280" height="50" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="20" y="358" font-family="JetBrains Mono" font-size="8" fill="#10b981">CACHE HIT (95%+): Edge → User  (&lt;20ms)</text>
+<text x="20" y="372" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">CACHE MISS (5%): Edge → Shield → Origin → Shield → Edge → User (&lt;200ms)</text>
+
+<!-- Arrows -->
+<line x1="90" y1="80" x2="108" y2="80" stroke="#e879f9" stroke-width="1.5" marker-end="url(#ma)"/>
+<line x1="90" y1="180" x2="108" y2="180" stroke="#e879f9" stroke-width="1.5" marker-end="url(#ma)"/>
+<line x1="90" y1="280" x2="108" y2="280" stroke="#e879f9" stroke-width="1.5" marker-end="url(#ma)"/>
+<line x1="240" y1="280" x2="308" y2="190" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#mb)"/>
+<line x1="480" y1="180" x2="548" y2="180" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#my)"/>
+</svg>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📥 Pull vs Push Caching Strategy</div><div class="sec-body">
+    <div class="two-col">
+      <div class="flow-box">
+        <div class="flow-title" style="color:#f5d0fe">PULL CACHING (default)</div>
+        <div class="fs"><div class="fnum">1</div><div>User requests asset. Edge checks local cache.</div></div>
+        <div class="fs"><div class="fnum">2</div><div>Cache miss → edge fetches from origin (via shield). Caches response.</div></div>
+        <div class="fs"><div class="fnum">3</div><div>Subsequent requests for same asset served from cache.</div></div>
+        <div class="fs"><div class="fnum">4</div><div><strong>When to use:</strong> Long-tail content — millions of unique assets, most rarely accessed. No wasted cache storage on unused assets.</div></div>
+        <div class="fs"><div class="fnum">5</div><div><strong>Problem:</strong> First user after deployment or cache expiry pays the miss penalty. Cold-start problem on new deployments.</div></div>
+      </div>
+      <div class="flow-box">
+        <div class="flow-title" style="color:#6ee7b7">PUSH CACHING (pre-warm)</div>
+        <div class="fs"><div class="fnum">1</div><div>Before deploying new content, customer calls CDN Push API.</div></div>
+        <div class="fs"><div class="fnum">2</div><div>CDN control plane distributes asset to all PoPs proactively.</div></div>
+        <div class="fs"><div class="fnum">3</div><div>First user hit is also a cache hit — zero cold-start latency.</div></div>
+        <div class="fs"><div class="fnum">4</div><div><strong>When to use:</strong> Hot, known content — new software releases, movie trailers, game patches. Content that will be immediately viral.</div></div>
+        <div class="fs"><div class="fnum">5</div><div><strong>Problem:</strong> Wastes storage on PoPs where content may never be requested. Requires explicit push call per deployment.</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity Estimation</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Global egress: 100 Tbps aggregate</span>
+  <span class="label">200 PoPs × 500 Gbps per PoP                     = </span><span class="val">100 Tbps</span>
+
+<span class="label">Per-PoP storage (hot cache):</span>
+  <span class="label">Typical PoP: 100–500 TB SSD                      = </span><span class="val">average 200 TB per PoP</span>
+  <span class="label">200 PoPs total:                                  = </span><span class="val">40 PB</span>  <span class="label">global edge cache</span>
+
+<span class="label">Cache hit rate impact on origin:</span>
+  <span class="label">100 Tbps × (1 - 0.95 hit rate)                  = </span><span class="val">5 Tbps</span>  <span class="label">origin receives</span>
+  <span class="label">With origin shield (1 per continent, 6 total):   = </span><span class="val">&lt;1 Tbps</span>  <span class="label">actual origin load</span>
+
+<span class="label">Purge propagation:</span>
+  <span class="label">200 PoPs × 5ms per purge ack                     = </span><span class="val">~1-2s</span>  <span class="label">for all PoPs to confirm</span>
+
+<span class="label">TLS cert management:</span>
+  <span class="label">10M customer domains → wildcard + SAN certs      = </span><span class="val">10M+ certs</span>  <span class="label">(Let's Encrypt + custom CA)</span>
+  <span class="label">Auto-renew 90-day certs, distributed to all PoPs</span>
+
+<span class="result">→ Origin shield + 95% hit rate means origin sees 1% of what the CDN serves.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+      <tr><td>PoP count</td><td class="hi">200+</td><td>Akamai: 4,000+; Cloudflare: 300+</td></tr>
+      <tr><td>Per-PoP egress</td><td class="hi">500 Gbps</td><td>Multiple 100G uplinks, peered with ISPs</td></tr>
+      <tr><td>Cache hit rate</td><td class="hi">95%+</td><td>Static assets with long TTLs</td></tr>
+      <tr><td>TTFB (cache hit)</td><td class="hi">&lt;20ms</td><td>Edge within ~10ms of user</td></tr>
+      <tr><td>TTFB (cache miss)</td><td class="hi">&lt;200ms</td><td>Edge → shield → origin round-trip</td></tr>
+      <tr><td>Purge propagation</td><td class="hi">&lt;5s</td><td>Message bus to all PoP purge agents</td></tr>
+      <tr><td>Origin shield</td><td class="hi">6 regions</td><td>One per continent, collapses 200→1 origin req</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 HLD + Data Flow</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:340px">
+<defs>
+<marker id="hma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#e879f9"/></marker>
+<marker id="hmg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="hmb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="hmy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+<!-- EDGE LAYER -->
+<rect x="8" y="8" width="250" height="220" rx="10" fill="rgba(232,121,249,.02)" stroke="rgba(232,121,249,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="133" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#e879f9">EDGE LAYER (200 PoPs)</text>
+<rect x="18" y="36" width="230" height="180" rx="7" fill="#131c2e" stroke="#e879f9" stroke-width="1.5"/>
+<text x="133" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f5d0fe">🏢 Edge PoP Node</text>
+<text x="133" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Anycast BGP announcement</text>
+<text x="133" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">TLS termination (ECDSA)</text>
+<text x="133" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">HTTP/2 + HTTP/3 (QUIC)</text>
+<text x="133" y="119" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#e879f9">Local cache (SSD): 200 TB</text>
+<text x="133" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Cache key: URL + Vary headers</text>
+<text x="133" y="149" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Purge agent (subscribes to bus)</text>
+<text x="133" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Health checks + failover</text>
+<text x="133" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#e879f9">~5ms average user distance</text>
+<text x="133" y="207" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Cache hit: serve directly. Miss: → shield.</text>
+
+<!-- SHIELD LAYER -->
+<rect x="268" y="8" width="230" height="220" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="383" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">SHIELD LAYER (6 regions)</text>
+<rect x="278" y="36" width="210" height="180" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="383" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🛡 Origin Shield</text>
+<text x="383" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Request coalescing</text>
+<text x="383" y="89" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">N concurrent misses → 1 origin req</text>
+<text x="383" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#10b981">Large local cache: 500 TB</text>
+<text x="383" y="119" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Serve edge while fetching origin</text>
+<text x="383" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Conditional requests (ETag/If-Modified)</text>
+<text x="383" y="149" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Connected via CDN backbone (not internet)</text>
+<text x="383" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">Shield → PoPs: pre-warm on cache fill</text>
+
+<!-- ORIGIN -->
+<rect x="508" y="60" width="200" height="100" rx="8" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="608" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">🏠 Customer Origin</text>
+<text x="608" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">AWS S3 / customer servers</text>
+<text x="608" y="112" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Protected by shield</text>
+<text x="608" y="126" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Sees &lt;1% of CDN traffic</text>
+<text x="608" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">Cache-Control headers set here</text>
+
+<!-- CONTROL PLANE -->
+<rect x="508" y="180" width="350" height="100" rx="8" fill="#131c2e" stroke="#e879f9" stroke-width="1.5"/>
+<text x="683" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#f5d0fe">🎛 Control Plane</text>
+<text x="608" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Purge API → message bus → all 200 purge agents</text>
+<text x="608" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Config push (rules, caching policies)</text>
+<text x="608" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">TLS cert provisioning + rotation</text>
+<text x="783" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Analytics pipeline</text>
+<text x="783" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Cache hit/miss metrics</text>
+<text x="783" y="248" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#e879f9">Real-time traffic dashboard</text>
+
+<!-- Arrows -->
+<line x1="248" y1="126" x2="276" y2="126" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#hmb)"/>
+<line x1="488" y1="110" x2="506" y2="110" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#hmy)"/>
+<line x1="248" y1="200" x2="506" y2="210" stroke="#e879f9" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hma)"/>
+
+<!-- Legend -->
+<rect x="8" y="242" width="490" height="88" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="18" y="260" font-family="JetBrains Mono" font-size="8" fill="#e879f9" font-weight="700">CACHE HIT FLOW:</text>
+<text x="18" y="274" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">User → Edge PoP (SSD cache lookup) → HIT → TLS decrypt → serve bytes → User [~5-20ms]</text>
+<text x="18" y="292" font-family="JetBrains Mono" font-size="8" fill="#f59e0b" font-weight="700">CACHE MISS FLOW:</text>
+<text x="18" y="306" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">User → Edge → MISS → Shield (coalesce) → Origin (fetch) → Shield (cache) → Edge (cache) → User [~100-200ms]</text>
+<text x="18" y="322" font-family="JetBrains Mono" font-size="8" fill="#10b981">Cache-Control: max-age=86400 (1 day TTL from origin sets edge TTL)</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// CDN Edge Node — Java: Cache lookup + origin fetch
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">EdgeCacheService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">DiskCacheStore</span>    diskCache;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">OriginShieldClient</span> shieldClient;
+
+    <span class="cm">/**
+     * Main edge request handler.
+     * 1. Check local SSD cache
+     * 2. On miss: fetch from origin shield (which may fetch origin)
+     * 3. Cache response locally
+     */</span>
+    <span class="kw">public</span> <span class="cls">CacheResponse</span> <span class="fn2">handle</span>(<span class="cls">HttpRequest</span> req) {
+        <span class="cls">String</span> cacheKey = <span class="fn2">buildCacheKey</span>(req);
+
+        <span class="cm">// 1. Local cache lookup</span>
+        <span class="cls">CacheEntry</span> entry = diskCache.get(cacheKey);
+        <span class="kw">if</span> (entry != <span class="kw">null</span> && !entry.isExpired()) {
+            <span class="kw">return</span> <span class="cls">CacheResponse</span>.hit(entry);  <span class="cm">// ~1ms</span>
+        }
+
+        <span class="cm">// 2. Stale-while-revalidate: serve stale, refresh in background</span>
+        <span class="kw">if</span> (entry != <span class="kw">null</span> && entry.isStaleButRevalidatable()) {
+            <span class="cls">CompletableFuture</span>.runAsync(() -> <span class="fn2">refresh</span>(cacheKey, req));
+            <span class="kw">return</span> <span class="cls">CacheResponse</span>.stale(entry);  <span class="cm">// serve stale immediately</span>
+        }
+
+        <span class="cm">// 3. Cache miss: fetch from shield (request coalescing handled at shield)</span>
+        <span class="cls">OriginResponse</span> originResp = shieldClient.fetch(req);
+        <span class="cls">CacheEntry</span> fresh = <span class="kw">new</span> <span class="cls">CacheEntry</span>(
+            cacheKey,
+            originResp.getBody(),
+            originResp.getHeaders(),
+            <span class="fn2">parseTtl</span>(originResp.getHeader(<span class="str">"Cache-Control"</span>))
+        );
+        diskCache.put(cacheKey, fresh);
+        <span class="kw">return</span> <span class="cls">CacheResponse</span>.miss(fresh);
+    }
+
+    <span class="cm">/** Cache key includes URL + relevant Vary headers */</span>
+    <span class="kw">private</span> <span class="cls">String</span> <span class="fn2">buildCacheKey</span>(<span class="cls">HttpRequest</span> req) {
+        <span class="cls">StringBuilder</span> sb = <span class="kw">new</span> <span class="cls">StringBuilder</span>(req.getUrl());
+        <span class="cm">// Vary: Accept-Encoding means gzip/br responses are cached separately</span>
+        <span class="kw">if</span> (req.getHeader(<span class="str">"Accept-Encoding"</span>) != <span class="kw">null</span>) {
+            sb.append(<span class="str">"|enc:"</span>).append(<span class="fn2">normalizeEncoding</span>(req.getHeader(<span class="str">"Accept-Encoding"</span>)));
+        }
+        <span class="kw">return</span> sb.toString();
+    }
+
+    <span class="kw">private int</span> <span class="fn2">parseTtl</span>(<span class="cls">String</span> cacheControl) {
+        <span class="kw">if</span> (cacheControl == <span class="kw">null</span>) <span class="kw">return</span> <span class="num">3600</span>; <span class="cm">// default 1h</span>
+        <span class="kw">return</span> <span class="cls">CacheControlParser</span>.maxAge(cacheControl);
+    }
+}
+
+<span class="cm">// ── Origin Shield — Request Coalescing ────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">OriginShieldService</span> {
+
+    <span class="cm">// inflight: URL → pending future (request coalescing)</span>
+    <span class="kw">private final</span> <span class="cls">ConcurrentHashMap</span>&lt;<span class="cls">String</span>, <span class="cls">CompletableFuture</span>&lt;<span class="cls">OriginResponse</span>&gt;&gt; inflight
+        = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+
+    <span class="kw">public</span> <span class="cls">OriginResponse</span> <span class="fn2">fetch</span>(<span class="cls">HttpRequest</span> req) {
+        <span class="kw">return</span> inflight.computeIfAbsent(req.getUrl(), url -> {
+            <span class="cm">// Only the first thread fires the origin request.
+            // All others join the same CompletableFuture.</span>
+            <span class="kw">return</span> <span class="cls">CompletableFuture</span>
+                .supplyAsync(() -> <span class="fn2">fetchFromOrigin</span>(url))
+                .whenComplete((resp, ex) -> inflight.remove(url));
+        }).join(); <span class="cm">// all concurrent requests wait for the same origin call</span>
+    }
+
+    <span class="kw">private</span> <span class="cls">OriginResponse</span> <span class="fn2">fetchFromOrigin</span>(<span class="cls">String</span> url) {
+        <span class="cm">// HTTP/2 to origin for multiplexing</span>
+        <span class="kw">return</span> originHttpClient.get(url);
+    }
+}
+
+<span class="cm">// ── Purge Handler — invalidate cached asset ───────────</span>
+<span class="ann">@KafkaListener</span>(topics = <span class="str">"cdn-purge-events"</span>)
+<span class="kw">public void</span> <span class="fn2">onPurgeEvent</span>(<span class="cls">PurgeEvent</span> event) {
+    <span class="kw">for</span> (<span class="cls">String</span> url : event.getUrls()) {
+        <span class="cls">String</span> key = <span class="fn2">buildCacheKey</span>(url, event.getVaryHeaders());
+        diskCache.delete(key);
+    }
+    purgeAckService.acknowledge(event.getPurgeId(), <span class="cls">POP_ID</span>);
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# CDN Edge Node — Python: Cache + Shield + Purge
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> asyncio, time, hashlib
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">CacheEntry</span>:
+    key:        str
+    body:       bytes
+    headers:    dict
+    expires_at: float
+    etag:       str = <span class="str">""</span>
+
+    <span class="kw">def</span> <span class="fn2">is_expired</span>(self) -> bool:
+        <span class="kw">return</span> time.time() > self.expires_at
+
+    <span class="kw">def</span> <span class="fn2">ttl_remaining</span>(self) -> float:
+        <span class="kw">return</span> max(<span class="num">0</span>, self.expires_at - time.time())
+
+
+<span class="kw">class</span> <span class="cls">EdgeCache</span>:
+    <span class="str">"""In-memory cache (production: disk-backed SSD cache)."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self._store: dict[str, <span class="cls">CacheEntry</span>] = {}
+
+    <span class="kw">def</span> <span class="fn2">get</span>(self, key: str) -> Optional[<span class="cls">CacheEntry</span>]:
+        entry = self._store.get(key)
+        <span class="kw">if</span> entry <span class="kw">and not</span> entry.is_expired(): <span class="kw">return</span> entry
+        <span class="kw">return None</span>
+
+    <span class="kw">def</span> <span class="fn2">put</span>(self, entry: <span class="cls">CacheEntry</span>): self._store[entry.key] = entry
+
+    <span class="kw">def</span> <span class="fn2">delete</span>(self, key: str): self._store.pop(key, <span class="kw">None</span>)
+
+
+<span class="kw">class</span> <span class="cls">OriginShield</span>:
+    <span class="str">"""Request coalescing: N concurrent misses → 1 origin request."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, origin_url: str):
+        self.origin_url = origin_url
+        self._inflight: dict[str, asyncio.Future] = {}
+
+    <span class="kw">async def</span> <span class="fn2">fetch</span>(self, path: str) -> dict:
+        <span class="kw">if</span> path <span class="kw">in</span> self._inflight:
+            <span class="kw">return await</span> self._inflight[path]  <span class="cm"># join existing request</span>
+
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        self._inflight[path] = future
+
+        <span class="kw">try</span>:
+            result = <span class="kw">await</span> self._fetch_from_origin(path)
+            future.set_result(result)
+            <span class="kw">return</span> result
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            future.set_exception(e)
+            <span class="kw">raise</span>
+        <span class="kw">finally</span>:
+            self._inflight.pop(path, <span class="kw">None</span>)
+
+    <span class="kw">async def</span> <span class="fn2">_fetch_from_origin</span>(self, path: str) -> dict:
+        <span class="cm"># HTTP/2 request to origin</span>
+        <span class="kw">import</span> httpx
+        <span class="kw">async with</span> httpx.AsyncClient(http2=<span class="kw">True</span>) <span class="kw">as</span> client:
+            r = <span class="kw">await</span> client.get(f<span class="str">"{self.origin_url}{path}"</span>)
+            <span class="kw">return</span> {<span class="str">"body"</span>: r.content, <span class="str">"headers"</span>: dict(r.headers),
+                    <span class="str">"status"</span>: r.status_code}
+
+
+<span class="kw">class</span> <span class="cls">EdgeNode</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, shield: <span class="cls">OriginShield</span>):
+        self.cache  = <span class="cls">EdgeCache</span>()
+        self.shield = shield
+
+    <span class="kw">async def</span> <span class="fn2">handle_request</span>(self, path: str, headers: dict) -> dict:
+        key = self._cache_key(path, headers)
+
+        <span class="cm"># 1. Cache HIT</span>
+        entry = self.cache.get(key)
+        <span class="kw">if</span> entry:
+            <span class="kw">return</span> {<span class="str">"body"</span>: entry.body, <span class="str">"headers"</span>: entry.headers,
+                    <span class="str">"x-cache"</span>: <span class="str">"HIT"</span>}
+
+        <span class="cm"># 2. Cache MISS: fetch from shield (request coalescing)</span>
+        origin = <span class="kw">await</span> self.shield.fetch(path)
+
+        <span class="cm"># 3. Parse TTL from Cache-Control</span>
+        cc    = origin[<span class="str">"headers"</span>].get(<span class="str">"cache-control"</span>, <span class="str">"max-age=3600"</span>)
+        ttl   = self._parse_max_age(cc)
+        fresh = <span class="cls">CacheEntry</span>(key=key, body=origin[<span class="str">"body"</span>],
+                             headers=origin[<span class="str">"headers"</span>],
+                             expires_at=time.time() + ttl)
+        self.cache.put(fresh)
+
+        <span class="kw">return</span> {<span class="str">"body"</span>: origin[<span class="str">"body"</span>], <span class="str">"headers"</span>: origin[<span class="str">"headers"</span>],
+                <span class="str">"x-cache"</span>: <span class="str">"MISS"</span>}
+
+    <span class="kw">def</span> <span class="fn2">purge</span>(self, urls: list[str]):
+        <span class="str">"""Handle purge command from control plane."""</span>
+        <span class="kw">for</span> url <span class="kw">in</span> urls:
+            self.cache.delete(self._cache_key(url, {}))
+        print(f<span class="str">"[PURGE] deleted {len(urls)} entries"</span>)
+
+    <span class="kw">def</span> <span class="fn2">_cache_key</span>(self, path: str, headers: dict) -> str:
+        enc = headers.get(<span class="str">"accept-encoding"</span>, <span class="str">"identity"</span>)
+        <span class="kw">return</span> hashlib.md5(f<span class="str">"{path}|{enc}"</span>.encode()).hexdigest()
+
+    <span class="kw">def</span> <span class="fn2">_parse_max_age</span>(self, cc: str) -> int:
+        <span class="kw">for</span> part <span class="kw">in</span> cc.split(<span class="str">","</span>):
+            part = part.strip()
+            <span class="kw">if</span> part.startswith(<span class="str">"max-age="</span>):
+                <span class="kw">return</span> int(part.split(<span class="str">"="</span>)[<span class="num">1</span>])
+        <span class="kw">return</span> <span class="num">3600</span>
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🗺 Routing: Anycast vs GeoDNS vs IP Anycast + GeoDNS</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">GeoDNS only</div><p>DNS resolver location → map to PoP IP. Simple to implement. Works everywhere. But: DNS TTL means slow failover (60s). DNS-based routing can be inaccurate when resolver is far from client (corporate proxy). Can't react to real-time congestion.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Anycast BGP (chosen)</div><p>Single IP announced from all PoPs. BGP routes to topologically nearest. Sub-second failover when PoP goes down (BGP withdrawal). DDoS automatically spread across all PoPs. Industry standard for large CDNs. Requires BGP peering with ISPs at every PoP — significant operational investment.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Hybrid (both)</div><p>Anycast for primary routing. GeoDNS as fallback for clients behind NAT/VPN that break anycast. Anycast for attack traffic (it distributes automatically). GeoDNS for business continuity when specific PoPs need to be bypassed. Cloudflare uses this combination.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🗑 Cache Invalidation: TTL vs Purge vs Versioned URLs</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Short TTL only</div><p>Set Cache-Control: max-age=60. Content auto-expires every 60s. No purge needed. Simple. Cost: origin gets 5% miss traffic every 60 seconds for all assets. At 100 Tbps scale, 5 Tbps hits origin every minute. Expensive. Also: content may be stale for up to 60s after update — poor UX for breaking news or product price changes.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Long TTL + explicit purge</div><p>Cache-Control: max-age=86400 (24h). Most traffic served from cache. When content changes: call Purge API → propagates to all PoPs in &lt;5s. Best of both: high cache hit rate + instant invalidation on demand. Industry standard for static assets.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Versioned URLs (immutable cache)</div><p><code>/static/app.abc123.js</code> — URL contains content hash. Cache-Control: max-age=31536000, immutable. Never expires. New deploys use new hash → new URL. Zero invalidation needed. The gold standard for JS/CSS assets. Requires build system integration but eliminates all cache invalidation complexity.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

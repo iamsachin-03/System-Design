@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #37 — Multi-Region Active-Active</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#f472b6;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fce7f3;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(244,114,182,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fdf2f8 0%,#f472b6 50%,#9d174d 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(244,114,182,.07);color:#fce7f3;border:1px solid rgba(244,114,182,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(244,114,182,.1);color:var(--ecolor);border:1.5px solid rgba(244,114,182,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(244,114,182,.08);color:var(--accent);border:1px solid rgba(244,114,182,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(244,114,182,.05);border:1px solid rgba(244,114,182,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fce7f3;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(244,114,182,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Distributed Systems › <span>37 / Multi-Region Active-Active</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🌍</div>
+    <div>
+      <div class="h-title">Multi-Region Active-Active</div>
+      <div class="h-desc">Design a system active in 3 regions simultaneously — all regions serve reads and writes, cross-region replication propagates changes in under 5 seconds, concurrent writes to the same record are resolved via CRDTs or LWW with hybrid logical clocks, and an entire region can fail without user-visible downtime beyond a brief DNS failover window.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">CRDT</span>
+        <span class="badge b-tag">LWW + HLC</span>
+        <span class="badge b-tag">Conflict Resolution</span>
+        <span class="badge b-tag">GeoDNS</span>
+        <span class="badge b-tag">Data Sovereignty</span>
+        <span class="badge b-tag">CAP Theorem</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('conflict',this)">⚡ Conflicts</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Active-active means every region serves both reads AND writes.</strong> The core challenge: two users in different regions can simultaneously modify the same record. You must choose — prevent this (coordinate globally = high latency), detect and resolve (eventual consistency + conflict resolution), or design data models that make conflicts impossible (shard by user/region).</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Users in any region get &lt;50ms read/write latency (local DB)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Data replicates to all regions asynchronously (&lt;5s lag)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Concurrent writes to same record: deterministic conflict resolution</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Region failure: traffic rerouted to surviving regions within 30s</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>EU user data stays in EU region (GDPR data sovereignty)</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>3 regions: us-east-1, eu-west-1, ap-southeast-1</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Availability: 99.999% (5 nines) — no region is SPOF</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>CAP choice: AP (availability + partition tolerance), eventual consistency</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Conflict rate: &lt;0.1% of writes in typical workloads</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Cross-region replication: dedicated backbone, not public internet</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Conflict Resolution</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · WRITE CONFLICTS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>User A in London and User B in Singapore both update the same record at exactly the same millisecond. Walk me through what happens end-to-end.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Both writes land at their local region within milliseconds. EU-west accepts User A's write, AP-southeast accepts User B's write. Both replicate toward each other asynchronously. When EU-west receives the AP write (and vice versa), they detect a conflict: same record, different values, overlapping timestamps.<br><br>
+      <b>Strategy 1 — Last-Write-Wins with Hybrid Logical Clock (LWW+HLC):</b><br>
+      Each write carries a Hybrid Logical Clock timestamp: <code>HLC = max(physical_clock, last_known_HLC) + epsilon</code>. This guarantees causality even when clocks drift. On conflict: the write with the higher HLC timestamp wins. Loser is discarded. Simple. Works well for scalar fields (user name, product status). The losing write is gone forever — acceptable for most fields.<br><br>
+      <b>Strategy 2 — CRDTs (Conflict-free Replicated Data Types):</b><br>
+      For commutative operations, design a data structure where merge is automatic and lossless. Example: shopping cart uses an OR-Set CRDT — "add item A" and "add item B" from different regions both survive, merged to {A, B}. View counters use PN-Counter CRDT — each region has its own increment register, merged value is the sum. No conflict possible by construction.<br><br>
+      <b>Strategy 3 — Home region per record:</b><br>
+      Route writes to the record's "home" region (e.g., hash(user_id) → region). Only one region ever writes a given record — conflicts are structurally impossible. Other regions hold read replicas. Trade-off: a US user editing a record homed in EU has 100ms extra latency for the write. This is what most real-world systems do for critical records (financial transactions, inventory).
+    </div></div>
+    <div class="tip-box"><strong>💡 In practice, multi-region active-active systems use all three strategies simultaneously:</strong> home region for critical mutable data (payments, inventory), CRDTs for counters and sets, LWW+HLC for user profile fields. The art is choosing the right strategy for each data type.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🌐 Phase 2 — Geo Routing & Failover</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · FAILOVER</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>EU-west goes completely dark at 3am. Walk me through what happens to EU users.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-i">YOU</div>
+      <b>T+0s:</b> EU-west region stops responding. Load balancer health checks start timing out.<br>
+      <b>T+10s:</b> After 3 failed health checks, Route53 (or Cloudflare) marks EU endpoints unhealthy.<br>
+      <b>T+30s:</b> DNS TTL expires for EU users. Their next DNS lookup returns US-east IP instead of EU IP. EU users now connect to US-east.<br>
+      <b>T+30s-60s:</b> US-east serves EU users with the last-replicated data — at most 5 seconds stale (our replication SLA). New writes from EU users go to US-east and replicate to AP-southeast.<br>
+      <b>Data sovereignty concern:</b> EU user data is now flowing through US-east, potentially violating GDPR. For PII, the correct choice is to fail closed — return 503 rather than serve from a non-EU region. For non-PII data, US-east can serve. This is a business/legal decision, not a technical one.<br>
+      <b>EU recovery:</b> When EU-west comes back, it needs to replay all writes that happened while it was down (from US-east's replication log). DynamoDB Global Tables and Cassandra multi-DC both handle this automatically via their replication protocols.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📊 Phase 3 — CAP Theorem in Practice</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · CAP TRADEOFFS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>CAP theorem says you can only have 2 of 3 — consistency, availability, partition tolerance. What does this mean for your design?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Network partitions between regions are a fact of life — transatlantic cable cuts happen. So partition tolerance (P) is mandatory. We choose between C and A:<br><br>
+      <b>CP (consistency + partition tolerance):</b> When a partition occurs, refuse writes until you can confirm the record's state across regions. This means global coordination on every write — 100-200ms cross-region latency added to every write. Correct but slow. Used by Google Spanner via TrueTime (GPS-synchronized clocks allowing globally consistent transactions). Appropriate for financial systems where consistency is non-negotiable.<br><br>
+      <b>AP (availability + partition tolerance):</b> Continue accepting writes in all regions even during a partition. Resolve conflicts when partition heals. This is what DynamoDB Global Tables, Cassandra, and CockroachDB with async replication provide. Write latency stays low (&lt;50ms local). Correctness depends on conflict resolution strategy. Appropriate for most internet-scale applications where some staleness is acceptable.<br><br>
+      <b>Our choice: AP with careful conflict-avoidance design.</b> Home-region routing eliminates most real-world conflicts. CRDTs handle counters and sets perfectly. LWW+HLC handles the rare remaining conflicts. For the truly critical operations (payments, seat reservations), we route to a single authoritative region — accepting 100ms extra latency for those specific transactions.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="conflict" class="panel">
+  <div class="sec"><div class="sec-head">⚡ Conflict Resolution Per Data Type</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#f472b6" font-weight="700">CONFLICT RESOLUTION DECISION GUIDE</text>
+
+<rect x="10" y="28" width="820" height="100" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(244,114,182,.1)"/>
+<text x="22" y="48" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">DATA TYPE               STRATEGY                    WHY IT WORKS</text>
+<line x1="10" y1="54" x2="830" y2="54" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+<text x="22" y="70" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">User name / email       LWW + HLC                   Last legitimate update wins; low conflict rate</text>
+<text x="22" y="84" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Shopping cart           OR-Set CRDT                 add+remove ops commutative; both regions' adds survive</text>
+<text x="22" y="98" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">View / like counter     PN-Counter CRDT             Sum regional increments; always converges correctly</text>
+<text x="22" y="112" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Inventory count         Home region only            Prevent conflict structurally; writes serialized</text>
+<text x="22" y="126" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Payment / order         Home region + 2PC           Correctness over latency; accept 100ms cross-region</text>
+
+<text x="10" y="148" font-family="JetBrains Mono" font-size="10" fill="#10b981" font-weight="700">CRDT TYPES — How They Work</text>
+
+<rect x="10" y="158" width="395" height="110" rx="8" fill="rgba(16,185,129,.03)" stroke="rgba(16,185,129,.12)"/>
+<text x="20" y="178" font-family="JetBrains Mono" font-size="9" fill="#10b981">G-Counter (grow-only)</text>
+<text x="20" y="194" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Each region has own slot: {us:42, eu:17, ap:31}</text>
+<text x="20" y="208" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Merge = element-wise max: {us:max(42,40), eu:max(17,17), ...}</text>
+<text x="20" y="222" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Total value = sum of all slots</text>
+<text x="20" y="238" font-family="JetBrains Mono" font-size="8" fill="#34d399">Converges in any message order ✓</text>
+<text x="20" y="255" font-family="JetBrains Mono" font-size="7" fill="#4e6070">PN-Counter = G-Counter(increments) - G-Counter(decrements)</text>
+
+<rect x="415" y="158" width="415" height="110" rx="8" fill="rgba(244,114,182,.03)" stroke="rgba(244,114,182,.12)"/>
+<text x="425" y="178" font-family="JetBrains Mono" font-size="9" fill="#f472b6">OR-Set (Observed-Remove Set)</text>
+<text x="425" y="194" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Add: generate unique tag for each add: {(A,uuid1), (B,uuid2)}</text>
+<text x="425" y="208" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Remove: remove all tags for that element</text>
+<text x="425" y="222" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Merge: union of all (element,tag) pairs</text>
+<text x="425" y="236" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Concurrent add+remove: add wins (tag not yet seen)</text>
+<text x="425" y="252" font-family="JetBrains Mono" font-size="8" fill="#34d399">No conflict possible; order of ops irrelevant ✓</text>
+
+<text x="10" y="290" font-family="JetBrains Mono" font-size="10" fill="#f59e0b" font-weight="700">HLC — Hybrid Logical Clock for LWW</text>
+<rect x="10" y="300" width="820" height="70" rx="8" fill="rgba(245,158,11,.03)" stroke="rgba(245,158,11,.1)"/>
+<text x="20" y="320" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Problem with wall clock: US-east clock = 14:00:00.001, EU-west clock = 14:00:00.000 (skewed)</text>
+<text x="20" y="334" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">EU write at .000 SHOULD win if it happened first, but wall clock makes US appear later → wrong winner</text>
+<text x="20" y="350" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">HLC: l = max(physical_now, last_l, msg_l); if tie: c++ (logical component breaks tie)</text>
+<text x="20" y="364" font-family="JetBrains Mono" font-size="8" fill="#34d399">HLC tracks causality: if event A caused event B, HLC(A) &lt; HLC(B) guaranteed ✓</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:320px">
+<defs>
+<marker id="paa2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f472b6"/></marker>
+<marker id="pag2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+</defs>
+
+<!-- GeoDNS top -->
+<rect x="340" y="10" width="200" height="44" rx="7" fill="#131c2e" stroke="#f472b6" stroke-width="2"/>
+<text x="440" y="30" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fce7f3">GeoDNS / Anycast</text>
+<text x="440" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">route to nearest healthy region</text>
+
+<!-- US East -->
+<rect x="10" y="80" width="240" height="170" rx="8" fill="rgba(244,114,182,.02)" stroke="rgba(244,114,182,.18)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="130" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#f472b6">US-EAST-1</text>
+<rect x="20" y="108" width="220" height="130" rx="7" fill="#131c2e" stroke="#f472b6" stroke-width="1.5"/>
+<text x="130" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fce7f3">API + DB (R/W)</text>
+<text x="130" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f472b6">DynamoDB Global Table</text>
+<text x="130" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Home region: US users</text>
+<text x="130" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">CRDT resolver engine</text>
+<text x="130" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">LWW+HLC on conflicts</text>
+<text x="130" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Replication log (Kafka)</text>
+<text x="130" y="218" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f472b6">Lag: 0ms (local writes)</text>
+<text x="130" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Failover SLA: 30s</text>
+
+<!-- EU West -->
+<rect x="320" y="80" width="240" height="170" rx="8" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.18)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="440" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">EU-WEST-1 (GDPR)</text>
+<rect x="330" y="108" width="220" height="130" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="440" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a7f3d0">API + DB (R/W)</text>
+<text x="440" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#10b981">DynamoDB Global Table</text>
+<text x="440" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Home region: EU users</text>
+<text x="440" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">PII never leaves EU (GDPR)</text>
+<text x="440" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Replication: non-PII only</text>
+<text x="440" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">or pseudonymized</text>
+<text x="440" y="218" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">Fail closed on outage (no US fallback for PII)</text>
+
+<!-- AP Southeast -->
+<rect x="630" y="80" width="240" height="170" rx="8" fill="rgba(56,189,248,.02)" stroke="rgba(56,189,248,.18)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="750" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#38bdf8">AP-SOUTHEAST-1</text>
+<rect x="640" y="108" width="220" height="130" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="750" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">API + DB (R/W)</text>
+<text x="750" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">DynamoDB Global Table</text>
+<text x="750" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Home region: APAC users</text>
+<text x="750" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Serving 300ms from EU</text>
+<text x="750" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Cross-region lag: ~2s</text>
+
+<!-- Backbone -->
+<rect x="10" y="270" width="860" height="40" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="440" y="287" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f472b6">Private backbone (AWS Global Accelerator / dedicated fiber)</text>
+<text x="440" y="302" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Replication: US↔EU ~80ms RTT, US↔AP ~150ms RTT, EU↔AP ~180ms RTT</text>
+
+<!-- Arrows -->
+<line x1="440" y1="54" x2="130" y2="78" stroke="#f472b6" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#paa2)"/>
+<line x1="440" y1="54" x2="440" y2="78" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#pag2)"/>
+<line x1="440" y1="54" x2="750" y2="78" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="240" y1="200" x2="328" y2="200" stroke="#f472b6" stroke-width="1.5" marker-end="url(#paa2)"/>
+<line x1="560" y1="200" x2="638" y2="200" stroke="#10b981" stroke-width="1.5" marker-end="url(#pag2)"/>
+</svg>
+    </div>
+    <table class="math-table">
+      <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+      <tr><td>Write latency (local)</td><td class="hi">&lt;10ms</td><td>Local DB write, no cross-region coordination</td></tr>
+      <tr><td>Write latency (cross-region home)</td><td class="hi">~100ms</td><td>Route to home region: us→eu backbone RTT</td></tr>
+      <tr><td>Cross-region replication lag</td><td class="hi">&lt;5s</td><td>Async replication via backbone; Kafka change stream</td></tr>
+      <tr><td>Conflict rate (typical)</td><td class="hi">&lt;0.1%</td><td>Home-region routing eliminates most conflicts</td></tr>
+      <tr><td>Failover time</td><td class="hi">30-60s</td><td>DNS TTL; health check period</td></tr>
+      <tr><td>Availability (3 regions)</td><td class="hi">99.999%</td><td>P(all 3 fail) = 99.9%³ = 99.7% uptime → 5 nines with active-active</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — CRDT PN-Counter + LWW Resolver</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Multi-Region — Java: PN-Counter CRDT + LWW+HLC
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── PN-Counter CRDT ───────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">PNCounter</span> {
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt; increments = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt; decrements = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+    <span class="kw">private final</span> <span class="cls">String</span>              regionId;
+
+    <span class="kw">public</span> <span class="cls">PNCounter</span>(<span class="cls">String</span> regionId) { <span class="kw">this</span>.regionId = regionId; }
+
+    <span class="kw">public void</span> <span class="fn2">increment</span>(<span class="kw">long</span> delta) {
+        increments.merge(regionId, delta, <span class="cls">Long</span>::sum);
+    }
+
+    <span class="kw">public void</span> <span class="fn2">decrement</span>(<span class="kw">long</span> delta) {
+        decrements.merge(regionId, delta, <span class="cls">Long</span>::sum);
+    }
+
+    <span class="kw">public long</span> <span class="fn2">value</span>() {
+        <span class="kw">long</span> inc = increments.values().stream().mapToLong(<span class="cls">Long</span>::longValue).sum();
+        <span class="kw">long</span> dec = decrements.values().stream().mapToLong(<span class="cls">Long</span>::longValue).sum();
+        <span class="kw">return</span> inc - dec;
+    }
+
+    <span class="cm">/** Merge another region's counter into this one (element-wise max). */</span>
+    <span class="kw">public void</span> <span class="fn2">merge</span>(<span class="cls">PNCounter</span> other) {
+        other.increments.forEach((k, v) -> increments.merge(k, v, <span class="cls">Math</span>::max));
+        other.decrements.forEach((k, v) -> decrements.merge(k, v, <span class="cls">Math</span>::max));
+    }
+}
+
+<span class="cm">// ── Hybrid Logical Clock ──────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">HybridLogicalClock</span> {
+
+    <span class="kw">private volatile long</span>  logicalTime = <span class="num">0</span>;
+    <span class="kw">private volatile int</span>   counter     = <span class="num">0</span>;
+
+    <span class="kw">public synchronized long</span>[] <span class="fn2">tick</span>() {
+        <span class="kw">long</span> physical = <span class="cls">System</span>.currentTimeMillis();
+        <span class="kw">if</span> (physical > logicalTime) {
+            logicalTime = physical; counter = <span class="num">0</span>;
+        } <span class="kw">else</span> {
+            counter++;
+        }
+        <span class="kw">return new long</span>[] { logicalTime, counter };
+    }
+
+    <span class="kw">public synchronized</span> <span class="kw">void</span> <span class="fn2">update</span>(<span class="kw">long</span> msgL, <span class="kw">int</span> msgC) {
+        <span class="kw">long</span> physical = <span class="cls">System</span>.currentTimeMillis();
+        <span class="kw">long</span> maxL     = <span class="cls">Math</span>.max(physical, <span class="cls">Math</span>.max(logicalTime, msgL));
+        <span class="kw">if</span> (maxL == logicalTime && maxL == msgL)      counter = <span class="cls">Math</span>.max(counter, msgC) + <span class="num">1</span>;
+        <span class="kw">else if</span> (maxL == logicalTime)                 counter++;
+        <span class="kw">else if</span> (maxL == msgL)                        counter = msgC + <span class="num">1</span>;
+        <span class="kw">else</span>                                          counter = <span class="num">0</span>;
+        logicalTime = maxL;
+    }
+}
+
+<span class="cm">// ── LWW Register — Last-Write-Wins field ─────────────</span>
+<span class="kw">public class</span> <span class="cls">LWWRegister</span>&lt;<span class="cls">T</span>&gt; {
+
+    <span class="kw">private</span> <span class="cls">T</span>      value;
+    <span class="kw">private long</span>   hlcL;
+    <span class="kw">private int</span>    hlcC;
+    <span class="kw">private</span> <span class="cls">String</span> siteId; <span class="cm">// region ID for tie-breaking</span>
+
+    <span class="kw">public void</span> <span class="fn2">set</span>(<span class="cls">T</span> newValue, <span class="kw">long</span>[] hlcTimestamp, <span class="cls">String</span> region) {
+        value = newValue; hlcL = hlcTimestamp[<span class="num">0</span>]; hlcC = (<span class="kw">int</span>) hlcTimestamp[<span class="num">1</span>]; siteId = region;
+    }
+
+    <span class="cm">/** Merge: the write with the higher HLC timestamp wins. */</span>
+    <span class="kw">public void</span> <span class="fn2">merge</span>(<span class="cls">LWWRegister</span>&lt;<span class="cls">T</span>&gt; other) {
+        <span class="kw">int</span> cmp = <span class="cls">Long</span>.compare(other.hlcL, <span class="kw">this</span>.hlcL);
+        <span class="kw">if</span> (cmp > <span class="num">0</span>) { <span class="fn2">accept</span>(other); <span class="kw">return</span>; }  <span class="cm">// other is newer</span>
+        <span class="kw">if</span> (cmp < <span class="num">0</span>) <span class="kw">return</span>;                        <span class="cm">// we are newer</span>
+        <span class="cm">// Same logical time: compare counter, then siteId for determinism</span>
+        <span class="kw">if</span> (other.hlcC > <span class="kw">this</span>.hlcC || (other.hlcC == <span class="kw">this</span>.hlcC && other.siteId.compareTo(<span class="kw">this</span>.siteId) > <span class="num">0</span>)) {
+            <span class="fn2">accept</span>(other);
+        }
+    }
+
+    <span class="kw">private void</span> <span class="fn2">accept</span>(<span class="cls">LWWRegister</span>&lt;<span class="cls">T</span>&gt; other) {
+        value = other.value; hlcL = other.hlcL; hlcC = other.hlcC; siteId = other.siteId;
+    }
+
+    <span class="kw">public</span> <span class="cls">T</span> <span class="fn2">get</span>() { <span class="kw">return</span> value; }
+}
+
+<span class="cm">// ── Replication: change stream → other regions ────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">CrossRegionReplicator</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">ChangeEvent</span>&gt; kafka;
+
+    <span class="cm">/** Publish every write to a change topic consumed by other regions. */</span>
+    <span class="kw">public void</span> <span class="fn2">publishChange</span>(<span class="cls">String</span> entityId, <span class="cls">Object</span> newValue, <span class="kw">long</span>[] hlc) {
+        kafka.send(<span class="str">"global-changes"</span>, entityId,
+            <span class="kw">new</span> <span class="cls">ChangeEvent</span>(entityId, newValue, hlc, <span class="cls">REGION_ID</span>));
+    }
+
+    <span class="ann">@KafkaListener</span>(topics = <span class="str">"global-changes"</span>)
+    <span class="kw">public void</span> <span class="fn2">onRemoteChange</span>(<span class="cls">ChangeEvent</span> event) {
+        <span class="kw">if</span> (event.getOriginRegion().equals(<span class="cls">REGION_ID</span>)) <span class="kw">return</span>; <span class="cm">// skip own events</span>
+        mergeIntoLocalStore(event); <span class="cm">// apply CRDT merge or LWW resolution</span>
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Multi-Region — Python: PN-Counter CRDT + LWW+HLC
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> Dict, TypeVar, Generic, Optional
+
+T = TypeVar(<span class="str">'T'</span>)
+
+<span class="cm"># ── PN-Counter CRDT ───────────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">PNCounter</span>:
+    <span class="str">"""Per-region increment + decrement counters. Merge = element-wise max."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, region_id: str):
+        self.region_id  = region_id
+        self.increments: Dict[str, int] = {region_id: <span class="num">0</span>}
+        self.decrements: Dict[str, int] = {region_id: <span class="num">0</span>}
+
+    <span class="kw">def</span> <span class="fn2">increment</span>(self, delta: int = <span class="num">1</span>):
+        self.increments[self.region_id] = self.increments.get(self.region_id, <span class="num">0</span>) + delta
+
+    <span class="kw">def</span> <span class="fn2">decrement</span>(self, delta: int = <span class="num">1</span>):
+        self.decrements[self.region_id] = self.decrements.get(self.region_id, <span class="num">0</span>) + delta
+
+    <span class="kw">def</span> <span class="fn2">value</span>(self) -> int:
+        <span class="kw">return</span> sum(self.increments.values()) - sum(self.decrements.values())
+
+    <span class="kw">def</span> <span class="fn2">merge</span>(self, other: <span class="str">'PNCounter'</span>):
+        <span class="str">"""Element-wise max merge — always safe to call in any order."""</span>
+        <span class="kw">for</span> k, v <span class="kw">in</span> other.increments.items():
+            self.increments[k] = max(self.increments.get(k, <span class="num">0</span>), v)
+        <span class="kw">for</span> k, v <span class="kw">in</span> other.decrements.items():
+            self.decrements[k] = max(self.decrements.get(k, <span class="num">0</span>), v)
+
+
+<span class="cm"># ── Hybrid Logical Clock ──────────────────────────────</span>
+<span class="kw">class</span> <span class="cls">HLC</span>:
+    <span class="str">"""Hybrid Logical Clock: max(physical, last_seen) + logical counter."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self.l = <span class="num">0</span>  <span class="cm"># logical time (ms)</span>
+        self.c = <span class="num">0</span>  <span class="cm"># logical counter</span>
+
+    <span class="kw">def</span> <span class="fn2">tick</span>(self) -> tuple:
+        p = int(time.time() * <span class="num">1000</span>)
+        <span class="kw">if</span> p > self.l: self.l = p; self.c = <span class="num">0</span>
+        <span class="kw">else</span>:          self.c += <span class="num">1</span>
+        <span class="kw">return</span> (self.l, self.c)
+
+    <span class="kw">def</span> <span class="fn2">update</span>(self, msg_l: int, msg_c: int):
+        p   = int(time.time() * <span class="num">1000</span>)
+        max_l = max(p, self.l, msg_l)
+        <span class="kw">if</span> max_l == self.l == msg_l: self.c = max(self.c, msg_c) + <span class="num">1</span>
+        <span class="kw">elif</span> max_l == self.l:         self.c += <span class="num">1</span>
+        <span class="kw">elif</span> max_l == msg_l:          self.c = msg_c + <span class="num">1</span>
+        <span class="kw">else</span>:                          self.c = <span class="num">0</span>
+        self.l = max_l
+
+
+<span class="cm"># ── LWW Register ─────────────────────────────────────</span>
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">LWWRegister</span>(<span class="cls">Generic</span>[T]):
+    value:   Optional[T] = <span class="kw">None</span>
+    hlc_l:   int         = <span class="num">0</span>
+    hlc_c:   int         = <span class="num">0</span>
+    site_id: str         = <span class="str">""</span>
+
+    <span class="kw">def</span> <span class="fn2">set</span>(self, value: T, hlc: tuple, site: str):
+        self.value, self.hlc_l, self.hlc_c, self.site_id = value, hlc[<span class="num">0</span>], hlc[<span class="num">1</span>], site
+
+    <span class="kw">def</span> <span class="fn2">merge</span>(self, other: <span class="str">'LWWRegister[T]'</span>):
+        <span class="str">"""Higher HLC wins. Tie-break: higher hlc_c, then lexicographic site_id."""</span>
+        other_tuple = (other.hlc_l, other.hlc_c, other.site_id)
+        self_tuple  = (self.hlc_l, self.hlc_c, self.site_id)
+        <span class="kw">if</span> other_tuple > self_tuple:
+            self.value, self.hlc_l, self.hlc_c, self.site_id = (
+                other.value, other.hlc_l, other.hlc_c, other.site_id)
+
+
+<span class="cm"># ── OR-Set CRDT (shopping cart) ──────────────────────</span>
+<span class="kw">import</span> uuid
+
+<span class="kw">class</span> <span class="cls">ORSet</span>:
+    <span class="str">"""Observed-Remove Set: concurrent add+remove = add wins."""</span>
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self): self.elements: Dict[str, set] = {}
+
+    <span class="kw">def</span> <span class="fn2">add</span>(self, item: str):
+        tag = str(uuid.uuid4())
+        self.elements.setdefault(item, set()).add(tag)
+
+    <span class="kw">def</span> <span class="fn2">remove</span>(self, item: str):
+        self.elements.pop(item, <span class="kw">None</span>)
+
+    <span class="kw">def</span> <span class="fn2">contains</span>(self, item: str) -> bool:
+        <span class="kw">return</span> bool(self.elements.get(item))
+
+    <span class="kw">def</span> <span class="fn2">merge</span>(self, other: <span class="str">'ORSet'</span>):
+        <span class="kw">for</span> item, tags <span class="kw">in</span> other.elements.items():
+            self.elements.setdefault(item, set()).update(tags)
+
+    <span class="kw">def</span> <span class="fn2">items</span>(self) -> list:
+        <span class="kw">return</span> [k <span class="kw">for</span> k, v <span class="kw">in</span> self.elements.items() <span class="kw">if</span> v]
+
+
+<span class="cm"># ── Demo: concurrent cart adds from 2 regions ─────────</span>
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    us_cart = <span class="cls">ORSet</span>(); eu_cart = <span class="cls">ORSet</span>()
+    us_cart.add(<span class="str">"shoes"</span>); us_cart.add(<span class="str">"hat"</span>)
+    eu_cart.add(<span class="str">"jacket"</span>)
+    eu_cart.remove(<span class="str">"hat"</span>)  <span class="cm"># EU didn't see "hat" yet — add wins after merge</span>
+
+    us_cart.merge(eu_cart); eu_cart.merge(us_cart)  <span class="cm"># both regions merge</span>
+    print(<span class="str">"US cart:"</span>, us_cart.items())  <span class="cm"># ['shoes', 'hat', 'jacket']</span>
+    print(<span class="str">"EU cart:"</span>, eu_cart.items())  <span class="cm"># same — converged ✓</span>
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🏛 Architecture: Active-Active vs Active-Passive vs Single-Region</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Single-Region</div><p>Simple to build and operate. All data in one place — no conflict resolution. Latency: users far from the region see 100-300ms. Availability: region outage = total outage. Only acceptable for small-scale or latency-insensitive workloads. Never appropriate for global products.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Active-Passive</div><p>One primary region, other regions are read-only replicas. Reads are fast (local). Writes route to primary — 100-300ms overhead for non-primary users. Failover: promote a replica if primary fails (30-120s). Data sovereignty: primary is the only writable store — doesn't help EU writes. Simpler than active-active but still has write latency problem.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Active-Active (chosen)</div><p>All regions serve reads AND writes. Low write latency for all users globally. Requires conflict resolution (CRDT / LWW / home-region). Highest complexity — the conflict resolution design is the hardest part. Used by Amazon (DynamoDB Global Tables), Cassandra, CockroachDB. Required for true global 5-nine availability.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">📊 Database Choice: DynamoDB Global Tables vs Cassandra vs CockroachDB</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ DynamoDB Global Tables</div><p>Fully managed multi-region active-active. AWS handles all replication, conflict resolution (LWW), and failover. Global secondar index support. No operational overhead. LWW conflict resolution is built-in — no custom CRDT code. High cost at scale. Proprietary — lock-in to AWS. Best for teams without operational expertise.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Cassandra multi-DC</div><p>Open source, highly configurable. Each DC operates independently. Replication across DCs is async. Tunable consistency (LOCAL_QUORUM for low latency, EACH_QUORUM for stronger guarantees). LWT (lightweight transactions) for single-row linearizability. Used by Apple, Netflix, Discord. High operational complexity — requires expertise.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">CockroachDB</div><p>Distributed SQL with serializability across regions. No conflict resolution needed — transactions are linearizable globally (like Spanner). Slower than Cassandra/DynamoDB for local writes (150ms+ cross-region latency for strong consistency). Best when you need SQL semantics globally and can accept higher write latency. Younger ecosystem.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

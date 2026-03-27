@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #35 — Database Replication & Failover</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#fb923c;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fed7aa;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(251,146,60,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ffedd5 0%,#fb923c 50%,#9a3412 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(251,146,60,.07);color:#fed7aa;border:1px solid rgba(251,146,60,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(251,146,60,.1);color:var(--ecolor);border:1.5px solid rgba(251,146,60,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(251,146,60,.08);color:var(--accent);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fed7aa;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.warn-box{background:rgba(244,63,94,.05);border:1px solid rgba(244,63,94,.15);border-left:3px solid #f43f5e;border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fda4af;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(251,146,60,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#fb923c;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Databases › <span>35 / DB Replication & Failover</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔄</div>
+    <div>
+      <div class="h-title">Database Replication & Failover</div>
+      <div class="h-desc">Design a robust MySQL/PostgreSQL replication system — WAL/binlog streaming to replicas, GTID-based position tracking, replication lag monitoring, read replica routing, semi-synchronous vs async replication tradeoffs, and automatic failover using Orchestrator/Patroni that elects a new primary and updates routing in under 30 seconds without data loss.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Binlog / WAL</span>
+        <span class="badge b-tag">GTID</span>
+        <span class="badge b-tag">Replication Lag</span>
+        <span class="badge b-tag">Failover</span>
+        <span class="badge b-tag">Split-Brain</span>
+        <span class="badge b-tag">Read Replicas</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('flow',this)">🔁 Replication</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Database replication is about two things: scaling reads and surviving failures.</strong> The hard problems are: how much data can you afford to lose when the primary dies (RPO), how quickly must the system recover (RTO), and how do you prevent split-brain — two nodes both thinking they're the primary and accepting writes independently?</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Stream writes from primary to N replicas in near-realtime</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Route read traffic to replicas; write traffic to primary</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Monitor replication lag; route away from lagging replicas</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Detect primary failure; elect new primary; update routing</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Prevent split-brain: only one primary accepting writes at a time</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>RPO (data loss): 0 seconds with semi-sync; &lt;1s with async</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>RTO (recovery time): &lt;30 seconds to elect new primary</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Replication lag: &lt;1 second under normal load</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Read scale: 5 replicas × primary write throughput</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Zero false failovers (split-brain prevention mandatory)</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Replication Mechanics</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · BINLOG / WAL STREAMING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How does MySQL replication actually work under the hood?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      MySQL replication uses the binary log (binlog) — a sequential log of all changes made to the database. Three components:<br><br>
+      <b>1. Primary binlog thread:</b> Every committed write is recorded to the binlog as an event: row-based (exact before/after image of every row changed), statement-based (the SQL statement), or mixed. Row-based is safer — no ambiguity about what changed.<br><br>
+      <b>2. Replica I/O thread:</b> Connects to the primary, requests events starting from its last known position. Primary sends binlog events as a stream. Replica writes them to its relay log.<br><br>
+      <b>3. Replica SQL thread:</b> Reads from the relay log, applies events to the replica's data. The gap between the primary's current binlog position and the replica's applied position is the <b>replication lag</b>.<br><br>
+      <b>GTID (Global Transaction ID):</b> Each transaction gets a globally unique ID: <code>{server_uuid}:{seq_no}</code>. This replaces binlog file+offset position tracking. Benefit: if the primary fails and you promote a replica, you don't need to calculate the new replication position — every transaction has a unique ID, and the new replicas simply replay transactions they haven't seen yet. This makes failover much simpler and safer.<br><br>
+      <b>PostgreSQL equivalent:</b> WAL (Write-Ahead Log) streaming replication. Same concept — the WAL is the authoritative log of all changes; replicas stream from the primary's WAL sender process. PostgreSQL uses LSN (Log Sequence Number) instead of GTID.
+    </div></div>
+    <div class="tip-box"><strong>💡 Always use GTID-based replication in production.</strong> Binlog position-based replication requires careful manual position tracking during failover — easy to make errors that corrupt replication. GTID makes failover safe by making transaction identity globally unique.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 2 — Failover Without Data Loss</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · FAILOVER</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The primary dies at 2am. Walk me through exactly what happens over the next 30 seconds.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Using Orchestrator (MySQL) or Patroni (PostgreSQL):<br><br>
+      <b>T+0s:</b> Primary crashes. Health checks from Orchestrator to the primary start timing out.<br>
+      <b>T+5s:</b> After 3 consecutive missed health checks (to avoid false positives from network blips), Orchestrator declares the primary dead. Cross-checks with multiple Orchestrator agents to prevent split-brain detection.<br>
+      <b>T+10s:</b> Candidate selection. Orchestrator evaluates all replicas: which has the most up-to-date GTID set? Most replicated = elected candidate. In semi-sync setups, the replica that acknowledged the last transaction is always current.<br>
+      <b>T+15s:</b> Candidate promotion. Orchestrator stops remaining replicas from reading from the old primary (to prevent divergence), tells the candidate to stop replication and promote itself as primary (SET GLOBAL read_only=OFF).<br>
+      <b>T+20s:</b> Other replicas are re-pointed to the new primary: <code>CHANGE MASTER TO MASTER_HOST='new-primary' USING GTID</code>. GTID automatically figures out where to start replication — no manual position tracking.<br>
+      <b>T+25s:</b> DNS/ProxySQL routing updated. Application connections that retry automatically hit the new primary. Applications that don't retry get an error and must reconnect.<br>
+      <b>T+30s:</b> New primary fully operational. Read replicas lagging slightly (re-syncing from new primary). Alert fired to on-call engineer.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🧠 Phase 3 — Split-Brain Prevention</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · SPLIT-BRAIN</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The primary becomes unreachable due to a network partition — it's still running fine but the replicas can't see it. They elect a new primary. Now we have two primaries accepting writes. How do you prevent this?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Split-brain is the worst failure mode in databases — you end up with two diverged write streams that are nearly impossible to reconcile. Multiple defenses:<br><br>
+      <b>1. Quorum-based election:</b> A new primary is only elected if a majority of known nodes agree the primary is dead. With 1 primary + 4 replicas = 5 nodes, need 3 votes. If the primary is partitioned but alive, it can't get 3 votes from replicas it can't see — so no split election possible. Orchestrator uses a quorum of Orchestrator agents across different availability zones.<br><br>
+      <b>2. STONITH (Shoot The Other Node In The Head):</b> Before promoting a new primary, fence the old one — cut its network access via cloud security group modification, or power it off via IPMI. This ensures the old primary cannot accept any more writes. More aggressive but eliminates split-brain entirely.<br><br>
+      <b>3. Semi-synchronous replication:</b> With semi-sync, the primary waits for at least one replica to acknowledge each transaction before committing. If all replicas are unreachable for >rpl_semi_sync_master_timeout, the primary reverts to async mode. This means the primary can't commit during a network partition to replicas — it essentially blocks writes. The system degrades gracefully rather than silently diverging.<br><br>
+      <b>4. Lease-based primary lock:</b> Patroni uses etcd/ZooKeeper leases. The primary holds a lease and must renew it every 10s. If it can't renew (network partition to etcd), it voluntarily demotes itself. No other node can become primary without acquiring the lease. This requires the primary to have connectivity to etcd — adding a dependency but guaranteeing no split-brain.
+    </div></div>
+    <div class="warn-box"><strong>⚠ The golden rule:</strong> It is safer to have no primary (cluster refuses writes) than to have two primaries (data diverges silently). Always choose availability of reads over availability of writes when facing uncertainty about whether the primary is alive.</div>
+  </div></div>
+</div>
+
+<div id="flow" class="panel">
+  <div class="sec"><div class="sec-head">🔁 Replication Flow & Lag Diagram</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+<defs>
+<marker id="oa2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fb923c"/></marker>
+<marker id="og2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="or2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+
+<!-- Primary -->
+<rect x="10" y="50" width="220" height="180" rx="8" fill="#131c2e" stroke="#fb923c" stroke-width="2"/>
+<text x="120" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">PRIMARY (rw)</text>
+<text x="120" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">ALL writes here</text>
+<text x="20" y="112" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">1. App writes to primary</text>
+<text x="20" y="126" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2. Write to InnoDB</text>
+<text x="20" y="140" font-family="JetBrains Mono" font-size="8" fill="#fb923c">3. Append to binlog</text>
+<text x="20" y="154" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">4. (semi-sync: wait ACK)</text>
+<text x="20" y="168" font-family="JetBrains Mono" font-size="8" fill="#fb923c">5. Commit</text>
+<text x="20" y="186" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Binlog: {srv:1}:1042 → next</text>
+<text x="20" y="200" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">GTID: srv1:1, srv1:2, ...</text>
+<text x="20" y="220" font-family="JetBrains Mono" font-size="7" fill="#4e6070">server-id: 1, read-only: OFF</text>
+
+<!-- Replica 1 (low lag) -->
+<rect x="260" y="40" width="200" height="140" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+<text x="360" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">REPLICA 1 (ro)</text>
+<text x="360" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#10b981">lag: 0.2s ✓</text>
+<text x="270" y="96" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">I/O thread: streams binlog</text>
+<text x="270" y="110" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Relay log: buffered events</text>
+<text x="270" y="124" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">SQL thread: applies events</text>
+<text x="270" y="138" font-family="JetBrains Mono" font-size="8" fill="#10b981">Routes: reads sent here ✓</text>
+<text x="270" y="155" font-family="JetBrains Mono" font-size="7" fill="#4e6070">read-only: ON, parallel SQL</text>
+
+<!-- Replica 2 (high lag) -->
+<rect x="260" y="200" width="200" height="130" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="360" y="222" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">REPLICA 2 (ro)</text>
+<text x="360" y="238" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">lag: 8.3s ⚠</text>
+<text x="270" y="256" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">SQL thread behind</text>
+<text x="270" y="270" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Heavy query holding lock</text>
+<text x="270" y="284" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Routes: reads excluded ✗</text>
+<text x="270" y="300" font-family="JetBrains Mono" font-size="7" fill="#4e6070">ProxySQL removes from pool</text>
+
+<!-- Orchestrator -->
+<rect x="490" y="50" width="200" height="120" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="590" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Orchestrator</text>
+<text x="500" y="90" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Health check every 1s</text>
+<text x="500" y="104" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">3 failures → declare dead</text>
+<text x="500" y="118" font-family="JetBrains Mono" font-size="8" fill="#a78bfa">Elect most-current replica</text>
+<text x="500" y="132" font-family="JetBrains Mono" font-size="8" fill="#a78bfa">Promote → update routing</text>
+<text x="500" y="148" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Quorum: 3+ agents agree</text>
+<text x="500" y="162" font-family="JetBrains Mono" font-size="7" fill="#4e6070">RTO: &lt;30 seconds</text>
+
+<!-- ProxySQL -->
+<rect x="490" y="190" width="200" height="110" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="1.5"/>
+<text x="590" y="212" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fed7aa">ProxySQL</text>
+<text x="500" y="232" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Writes → primary</text>
+<text x="500" y="246" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Reads → least-lagging replica</text>
+<text x="500" y="260" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Lag > 5s → remove from pool</text>
+<text x="500" y="274" font-family="JetBrains Mono" font-size="8" fill="#fb923c">Failover: update rule &lt;1s</text>
+<text x="500" y="290" font-family="JetBrains Mono" font-size="7" fill="#4e6070">App uses single endpoint</text>
+
+<!-- lag monitoring -->
+<rect x="700" y="50" width="130" height="250" rx="7" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="765" y="70" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">REPLICATION LAG</text>
+<text x="710" y="90" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Seconds_Behind_Master</text>
+<text x="710" y="106" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">0-1s: ✓ use for reads</text>
+<text x="710" y="120" font-family="JetBrains Mono" font-size="7" fill="#fcd34d">1-5s: ⚠ monitor</text>
+<text x="710" y="134" font-family="JetBrains Mono" font-size="7" fill="#f87171">&gt;5s: ✗ exclude reads</text>
+<text x="765" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">CAUSES</text>
+<text x="710" y="176" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Long-running queries</text>
+<text x="710" y="190" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Lock contention</text>
+<text x="710" y="204" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Network saturation</text>
+<text x="710" y="218" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Single-threaded SQL</text>
+<text x="765" y="240" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">FIX</text>
+<text x="710" y="256" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Parallel replication</text>
+<text x="710" y="270" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Tune replica_parallel_</text>
+<text x="710" y="284" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">workers=16</text>
+
+<!-- Arrows -->
+<line x1="230" y1="110" x2="258" y2="110" stroke="#fb923c" stroke-width="1.5" marker-end="url(#oa2)"/>
+<line x1="230" y1="165" x2="258" y2="240" stroke="#fb923c" stroke-width="1.5" marker-end="url(#oa2)"/>
+<line x1="460" y1="100" x2="488" y2="100" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#oa2)"/>
+<line x1="460" y1="245" x2="488" y2="245" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#oa2)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity & SLA</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Write throughput:</span>
+  <span class="label">Primary: 10K TPS (transactions/sec)                → replicated to all replicas</span>
+  <span class="label">Binlog: 10K TPS × avg 500B per row event           = </span><span class="val">5 MB/sec binlog</span>
+  <span class="label">Network to 5 replicas: 5 MB/sec × 5               = </span><span class="val">25 MB/sec replication traffic</span>
+
+<span class="label">Read scale:</span>
+  <span class="label">5 replicas × 10K TPS read capacity each            = </span><span class="val">50K read TPS total</span>
+  <span class="label">Primary handles writes only (no reads)              = </span><span class="val">5× read scale</span>
+
+<span class="label">Replication lag under load:</span>
+  <span class="label">Single-threaded SQL: 5 MB/sec input, 4 MB/sec apply → </span><span class="val">builds lag over time</span>
+  <span class="label">Parallel SQL (16 workers):               → </span><span class="val">&lt;0.5s lag sustained</span>
+
+<span class="label">Failover timing:</span>
+  <span class="label">Health check interval: 1s × 3 failures             = </span><span class="val">3s detection</span>
+  <span class="label">Candidate selection + promotion                    = </span><span class="val">5s</span>
+  <span class="label">Re-point replicas to new primary                   = </span><span class="val">5s</span>
+  <span class="label">DNS/ProxySQL update                                = </span><span class="val">2s</span>
+  <span class="label">Total:                                             = </span><span class="result">~15-30s RTO</span>
+
+<span class="label">RPO (data loss):</span>
+  <span class="label">Async replication:                                 → </span><span class="val">up to 1-2 seconds of data lost</span>
+  <span class="label">Semi-sync (wait for 1 ACK):                       → </span><span class="val">0 data loss (at cost of latency)</span>
+  <span class="label">Semi-sync timeout fallback to async:              → </span><span class="val">brief window if all replicas down</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Mode</th><th>RPO</th><th>Write Latency</th><th>Notes</th></tr>
+      <tr><td>Async replication</td><td class="hi">0-2s data loss</td><td class="ans">+0ms</td><td>Default MySQL; no ack wait</td></tr>
+      <tr><td>Semi-sync (1 ACK)</td><td class="hi">0 data loss</td><td class="ans">+0.5-2ms</td><td>Wait 1 replica acks before commit</td></tr>
+      <tr><td>Sync (all replicas)</td><td class="hi">0 data loss</td><td>+10-50ms</td><td>Used by MySQL Cluster/NDB; very slow</td></tr>
+      <tr><td>Patroni (Postgres)</td><td class="hi">0 data loss</td><td class="ans">+0.5ms</td><td>Synchronous_standby_names</td></tr>
+      <tr><td>Amazon RDS Multi-AZ</td><td class="hi">0 data loss</td><td class="ans">+2ms</td><td>Synchronous replica, auto-failover</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:310px">
+<defs>
+<marker id="oma2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fb923c"/></marker>
+<marker id="omg2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="omb2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+</defs>
+
+<!-- App layer -->
+<rect x="10" y="20" width="130" height="60" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="75" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Application</text>
+<text x="75" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">single endpoint</text>
+<text x="75" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">db.internal:3306</text>
+
+<!-- ProxySQL -->
+<rect x="160" y="10" width="160" height="80" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="2"/>
+<text x="240" y="38" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">ProxySQL</text>
+<text x="240" y="54" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">R/W split</text>
+<text x="240" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lag-aware routing</text>
+<text x="240" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fb923c">connection pooling</text>
+
+<!-- Primary -->
+<rect x="350" y="10" width="180" height="120" rx="7" fill="#131c2e" stroke="#fb923c" stroke-width="2"/>
+<text x="440" y="36" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fed7aa">PRIMARY</text>
+<text x="440" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">writes accepted</text>
+<text x="440" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">binlog: GTID mode</text>
+<text x="440" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">semi-sync: wait 1 ACK</text>
+<text x="440" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">read-only: OFF</text>
+<text x="440" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lease holder (etcd)</text>
+<text x="440" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#fb923c">AZ: us-east-1a</text>
+
+<!-- Replicas -->
+<rect x="560" y="10" width="160" height="80" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="640" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">REPLICA ×4</text>
+<text x="640" y="48" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">read-only: ON</text>
+<text x="640" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">parallel_workers=16</text>
+<text x="640" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">AZ: 1b, 1c, 1d, 1e</text>
+
+<!-- Orchestrator -->
+<rect x="350" y="150" width="180" height="100" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="440" y="174" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Orchestrator</text>
+<text x="440" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">health checks 1s</text>
+<text x="440" y="206" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">quorum: 3+ agents</text>
+<text x="440" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#a78bfa">failover automation</text>
+<text x="440" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Raft-based agents</text>
+
+<!-- etcd -->
+<rect x="560" y="110" width="160" height="80" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="640" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">etcd / ZooKeeper</text>
+<text x="640" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">primary lease</text>
+<text x="640" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">TTL 10s, renew 3s</text>
+<text x="640" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">split-brain prevention</text>
+
+<!-- Monitoring -->
+<rect x="740" y="10" width="130" height="250" rx="7" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="805" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb923c">MONITORING</text>
+<text x="750" y="52" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Seconds_Behind_Master</text>
+<text x="750" y="66" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">→ Prometheus metric</text>
+<text x="750" y="80" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">→ Alert if &gt;5s</text>
+<text x="750" y="98" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">GTID_EXECUTED set</text>
+<text x="750" y="112" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">→ replica completeness</text>
+<text x="750" y="130" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Binlog position delta</text>
+<text x="750" y="144" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">→ throughput metric</text>
+<text x="750" y="162" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Connection count</text>
+<text x="750" y="178" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">→ pool exhaustion</text>
+<text x="750" y="198" font-family="JetBrains Mono" font-size="7" fill="#fb923c">SLA TARGETS:</text>
+<text x="750" y="214" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">RTO: &lt;30s</text>
+<text x="750" y="228" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">RPO: 0 (semi-sync)</text>
+<text x="750" y="242" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Lag: &lt;1s normal</text>
+
+<!-- Arrows -->
+<line x1="140" y1="50" x2="158" y2="50" stroke="#fb923c" stroke-width="1.5" marker-end="url(#oma2)"/>
+<line x1="320" y1="50" x2="348" y2="50" stroke="#fb923c" stroke-width="1.5" marker-end="url(#oma2)"/>
+<line x1="530" y1="70" x2="558" y2="50" stroke="#10b981" stroke-width="1.5" marker-end="url(#omg2)"/>
+<line x1="440" y1="130" x2="440" y2="148" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#oma2)"/>
+<line x1="530" y1="200" x2="558" y2="175" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#omb2)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — Replication Monitor + Failover Detector</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// DB Replication Monitor — Java: Lag check + failover
+// ══════════════════════════════════════════════════════</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">ReplicationMonitor</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">DataSource</span>         primaryDs;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">List</span>&lt;<span class="cls">DataSource</span>&gt;    replicaDsList;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">ProxySQLClient</span>      proxySQL;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">AlertService</span>        alerts;
+
+    <span class="kw">private static final int</span>  LAG_THRESHOLD_S  = <span class="num">5</span>;
+    <span class="kw">private static final int</span>  HEALTH_FAIL_LIMIT = <span class="num">3</span>;
+    <span class="kw">private</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>,<span class="cls">Integer</span>&gt; consecutiveFails = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+
+    <span class="cm">/** Check replication lag for all replicas every 5 seconds. */</span>
+    <span class="ann">@Scheduled</span>(fixedRate = <span class="num">5000</span>)
+    <span class="kw">public void</span> <span class="fn2">checkReplicationLag</span>() {
+        replicaDsList.forEach(ds -> {
+            <span class="kw">try</span> (<span class="cls">Connection</span> conn = ds.getConnection();
+                 <span class="cls">Statement</span>  st   = conn.createStatement();
+                 <span class="cls">ResultSet</span>  rs   = st.executeQuery(<span class="str">"SHOW SLAVE STATUS"</span>)) {
+
+                <span class="kw">if</span> (!rs.next()) <span class="kw">return</span>;
+
+                <span class="cls">String</span> replicaId = rs.getString(<span class="str">"Master_Host"</span>);
+                <span class="kw">int</span>    lagSeconds = rs.getInt(<span class="str">"Seconds_Behind_Master"</span>);
+                <span class="cls">String</span> ioRunning  = rs.getString(<span class="str">"Slave_IO_Running"</span>);
+                <span class="cls">String</span> sqlRunning = rs.getString(<span class="str">"Slave_SQL_Running"</span>);
+                <span class="cls">String</span> gtidExec   = rs.getString(<span class="str">"Executed_Gtid_Set"</span>);
+
+                <span class="cm">// Metric to Prometheus</span>
+                <span class="cls">Metrics</span>.gauge(<span class="str">"db_replica_lag_seconds"</span>,
+                    <span class="cls">Tags</span>.of(<span class="str">"replica"</span>, replicaId)).record(lagSeconds);
+
+                <span class="cm">// Route away from lagging replicas</span>
+                <span class="kw">if</span> (lagSeconds > LAG_THRESHOLD_S || !<span class="str">"Yes"</span>.equals(ioRunning)) {
+                    proxySQL.setHostGroupWeight(replicaId, <span class="num">0</span>); <span class="cm">// remove from read pool</span>
+                    alerts.warn(<span class="str">"Replica lagging: "</span> + replicaId + <span class="str">" lag="</span> + lagSeconds + <span class="str">"s"</span>);
+                } <span class="kw">else</span> {
+                    proxySQL.setHostGroupWeight(replicaId, <span class="num">100</span>); <span class="cm">// restore to pool</span>
+                }
+
+                consecutiveFails.put(replicaId, <span class="num">0</span>); <span class="cm">// health restored</span>
+
+            } <span class="kw">catch</span> (<span class="cls">SQLException</span> e) {
+                <span class="cls">String</span> replicaId = <span class="fn2">getReplicaId</span>(ds);
+                <span class="kw">int</span> fails = consecutiveFails.merge(replicaId, <span class="num">1</span>, <span class="cls">Integer</span>::sum);
+                <span class="kw">if</span> (fails >= HEALTH_FAIL_LIMIT) {
+                    proxySQL.setHostGroupWeight(replicaId, <span class="num">0</span>);
+                    alerts.critical(<span class="str">"Replica unreachable: "</span> + replicaId);
+                }
+            }
+        });
+    }
+
+    <span class="cm">/** Check primary health; alert Orchestrator on failure. */</span>
+    <span class="ann">@Scheduled</span>(fixedRate = <span class="num">1000</span>)
+    <span class="kw">public void</span> <span class="fn2">checkPrimaryHealth</span>() {
+        <span class="kw">try</span> (<span class="cls">Connection</span> conn = primaryDs.getConnection();
+             <span class="cls">PreparedStatement</span> ps = conn.prepareStatement(<span class="str">"SELECT 1"</span>)) {
+            ps.executeQuery();
+            consecutiveFails.put(<span class="str">"primary"</span>, <span class="num">0</span>);
+        } <span class="kw">catch</span> (<span class="cls">SQLException</span> e) {
+            <span class="kw">int</span> fails = consecutiveFails.merge(<span class="str">"primary"</span>, <span class="num">1</span>, <span class="cls">Integer</span>::sum);
+            <span class="kw">if</span> (fails >= HEALTH_FAIL_LIMIT) {
+                alerts.critical(<span class="str">"PRIMARY UNREACHABLE — triggering failover"</span>);
+                <span class="cm">// In production: Orchestrator handles the actual failover</span>
+                <span class="cm">// We just alert; never manually failover from application code</span>
+            }
+        }
+    }
+}
+
+<span class="cm">// ── Read/Write routing via annotation ────────────────</span>
+<span class="ann">@Aspect</span>
+<span class="ann">@Component</span>
+<span class="kw">public class</span> <span class="cls">DataSourceRoutingAspect</span> {
+
+    <span class="ann">@Around</span>(<span class="str">"@annotation(readOnly)"</span>)
+    <span class="kw">public</span> <span class="cls">Object</span> <span class="fn2">routeToReplica</span>(<span class="cls">ProceedingJoinPoint</span> pjp, <span class="cls">ReadOnly</span> readOnly) <span class="kw">throws</span> <span class="cls">Throwable</span> {
+        <span class="cls">DataSourceContextHolder</span>.setReadOnly(<span class="kw">true</span>);   <span class="cm">// route to replica pool</span>
+        <span class="kw">try</span> { <span class="kw">return</span> pjp.proceed(); }
+        <span class="kw">finally</span> { <span class="cls">DataSourceContextHolder</span>.setReadOnly(<span class="kw">false</span>); }
+    }
+}
+
+<span class="cm">// Usage: @ReadOnly → replica | no annotation → primary</span>
+<span class="ann">@ReadOnly</span>
+<span class="kw">public</span> <span class="cls">User</span> <span class="fn2">findUser</span>(<span class="kw">long</span> id) { <span class="kw">return</span> repo.findById(id); }
+
+<span class="kw">public void</span> <span class="fn2">createUser</span>(<span class="cls">User</span> u) { repo.save(u); } <span class="cm">// → primary</span>
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# DB Replication Monitor — Python
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, threading, pymysql
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Dict, List, Optional
+
+LAG_THRESHOLD_S  = <span class="num">5</span>
+HEALTH_FAIL_LIMIT = <span class="num">3</span>
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">ReplicaStatus</span>:
+    host:        str
+    lag_seconds: Optional[int]
+    io_running:  bool
+    sql_running: bool
+    gtid_set:    str
+    healthy:     bool
+
+
+<span class="kw">def</span> <span class="fn2">check_replica</span>(host: str, port: int = <span class="num">3306</span>) -> <span class="cls">ReplicaStatus</span>:
+    <span class="str">"""Run SHOW SLAVE STATUS on a replica and return structured status."""</span>
+    <span class="kw">try</span>:
+        conn = pymysql.connect(host=host, port=port, user=<span class="str">"monitor"</span>,
+                               password=<span class="str">"secret"</span>, connect_timeout=<span class="num">3</span>)
+        <span class="kw">with</span> conn.cursor(pymysql.cursors.DictCursor) <span class="kw">as</span> cur:
+            cur.execute(<span class="str">"SHOW SLAVE STATUS"</span>)
+            row = cur.fetchone()
+        conn.close()
+
+        <span class="kw">if not</span> row:
+            <span class="kw">return</span> <span class="cls">ReplicaStatus</span>(host=host, lag_seconds=<span class="kw">None</span>, io_running=<span class="kw">False</span>,
+                                    sql_running=<span class="kw">False</span>, gtid_set=<span class="str">""</span>, healthy=<span class="kw">False</span>)
+
+        lag = row.get(<span class="str">"Seconds_Behind_Master"</span>)
+        <span class="kw">return</span> <span class="cls">ReplicaStatus</span>(
+            host=host,
+            lag_seconds=int(lag) <span class="kw">if</span> lag <span class="kw">is not None else None</span>,
+            io_running=row[<span class="str">"Slave_IO_Running"</span>] == <span class="str">"Yes"</span>,
+            sql_running=row[<span class="str">"Slave_SQL_Running"</span>] == <span class="str">"Yes"</span>,
+            gtid_set=row.get(<span class="str">"Executed_Gtid_Set"</span>, <span class="str">""</span>),
+            healthy=row[<span class="str">"Slave_IO_Running"</span>] == <span class="str">"Yes"</span>
+                    <span class="kw">and</span> row[<span class="str">"Slave_SQL_Running"</span>] == <span class="str">"Yes"</span>
+                    <span class="kw">and</span> (lag <span class="kw">is None or</span> int(lag) <= LAG_THRESHOLD_S)
+        )
+    <span class="kw">except</span> Exception <span class="kw">as</span> e:
+        print(f<span class="str">"[ERROR] Cannot reach replica {host}: {e}"</span>)
+        <span class="kw">return</span> <span class="cls">ReplicaStatus</span>(host=host, lag_seconds=<span class="kw">None</span>, io_running=<span class="kw">False</span>,
+                                sql_running=<span class="kw">False</span>, gtid_set=<span class="str">""</span>, healthy=<span class="kw">False</span>)
+
+
+<span class="kw">class</span> <span class="cls">ReplicationMonitor</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, replicas: List[str]):
+        self.replicas      = replicas
+        self.fail_counts:  Dict[str, int]  = {h: <span class="num">0</span> <span class="kw">for</span> h <span class="kw">in</span> replicas}
+        self.healthy_pool: List[str]       = list(replicas)
+        self._lock = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">monitor_loop</span>(self, interval: int = <span class="num">5</span>):
+        <span class="kw">while True</span>:
+            <span class="kw">for</span> host <span class="kw">in</span> self.replicas:
+                status = check_replica(host)
+                <span class="kw">with</span> self._lock:
+                    <span class="kw">if</span> status.healthy:
+                        self.fail_counts[host] = <span class="num">0</span>
+                        <span class="kw">if</span> host <span class="kw">not in</span> self.healthy_pool:
+                            self.healthy_pool.append(host)
+                            print(f<span class="str">"[RESTORED] {host} back in read pool"</span>)
+                    <span class="kw">else</span>:
+                        self.fail_counts[host] += <span class="num">1</span>
+                        <span class="kw">if</span> self.fail_counts[host] >= HEALTH_FAIL_LIMIT:
+                            <span class="kw">if</span> host <span class="kw">in</span> self.healthy_pool:
+                                self.healthy_pool.remove(host)
+                                lag_str = f<span class="str">"lag={status.lag_seconds}s"</span> <span class="kw">if</span> status.lag_seconds <span class="kw">else</span> <span class="str">"unreachable"</span>
+                                print(f<span class="str">"[REMOVED] {host} from read pool ({lag_str})"</span>)
+            time.sleep(interval)
+
+    <span class="kw">def</span> <span class="fn2">get_read_replica</span>(self) -> Optional[str]:
+        <span class="str">"""Round-robin across healthy replicas."""</span>
+        <span class="kw">with</span> self._lock:
+            <span class="kw">return</span> self.healthy_pool[int(time.time()) % len(self.healthy_pool)] <span class="kw">if</span> self.healthy_pool <span class="kw">else None</span>
+
+
+<span class="cm"># ── Patroni-style failover using etcd ────────────────</span>
+<span class="kw">def</span> <span class="fn2">acquire_primary_lease</span>(etcd_client, node_id: str, ttl: int = <span class="num">10</span>) -> bool:
+    <span class="str">"""Acquire the primary lease. Returns True if this node is primary."""</span>
+    <span class="kw">try</span>:
+        <span class="cm"># etcd compare-and-set: only set if key doesn't exist</span>
+        resp = etcd_client.transaction(
+            compare=[etcd_client.transactions.version(<span class="str">"/primary"</span>) == <span class="num">0</span>],
+            success=[etcd_client.transactions.put(<span class="str">"/primary"</span>, node_id, lease=ttl)],
+            failure=[]
+        )
+        <span class="kw">return</span> resp.succeeded
+    <span class="kw">except</span>: <span class="kw">return False</span>
+
+
+<span class="kw">def</span> <span class="fn2">primary_heartbeat_loop</span>(etcd_client, node_id: str, lease_id: int, interval: int = <span class="num">3</span>):
+    <span class="str">"""Renew the primary lease every 3s. If we can't, voluntarily demote."""</span>
+    <span class="kw">while True</span>:
+        <span class="kw">try</span>:
+            etcd_client.refresh_lease(lease_id)  <span class="cm"># renew TTL</span>
+        <span class="kw">except</span> Exception:
+            print(<span class="str">"[DEMOTE] Cannot renew lease — network issue. Stepping down as primary."</span>)
+            <span class="cm"># Set read-only: prevent new writes</span>
+            <span class="kw">break</span>
+        time.sleep(interval)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🔄 Replication Mode: Async vs Semi-sync vs Sync</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Async (default MySQL)</div><p>Primary commits without waiting for replica ack. Zero write latency overhead. RPO = up to seconds of data loss on primary failure. Standard for write-heavy workloads where some data loss is acceptable (e.g., analytics, logging). Most commonly deployed due to simplicity.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Semi-sync (1 ACK)</div><p>Primary waits for at least one replica to write to its relay log before committing. Guarantees zero data loss on failover (at least 1 replica always has the latest transaction). Write latency +0.5-2ms (one network RTT). Fallback to async if no replica acks within timeout. Best balance of durability and performance.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Fully Sync (all replicas)</div><p>Primary waits for ALL replicas to ack. Zero data loss guaranteed. Write latency = slowest replica × overhead. Impractical at scale — a single slow replica blocks all writes. Used by MySQL Cluster (NDB) and only when absolute durability is required (financial transactions). Usually replaced by semi-sync + monitoring.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🛡 Failover Tool: Orchestrator vs Patroni vs AWS RDS</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Orchestrator (MySQL)</div><p>Purpose-built for MySQL HA. Understands replication topology. Automatic failover with quorum detection. Splits-brain safe via Raft-based agent quorum. Used by GitHub, Booking.com. Open source. Requires operational expertise. Best for on-prem or self-managed MySQL at scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Patroni (PostgreSQL)</div><p>Template for PostgreSQL HA. Uses etcd/ZooKeeper/Consul for distributed consensus (primary lease). Automatic failover in &lt;30s. REST API for manual operations. Industry standard for self-managed Postgres. Used by Zalando, GitLab. Requires etcd cluster as a dependency.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">AWS RDS Multi-AZ</div><p>Fully managed failover. Synchronous replica in another AZ. Automatic failover in 60-120s (slower than Orchestrator/Patroni). No operational overhead — AWS handles everything. Cost: 2× instance cost for standby. Best for teams without DB operations expertise or low tolerance for operational complexity.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

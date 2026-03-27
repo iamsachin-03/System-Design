@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #20 — Typeahead / Autocomplete</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#818cf8;--a2:#6366f1;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#c7d2fe;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#08080f 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:-80px;right:-60px;width:380px;height:380px;background:radial-gradient(circle,rgba(129,140,248,.05) 0%,transparent 65%);pointer-events:none}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(129,140,248,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#e0e7ff 0%,#818cf8 50%,#4f46e5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(129,140,248,.07);color:#c7d2fe;border:1px solid rgba(129,140,248,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(129,140,248,.1);color:var(--ecolor);border:1.5px solid rgba(129,140,248,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(129,140,248,.08);color:var(--accent);border:1px solid rgba(129,140,248,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.info-box{background:rgba(129,140,248,.05);border:1px solid rgba(129,140,248,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#c7d2fe;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(129,140,248,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(129,140,248,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#818cf8;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+.api-ep{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.api-head{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+.http-m{padding:4px 12px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.m-get{background:rgba(0,212,255,.12);color:#7dd3fc;border:1px solid rgba(0,212,255,.22)}
+.m-post{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.api-path{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);font-weight:600}
+.api-desc{font-size:12px;color:var(--muted2);margin-left:auto}
+.api-sec{padding:14px 20px;border-bottom:1px solid rgba(30,45,69,.5)}.api-sec:last-child{border-bottom:none}
+.api-sec-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.frow{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;font-size:12.5px}
+.fn{font-family:'JetBrains Mono',monospace;color:#7dd3fc;min-width:140px;flex-shrink:0}
+.ft{color:#a78bfa;min-width:80px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0}
+.fr{color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fo{color:#94a3b8;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:60px;flex-shrink:0}
+.fd{color:#8899b0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Search Infrastructure › <span>20 / Typeahead</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔡</div>
+    <div>
+      <div class="h-title">Typeahead / Autocomplete</div>
+      <div class="h-desc">Design a real-time search autocomplete returning top-5 suggestions in &lt;100ms for every keystroke at 10M QPS — using a trie data structure, prefix compression, Redis hot-prefix cache, multi-layer CDN caching, and an offline pipeline to keep suggestions fresh from real query logs.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium</span>
+        <span class="badge b-tag">Trie</span>
+        <span class="badge b-tag">Prefix Cache</span>
+        <span class="badge b-tag">CDN</span>
+        <span class="badge b-tag">Trending</span>
+        <span class="badge b-tag">Top-K at Node</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('trie',this)">🌲 Trie Deep Dive</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('api',this)">🔌 API Design</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<!-- REQUIREMENTS -->
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Clarify Scope</div><div class="sec-body">
+    <div class="info-box"><strong>Typeahead is deceptively simple.</strong> The hard parts: sub-100ms at 10M QPS, keeping suggestions fresh as trends change, handling the massive traffic difference between 1-char and 6-char prefixes, and filtering harmful content.</div><br>
+    <div class="rq-grid">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🙋 Ask These</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Global suggestions or personalised per user?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How many suggestions to return? QPS?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>How fresh must suggestions be?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Exact prefix only, or also fuzzy / typo-tolerant?</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Multi-language / Unicode?</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--a4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">✅ Assumptions</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Global query-frequency ranking. No personalisation.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Top 5. 10M QPS peak (Google-scale).</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Near-real-time: hourly batch + 5-min trending overlay.</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>Exact prefix match. No fuzzy (out of scope).</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a4)"></div><div>English/ASCII only.</div></div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">✅ Functional + Non-Functional</div><div class="sec-body">
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>suggest(prefix) → top 5:</strong> sorted by frequency descending</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Trending boost:</strong> rising queries (e.g., breaking news) surface quickly</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Content filter:</strong> blocklist for harmful/sensitive queries</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Fresh data:</strong> hourly trie rebuild from aggregated logs</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>p99 end-to-end &lt;100ms (CDN + network)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Backend processing &lt;5ms (in-memory trie)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>10M QPS — 99%+ served from CDN edge</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Trie rebuild zero-downtime (atomic swap)</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- Q&A -->
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Data Structure Choice</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · TRIE VS ALTERNATIVES</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What data structure would you use? Why not a SQL LIKE query or a hash map?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Three options — each with fatal flaws at scale:<br><br>
+      <b>SQL LIKE 'pre%':</b> Even with a B-tree index, this requires a range scan over all strings starting with the prefix. With 300M unique queries and 10M QPS, this becomes seconds per lookup. Non-starter.<br><br>
+      <b>Hash map (prefix → top-5 list):</b> O(1) lookup. But pre-computing every prefix for every query string causes memory explosion — a 20-char query generates 20 prefix entries. At 300M queries × avg 20 chars = 6 billion entries. Too large.<br><br>
+      <b>Trie (prefix tree):</b> Characters as nodes. "amazon" and "apple" share the "a" root. Each node stores top-5 suggestions for that prefix — precomputed at build time. Lookup: O(L) where L = prefix length ≈ constant. Memory-efficient because shared prefixes share nodes. Winner.
+      <br><br>
+      <b>Key optimisation — cache top-5 at each node:</b> Naïve trie lookup would require traversing the entire subtree to find top-5. Instead, during build we run a DFS and store the top-5 at every node. Lookups become O(L) — just follow the prefix, read the stored list.
+    </div></div>
+    <div class="tip-box"><strong>💡 Always explain why the naïve trie is too slow</strong> (subtree traversal per lookup), then immediately pivot to the optimised version with cached top-K at each node. This distinction is what separates strong candidates.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔄 Phase 2 — Data Pipeline & Freshness</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · PIPELINE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>"World Cup 2026" starts trending. How does it appear in suggestions within minutes?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Two pipelines with different freshness guarantees:<br><br>
+      <b>1. Hourly batch rebuild:</b> Every search is logged to Kafka. A Spark/Flink job aggregates query counts over a sliding 7-day window with exponential decay on older data. Every hour: generate top queries per prefix → build new trie → serialise to snapshot → hot-swap. Old trie stays live during build; atomic pointer swap when done. Zero downtime.<br><br>
+      <b>2. 5-minute trending overlay:</b> A separate Flink job counts queries in a 5-minute sliding window and detects velocity spikes (query count in last 5min &gt; 3× average). Spikes written to Redis ZSet: <code>ZINCRBY trending:{prefix} {velocity} {query}</code>. At serve time the API merges trie results with trending scores — trending queries can bump their way into the top-5 even if their absolute frequency is lower. This gives us breaking-news sensitivity within 5 minutes.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 3 — Scaling to 10M QPS</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · SCALE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>10M QPS is enormous. How do you handle it without the trie service becoming a bottleneck?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Multi-layer caching eliminates nearly all load from the trie service:<br><br>
+      <b>Layer 1 — Client cache:</b> Browser/app caches results for the current session. If user types "am", gets results, then backspaces to "a" — served from local cache. Handles ~30% of keystrokes.<br><br>
+      <b>Layer 2 — CDN edge (5-sec TTL for 1-3 char prefixes):</b> <code>GET /autocomplete?q=am</code> cached at CDN edge globally. 5s stale is acceptable. CDN absorbs ~80% of QPS. 1-3 char prefixes have massive hit rates since millions of users type the same short prefixes simultaneously.<br><br>
+      <b>Layer 3 — App server in-process LRU (100K prefixes):</b> ~95% hit rate for top 100K prefixes. Cache miss costs one trie lookup (&lt;1ms).<br><br>
+      <b>Layer 4 — Trie service:</b> Only ~5% of 10M QPS = 500K QPS reaches here. The 1.85 GB trie is loaded entirely in RAM. 20 read replicas each handle 25K QPS — trivial for an in-memory lookup.
+    </div></div>
+  </div></div>
+</div>
+
+<!-- TRIE DEEP DIVE -->
+<div id="trie" class="panel">
+  <div class="sec"><div class="sec-head">🌲 Trie Structure & Top-K Caching</div><div class="sec-body">
+    <div class="diag">
+      <svg viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+        <defs><marker id="ta" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#818cf8"/></marker></defs>
+        <!-- Root -->
+        <circle cx="350" cy="30" r="18" fill="rgba(129,140,248,.2)" stroke="#818cf8" stroke-width="2"/>
+        <text x="350" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#818cf8">*</text>
+        <!-- Level 1 -->
+        <line x1="350" y1="48" x2="150" y2="100" stroke="#334155" stroke-width="1.5"/>
+        <line x1="350" y1="48" x2="350" y2="100" stroke="#334155" stroke-width="1.5"/>
+        <line x1="350" y1="48" x2="550" y2="100" stroke="#334155" stroke-width="1.5"/>
+        <circle cx="150" cy="115" r="18" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="150" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c7d2fe">a</text>
+        <circle cx="350" cy="115" r="18" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="350" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c7d2fe">g</text>
+        <circle cx="550" cy="115" r="18" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="550" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c7d2fe">t</text>
+        <!-- Level 2 under a -->
+        <line x1="150" y1="133" x2="80" y2="185" stroke="#334155" stroke-width="1.5"/>
+        <line x1="150" y1="133" x2="220" y2="185" stroke="#334155" stroke-width="1.5"/>
+        <circle cx="80" cy="200" r="18" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="80" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c7d2fe">m</text>
+        <circle cx="220" cy="200" r="18" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="220" y="205" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c7d2fe">p</text>
+        <!-- Level 3 under am -->
+        <line x1="80" y1="218" x2="50" y2="265" stroke="#334155" stroke-width="1.5"/>
+        <line x1="80" y1="218" x2="110" y2="265" stroke="#334155" stroke-width="1.5"/>
+        <circle cx="50" cy="280" r="16" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="50" y="285" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#c7d2fe">a</text>
+        <circle cx="110" cy="280" r="16" fill="rgba(16,185,129,.15)" stroke="#10b981" stroke-width="2"/>
+        <text x="110" y="285" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#6ee7b7">z</text>
+        <text x="130" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">→ "amaz..." ✓</text>
+        <!-- Top-5 cache annotation on "am" node -->
+        <rect x="140" y="178" width="190" height="78" rx="6" fill="rgba(129,140,248,.05)" stroke="rgba(129,140,248,.2)" stroke-width="1"/>
+        <text x="150" y="194" font-family="JetBrains Mono" font-size="8" fill="#818cf8">TOP-5 cached at "am":</text>
+        <text x="150" y="207" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">1. amazon (8.2B)</text>
+        <text x="150" y="219" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2. amazon prime (3.1B)</text>
+        <text x="150" y="231" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">3. amazon music (1.4B)</text>
+        <text x="150" y="243" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">4. american airlines (0.9B)</text>
+        <text x="150" y="248" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">5. amazon fresh (0.7B)</text>
+        <line x1="99" y1="205" x2="138" y2="215" stroke="#818cf8" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="108" y="196" font-family="JetBrains Mono" font-size="8" fill="#818cf8">O(1) read!</text>
+        <!-- Legend -->
+        <rect x="20" y="335" width="360" height="36" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.05)"/>
+        <circle cx="36" cy="353" r="8" fill="rgba(129,140,248,.2)" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="50" y="357" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">Internal node</text>
+        <circle cx="150" cy="353" r="8" fill="rgba(16,185,129,.15)" stroke="#10b981" stroke-width="1.5"/>
+        <text x="164" y="357" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">Complete query (terminal)</text>
+        <rect x="280" y="346" width="70" height="14" rx="3" fill="rgba(129,140,248,.05)" stroke="rgba(129,140,248,.2)" stroke-width="1"/>
+        <text x="315" y="357" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6b7fa0">Cached top-5</text>
+      </svg>
+    </div>
+    <br>
+    <div class="two-col">
+      <div class="flow-box">
+        <div class="flow-title" style="color:#c7d2fe">BUILD: DFS PROPAGATION</div>
+        <div class="fs"><div class="fnum">1</div><div>Insert all (query, freq) pairs into trie</div></div>
+        <div class="fs"><div class="fnum">2</div><div>DFS from root; at each node collect all descendant (query, freq) pairs</div></div>
+        <div class="fs"><div class="fnum">3</div><div>Keep only top-5 by frequency at each node — discard the rest</div></div>
+        <div class="fs"><div class="fnum">4</div><div>Build time: O(N × avg_len). Done offline hourly.</div></div>
+        <div class="fs"><div class="fnum">5</div><div>Atomic swap: new trie built while old serves traffic. Pointer swap = instant cutover.</div></div>
+      </div>
+      <div class="flow-box">
+        <div class="flow-title" style="color:#6ee7b7">LOOKUP: O(PREFIX_LENGTH)</div>
+        <div class="fs"><div class="fnum">1</div><div>Navigate from root, one char at a time</div></div>
+        <div class="fs"><div class="fnum">2</div><div>At each node: <code>children.get(c)</code> → O(1)</div></div>
+        <div class="fs"><div class="fnum">3</div><div>After L steps: reach the node for the full prefix</div></div>
+        <div class="fs"><div class="fnum">4</div><div>Return <code>node.top_k</code> — already precomputed</div></div>
+        <div class="fs"><div class="fnum">5</div><div>Merge with Redis trending overlay → final top-5</div></div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🗜 Patricia (Compressed) Trie</div><div class="sec-body">
+    <div class="info-box"><strong>Production systems compress single-child chains.</strong> Instead of nodes a→m→a→z→o→n, store one node "amazon". Reduces memory 3-5×.</div>
+    <div class="two-col" style="margin-top:14px">
+      <div class="flow-box">
+        <div class="flow-title" style="color:#fda4af">STANDARD: 7 nodes for "amazon"</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;line-height:2.2">
+          root → a → m → a → z → o → n ✓<br>
+          <span style="color:#4e6070">Memory: 7 × 350B = 2.45 KB per query path</span>
+        </div>
+      </div>
+      <div class="flow-box">
+        <div class="flow-title" style="color:#6ee7b7">PATRICIA: 1 node for "amazon"</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;line-height:2.2">
+          root → "amazon" ✓<br>
+          <span style="color:#4e6070">Memory: 1 × 380B = 380 B per query path</span>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- CAPACITY -->
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity Estimation</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">QPS: 10M peak. Multi-layer caching breakdown:</span>
+  <span class="label">Layer 1 (client cache):  30% absorbed → </span><span class="val">7M QPS</span><span class="label"> to network</span>
+  <span class="label">Layer 2 (CDN, 5s TTL):  80% of 7M → </span><span class="val">5.6M absorbed</span><span class="label">, 1.4M to app</span>
+  <span class="label">Layer 3 (in-process LRU): 95% of 1.4M → </span><span class="val">1.33M absorbed</span><span class="label">, 70K to trie</span>
+  <span class="label">Layer 4 (trie service):  70K QPS ÷ 20 replicas = </span><span class="val">3,500 QPS/replica</span>
+
+<span class="label">Trie memory (top 5M prefixes only, Patricia compressed):</span>
+  <span class="label">5M nodes × 370B ≈ </span><span class="val">1.85 GB per replica</span>
+
+<span class="label">Rebuild pipeline: 10M QPS × 3600 = 36B events/hour</span>
+  <span class="label">Spark aggregation (100-node cluster): ~8 min</span>
+  <span class="label">Trie build: ~2 min | Serialise+distribute: ~2 min</span>
+  <span class="label">Total pipeline: </span><span class="val">~15 min</span><span class="label"> — new trie hot every hour</span>
+
+<span class="result">→ 20 trie replicas × 1.85 GB = 37 GB RAM total. 8-core servers suffice.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Metric</th><th>Value</th><th>Notes</th></tr>
+      <tr><td>Peak QPS</td><td class="hi">10M</td><td>Per-keystroke requests</td></tr>
+      <tr><td>QPS reaching trie</td><td class="hi">~70K</td><td>0.7% after 3 cache layers</td></tr>
+      <tr><td>Trie size (top 5M prefixes)</td><td class="hi">1.85 GB</td><td>Patricia trie, in RAM</td></tr>
+      <tr><td>Trie replicas</td><td class="hi">20</td><td>3,500 QPS each — trivial</td></tr>
+      <tr><td>Pipeline rebuild time</td><td class="hi">~15 min</td><td>Hourly, zero-downtime swap</td></tr>
+      <tr><td>Trending update lag</td><td class="hi">5 min</td><td>Redis ZSet velocity overlay</td></tr>
+      <tr><td>Lookup latency (in-memory)</td><td class="hi">&lt;1ms</td><td>O(L), L ≤ 20 chars</td></tr>
+      <tr><td>End-to-end p99</td><td class="hi">&lt;100ms</td><td>CDN + network budget</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<!-- API -->
+<div id="api" class="panel">
+  <div class="sec"><div class="sec-head">🔌 API Design</div><div class="sec-body">
+    <div class="api-ep">
+      <div class="api-head"><span class="http-m m-get">GET</span><span class="api-path">/api/v1/autocomplete</span><span class="api-desc">Get top-5 suggestions for a prefix</span></div>
+      <div class="api-body">
+        <div class="api-sec"><div class="api-sec-title">Query Parameters</div>
+          <div class="frow"><span class="fn">q</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Prefix string. Lowercased, stripped. Min 1 char, max 100 chars.</span></div>
+          <div class="frow"><span class="fn">limit</span><span class="ft">integer</span><span class="fo">optional</span><span class="fd">Max suggestions. Default 5, max 10.</span></div>
+        </div>
+        <div class="api-sec"><div class="api-sec-title">Response 200</div>
+          <div class="frow"><span class="fn">suggestions</span><span class="ft">object[]</span><span class="fo"></span><span class="fd"><code>[{"query":"amazon prime","score":3100000000,"is_trending":false}]</code> — sorted by score desc</span></div>
+          <div class="frow"><span class="fn">Cache-Control</span><span class="ft">header</span><span class="fo"></span><span class="fd"><code>public, max-age=5</code> for 1-3 char prefixes. <code>max-age=60</code> for longer. CDN-cacheable.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="api-ep">
+      <div class="api-head"><span class="http-m m-post">POST</span><span class="api-path">/internal/queries/record</span><span class="api-desc">Log a completed search (feeds pipeline)</span></div>
+      <div class="api-body">
+        <div class="api-sec"><div class="api-sec-title">Request (async, fire-and-forget)</div>
+          <div class="frow"><span class="fn">query</span><span class="ft">string</span><span class="fr">required</span><span class="fd">Executed query string. Lowercased, anonymised.</span></div>
+          <div class="frow"><span class="fn">timestamp</span><span class="ft">long</span><span class="fr">required</span><span class="fd">Unix ms. Goes to Kafka → Spark aggregate → trie rebuild.</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- HLD -->
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 High-Level Architecture</div><div class="sec-body">
+    <div class="diag">
+      <svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:420px">
+        <defs>
+          <marker id="hla" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#818cf8"/></marker>
+          <marker id="hlg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+          <marker id="hlo" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+          <marker id="hlr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+        </defs>
+        <!-- READ PATH -->
+        <rect x="8" y="8" width="530" height="300" rx="10" fill="rgba(129,140,248,.02)" stroke="rgba(129,140,248,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="270" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#818cf8">READ PATH (10M QPS)</text>
+        <rect x="18" y="42" width="90" height="42" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="63" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">⌨️ User</text>
+        <text x="63" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">keystrokes</text>
+        <rect x="128" y="42" width="110" height="52" rx="7" fill="#131c2e" stroke="#818cf8" stroke-width="2"/>
+        <text x="183" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c7d2fe">🌐 CDN</text>
+        <text x="183" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">5s TTL, 1-3 char</text>
+        <text x="183" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">~80% hit rate</text>
+        <rect x="258" y="42" width="130" height="62" rx="7" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="323" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c7d2fe">⚙️ App Servers</text>
+        <text x="323" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">in-process LRU</text>
+        <text x="323" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">100K prefix cache</text>
+        <text x="323" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">merge trending</text>
+        <rect x="408" y="42" width="120" height="62" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="2"/>
+        <text x="468" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🌲 Trie Service</text>
+        <text x="468" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">×20 read replicas</text>
+        <text x="468" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">1.85 GB each in RAM</text>
+        <text x="468" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">O(L) lookup</text>
+        <rect x="168" y="142" width="110" height="42" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+        <text x="223" y="160" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Trending</text>
+        <text x="223" y="174" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Redis ZSet 5-min</text>
+        <!-- WRITE / PIPELINE PATH -->
+        <rect x="548" y="8" width="360" height="300" rx="10" fill="rgba(16,185,129,.02)" stroke="rgba(16,185,129,.1)" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="728" y="26" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#10b981">WRITE / PIPELINE PATH</text>
+        <rect x="560" y="42" width="130" height="42" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+        <text x="625" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">🔍 Search Svc</text>
+        <text x="625" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">logs query events</text>
+        <rect x="710" y="42" width="130" height="42" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+        <text x="775" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#6ee7b7">📨 Kafka</text>
+        <text x="775" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">query-events topic</text>
+        <rect x="560" y="114" width="130" height="52" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="625" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fcd34d">📊 Spark Batch</text>
+        <text x="625" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">hourly aggregation</text>
+        <text x="625" y="160" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">builds trie snapshot</text>
+        <rect x="710" y="114" width="130" height="52" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="1.5"/>
+        <text x="775" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb7185">⚡ Flink Trending</text>
+        <text x="775" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">5-min windows</text>
+        <text x="775" y="160" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">→ Redis ZSet</text>
+        <rect x="620" y="198" width="200" height="42" rx="7" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+        <text x="720" y="216" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#c7d2fe">🪣 S3 Trie Snapshots</text>
+        <text x="720" y="230" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">hourly build → distribute to replicas</text>
+        <!-- Arrows -->
+        <line x1="108" y1="63" x2="126" y2="63" stroke="#818cf8" stroke-width="1.5" marker-end="url(#hla)"/>
+        <line x1="238" y1="73" x2="256" y2="73" stroke="#818cf8" stroke-width="1.5" marker-end="url(#hla)"/>
+        <line x1="388" y1="73" x2="406" y2="73" stroke="#818cf8" stroke-width="1.5" marker-end="url(#hla)"/>
+        <line x1="690" y1="63" x2="708" y2="63" stroke="#10b981" stroke-width="1.5" marker-end="url(#hlg)"/>
+        <line x1="775" y1="84" x2="775" y2="112" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hlo)"/>
+        <line x1="690" y1="140" x2="820" y2="140" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="625" y1="166" x2="625" y2="196" stroke="#818cf8" stroke-width="1.5" marker-end="url(#hla)"/>
+        <line x1="720" y1="196" x2="468" y2="106" stroke="#818cf8" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hla)"/>
+        <line x1="775" y1="166" x2="275" y2="185" stroke="#f43f5e" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#hlr)"/>
+        <!-- Flow notes -->
+        <text x="10" y="340" font-family="JetBrains Mono" font-size="9" fill="#818cf8">READ: User → CDN (hit: &lt;5ms) → App LRU → Trie service → merge trending → return</text>
+        <text x="10" y="358" font-family="JetBrains Mono" font-size="9" fill="#10b981">WRITE: Search → Kafka → Spark (hourly) → S3 snapshot → distributed to trie replicas (hot-swap)</text>
+        <text x="10" y="376" font-family="JetBrains Mono" font-size="9" fill="#f43f5e">TRENDING: Kafka → Flink (5-min) → Redis ZSet → merged at app server layer</text>
+      </svg>
+    </div>
+  </div></div>
+</div>
+
+<!-- CODE -->
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Typeahead — Java: Trie with cached top-K at each node
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">TrieNode</span> {
+    <span class="kw">public</span> <span class="cls">Map</span>&lt;<span class="cls">Character</span>, <span class="cls">TrieNode</span>&gt; children = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+    <span class="kw">public boolean</span>                    isEnd     = <span class="kw">false</span>;
+    <span class="kw">public long</span>                        frequency = <span class="num">0</span>;
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">Suggestion</span>&gt;           topK      = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+}
+
+<span class="kw">public class</span> <span class="cls">AutocompleteTrie</span> {
+
+    <span class="kw">private final</span> <span class="cls">TrieNode</span> root = <span class="kw">new</span> <span class="cls">TrieNode</span>();
+    <span class="kw">private final int</span>       K    = <span class="num">5</span>;
+
+    <span class="cm">/** O(L): navigate to prefix node, return cached top-K */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">Suggestion</span>&gt; <span class="fn2">suggest</span>(<span class="cls">String</span> prefix) {
+        <span class="cls">TrieNode</span> node = root;
+        <span class="kw">for</span> (<span class="kw">char</span> c : prefix.toLowerCase().toCharArray()) {
+            node = node.children.get(c);
+            <span class="kw">if</span> (node == <span class="kw">null</span>) <span class="kw">return</span> <span class="cls">List</span>.of();
+        }
+        <span class="kw">return</span> node.topK; <span class="cm">// pre-computed at build time, O(1)</span>
+    }
+
+    <span class="cm">/** Insert query and its frequency */</span>
+    <span class="kw">public void</span> <span class="fn2">insert</span>(<span class="cls">String</span> query, <span class="kw">long</span> frequency) {
+        <span class="cls">TrieNode</span> node = root;
+        <span class="kw">for</span> (<span class="kw">char</span> c : query.toLowerCase().toCharArray()) {
+            node = node.children.computeIfAbsent(c, k -> <span class="kw">new</span> <span class="cls">TrieNode</span>());
+        }
+        node.isEnd     = <span class="kw">true</span>;
+        node.frequency = frequency;
+    }
+
+    <span class="cm">/** DFS: propagate top-K up to every ancestor node */</span>
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">Suggestion</span>&gt; <span class="fn2">buildTopK</span>(<span class="cls">TrieNode</span> node, <span class="cls">String</span> path) {
+        <span class="cls">List</span>&lt;<span class="cls">Suggestion</span>&gt; results = <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;();
+        <span class="kw">if</span> (node.isEnd) results.add(<span class="kw">new</span> <span class="cls">Suggestion</span>(path, node.frequency));
+        <span class="kw">for</span> (<span class="kw">var</span> entry : node.children.entrySet()) {
+            results.addAll(<span class="fn2">buildTopK</span>(entry.getValue(), path + entry.getKey()));
+        }
+        results.sort(<span class="cls">Comparator</span>.comparingLong(<span class="cls">Suggestion</span>::score).reversed());
+        node.topK = results.stream().limit(K).collect(<span class="cls">Collectors</span>.toList());
+        <span class="kw">return</span> node.topK;
+    }
+
+    <span class="cm">/** Hot-swap: build new trie offline, swap pointer atomically */</span>
+    <span class="kw">private volatile</span> <span class="cls">AutocompleteTrie</span> activeTrie;
+
+    <span class="kw">public void</span> <span class="fn2">hotSwap</span>(<span class="cls">AutocompleteTrie</span> newTrie) {
+        <span class="kw">this</span>.activeTrie = newTrie; <span class="cm">// volatile write — instantly visible to all threads</span>
+    }
+}
+
+<span class="cm">// ── Autocomplete Service — trending merge ──────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">AutocompleteService</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">AutocompleteTrie</span> trie;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+
+    <span class="kw">public</span> <span class="cls">List</span>&lt;<span class="cls">Suggestion</span>&gt; <span class="fn2">autocomplete</span>(<span class="cls">String</span> prefix, <span class="kw">int</span> limit) {
+        prefix = prefix.toLowerCase().strip();
+
+        <span class="cm">// 1. Base suggestions from trie (O(L), pre-computed)</span>
+        <span class="cls">List</span>&lt;<span class="cls">Suggestion</span>&gt; base = trie.suggest(prefix);
+
+        <span class="cm">// 2. Trending overlay from Redis ZSet (5-min velocity)</span>
+        <span class="cls">Set</span>&lt;<span class="cls">ZSetOperations</span>.<span class="cls">TypedTuple</span>&lt;<span class="cls">String</span>&gt;&gt; trending =
+            redis.opsForZSet().reverseRangeWithScores(
+                <span class="str">"trending:"</span> + prefix, <span class="num">0</span>, limit - <span class="num">1</span>);
+
+        <span class="cm">// 3. Merge: boost trending items, deduplicate</span>
+        <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">Suggestion</span>&gt; merged = <span class="kw">new</span> <span class="cls">LinkedHashMap</span>&lt;&gt;();
+        <span class="kw">for</span> (<span class="cls">Suggestion</span> s : base) merged.put(s.query(), s);
+        <span class="kw">for</span> (<span class="kw">var</span> t : trending) {
+            merged.merge(t.getValue(),
+                <span class="kw">new</span> <span class="cls">Suggestion</span>(t.getValue(), t.getScore().longValue(), <span class="kw">true</span>),
+                (existing, trending_) -> <span class="kw">new</span> <span class="cls">Suggestion</span>(
+                    existing.query(), existing.score() + trending_.score(), <span class="kw">true</span>));
+        }
+
+        <span class="kw">return</span> merged.values().stream()
+            .sorted(<span class="cls">Comparator</span>.comparingLong(<span class="cls">Suggestion</span>::score).reversed())
+            .limit(limit)
+            .collect(<span class="cls">Collectors</span>.toList());
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Typeahead — Python: Trie + trending overlay
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field
+<span class="kw">from</span> typing <span class="kw">import</span> Dict, List, Optional
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">TrieNode</span>:
+    children: Dict[str, '<span class="cls">TrieNode</span>'] = field(default_factory=dict)
+    is_end:   bool                     = False
+    frequency: int                     = 0
+    top_k:    List[tuple]              = field(default_factory=list)  <span class="cm"># [(query, score)]</span>
+
+
+<span class="kw">class</span> <span class="cls">AutocompleteTrie</span>:
+    K = <span class="num">5</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self):
+        self.root = <span class="cls">TrieNode</span>()
+
+    <span class="kw">def</span> <span class="fn2">insert</span>(self, query: str, frequency: int):
+        node = self.root
+        <span class="kw">for</span> c <span class="kw">in</span> query.lower():
+            <span class="kw">if</span> c <span class="kw">not in</span> node.children:
+                node.children[c] = <span class="cls">TrieNode</span>()
+            node = node.children[c]
+        node.is_end    = True
+        node.frequency = frequency
+
+    <span class="kw">def</span> <span class="fn2">suggest</span>(self, prefix: str) -> List[tuple]:
+        <span class="str">"""O(L) lookup — returns pre-cached top_k list."""</span>
+        node = self.root
+        <span class="kw">for</span> c <span class="kw">in</span> prefix.lower():
+            <span class="kw">if</span> c <span class="kw">not in</span> node.children:
+                <span class="kw">return</span> []
+            node = node.children[c]
+        <span class="kw">return</span> node.top_k
+
+    <span class="kw">def</span> <span class="fn2">build_top_k</span>(self, node: <span class="cls">TrieNode</span> = <span class="kw">None</span>, path: str = <span class="str">""</span>) -> List[tuple]:
+        <span class="str">"""DFS: build and cache top-K at every node. Call once after all inserts."""</span>
+        <span class="kw">if</span> node <span class="kw">is None</span>: node = self.root
+        results = []
+        <span class="kw">if</span> node.is_end:
+            results.append((path, node.frequency))
+        <span class="kw">for</span> char, child <span class="kw">in</span> node.children.items():
+            results.extend(self.build_top_k(child, path + char))
+        results.sort(key=<span class="kw">lambda</span> x: -x[<span class="num">1</span>])
+        node.top_k = results[:self.K]
+        <span class="kw">return</span> results
+
+
+<span class="kw">class</span> <span class="cls">AutocompleteService</span>:
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, trie: <span class="cls">AutocompleteTrie</span>, redis):
+        self.trie  = trie
+        self.redis = redis
+
+    <span class="kw">def</span> <span class="fn2">autocomplete</span>(self, prefix: str, limit: int = <span class="num">5</span>) -> list:
+        prefix = prefix.lower().strip()
+
+        <span class="cm"># 1. Trie base results</span>
+        base     = {q: s <span class="kw">for</span> q, s <span class="kw">in</span> self.trie.suggest(prefix)}
+
+        <span class="cm"># 2. Trending overlay from Redis (5-min velocity scores)</span>
+        trending = self.redis.zrevrangebyscore(
+            f<span class="str">"trending:{prefix}"</span>, <span class="str">"+inf"</span>, <span class="str">"-inf"</span>,
+            start=<span class="num">0</span>, num=limit, withscores=True)
+
+        <span class="cm"># 3. Merge: trending items boost or inject new results</span>
+        merged = dict(base)
+        <span class="kw">for</span> query, velocity <span class="kw">in</span> trending:
+            merged[query] = merged.get(query, <span class="num">0</span>) + velocity
+
+        <span class="kw">return</span> sorted(merged.items(), key=<span class="kw">lambda</span> x: -x[<span class="num">1</span>])[:limit]
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- TRADEOFFS -->
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">📊 Data Structure: Trie vs Redis ZSet vs Elasticsearch</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Trie (chosen)</div><p>O(L) lookup, ~5M prefixes in 1.85 GB RAM. Best for exact prefix match at Google scale. Requires offline build + hot-swap. Optimal for this problem.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">⚠️ Redis ZSet (ZRANGEBYLEX)</div><p>Simple, no custom data structure. Works great for &lt;1M queries, &lt;100K QPS. At Google scale: one massive ZSet becomes a single-node bottleneck. Fine for small-scale autocomplete (product search, internal tools).</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">❌ Elasticsearch</div><p>Excellent for fuzzy search and complex ranking. But: too much overhead for simple prefix completion. Overkill operationally. Use if you also need full-text search over the same dataset.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🔄 Freshness: Hourly batch vs Real-time vs Hybrid</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">❌ Real-time trie updates</div><p>Every search updates trie nodes. Requires distributed write locks. With 11.6K searches/sec, lock contention kills throughput. Trie becomes unsafe to read during updates. Not practical.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">⚠️ Hourly batch only</div><p>Deterministic, safe. But breaking news ("earthquake in X") takes up to 1 hour to surface. Terrible UX for trending queries.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Hourly batch + 5-min trending overlay</div><p>Best of both. Stable base from batch; real-time responsiveness from Redis velocity overlay. Two independent systems — trending can fail without breaking core autocomplete.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #22 — Distributed ID Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#fb923c;--a2:#f97316;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fed7aa;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{background:linear-gradient(160deg,#07090f 0%,#0f0a07 40%,#07090f 100%);padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(251,146,60,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ffedd5 0%,#fb923c 50%,#c2410c 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(251,146,60,.07);color:#fed7aa;border:1px solid rgba(251,146,60,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(251,146,60,.1);color:var(--ecolor);border:1.5px solid rgba(251,146,60,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble em{color:#6ee7b7;font-style:normal;font-weight:500}
+.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.bubble ol{padding-left:20px;margin-top:8px}.bubble ol li{margin-bottom:7px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(251,146,60,.08);color:var(--accent);border:1px solid rgba(251,146,60,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.warn-box{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-left:3px solid var(--a4);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fcd34d;margin:12px 0;line-height:1.65}
+.info-box{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fed7aa;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(251,146,60,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:560px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(251,146,60,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#fb923c;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rq-item strong{color:#e2e8f0;font-weight:500}
+/* Bit layout */
+.bit-row{display:flex;gap:2px;align-items:stretch;height:52px;margin:14px 0}
+.bit-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;position:relative}
+.bit-label{font-size:9px;font-weight:400;margin-top:4px;opacity:.7}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>22 / Distributed ID Generator</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔢</div>
+    <div>
+      <div class="h-title">Distributed ID Generator</div>
+      <div class="h-desc">Design a system that generates globally unique 64-bit IDs at millions/sec with no coordination between servers — Twitter Snowflake deep-dive: bit layout, clock skew handling, datacenter/worker encoding, monotonicity guarantees, and all the tradeoffs between UUID, database sequences, and Snowflake.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium</span>
+        <span class="badge b-tag">Snowflake</span>
+        <span class="badge b-tag">Clock Skew</span>
+        <span class="badge b-tag">Monotonic</span>
+        <span class="badge b-tag">UUID</span>
+        <span class="badge b-tag">Bit Packing</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A Interview</button>
+  <button class="nbtn" onclick="show('snowflake',this)">❄️ Snowflake Internals</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('compare',this)">🆚 Compare Approaches</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>IDs are everywhere in distributed systems</strong> — tweet IDs, order IDs, user IDs, session tokens. The requirements seem simple but hide deep tradeoffs: uniqueness, ordering, performance, and coordination-free generation.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">MUST HAVE</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Globally unique:</strong> No two IDs ever match across any server, any datacenter</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>Sortable by time:</strong> IDs generated later are numerically larger — enables range scans, pagination</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>High throughput:</strong> 100K+ IDs/sec per node, millions/sec cluster-wide</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>64-bit integer:</strong> Fits in a long, compatible with most DBs and languages</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div><strong>No single point of failure:</strong> Each node generates IDs independently</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NICE TO HAVE</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Decode timestamp:</strong> Given an ID, extract when it was created</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Monotonic within a node:</strong> Sequence always increases within a millisecond</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Opaque:</strong> Non-guessable (don't expose sequential user IDs to attackers)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Compact:</strong> Short enough to use as URL slug, primary key</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div><strong>Cluster-aware:</strong> IDs encode datacenter + worker for debugging</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Why Not UUID?</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · UUID PROBLEMS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Why not just use UUID? It's already unique and well-supported everywhere.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      UUID v4 (random) has three production problems at scale:<br><br>
+      <b>1. Not sortable:</b> UUIDs are random — inserting them as primary keys in a B-tree index causes random page splits. Every new row lands in a random position in the index, requiring the DB to read a different page from disk each time. At scale, this destroys write performance and causes massive index fragmentation. MySQL with UUID primary keys can be 30-50% slower than sequential IDs.<br><br>
+      <b>2. Storage overhead:</b> UUID is 128 bits (16 bytes). A 64-bit Snowflake ID is 8 bytes — half the size. For a table with 1 billion rows, that's 8 GB saved just on the primary key column, plus proportional savings on every foreign key reference and index.<br><br>
+      <b>3. Not human-readable for debugging:</b> "550e8400-e29b-41d4-a716-446655440000" — you can't tell when this was created, which server generated it, or how to sort it relative to another ID.<br><br>
+      UUID v7 (new) addresses the sortability issue with a timestamp prefix, but it's 128-bit and not yet universally supported. Snowflake gives us sorted 64-bit IDs with embedded metadata.
+    </div></div>
+    <div class="tip-box"><strong>💡 Memorise the UUID problems:</strong> unsorted (B-tree fragmentation) + 128-bit overhead + no timestamp extractability. These three points come up in almost every ID generation discussion.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚡ Phase 2 — Snowflake Deep Dive</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · SNOWFLAKE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Explain the Snowflake ID format. How does it guarantee uniqueness without coordination?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      A Snowflake ID is a 64-bit integer composed of three parts:<br><br>
+      <code>[ 41-bit timestamp | 10-bit worker ID | 12-bit sequence ]</code><br><br>
+      <b>41-bit timestamp:</b> Milliseconds since a custom epoch (Twitter uses Nov 4, 2010). 2⁴¹ = 2.2 trillion milliseconds = <b>69 years</b> before overflow (Twitter's system runs until ~2080).<br><br>
+      <b>10-bit worker ID:</b> Identifies the generating node. Split as 5 bits datacenter + 5 bits machine = 32 datacenters × 32 machines = 1,024 unique workers. No two workers share an ID → no coordination needed between workers.<br><br>
+      <b>12-bit sequence:</b> Within a single millisecond on a single worker, this increments for each ID. 2¹² = 4,096 IDs per millisecond per worker = 4,096,000 IDs/second per worker. Resets to 0 on the next millisecond.<br><br>
+      <b>Uniqueness guarantee:</b> For two IDs to collide, all three parts must match simultaneously: same millisecond AND same worker AND same sequence number. Since each worker has a unique worker ID, no two workers can generate the same ID even without talking to each other. Within a worker, the monotonic sequence prevents collisions within a millisecond.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🕰 Phase 3 — Clock Skew: The Hard Problem</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · CLOCK SKEW</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>What happens if the server clock goes backward? NTP can cause this.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Clock skew backward is the most dangerous failure mode for Snowflake. If the clock goes from 1000ms → 990ms, and the node keeps generating IDs, it would produce IDs with timestamp 990 — which are numerically smaller than IDs generated at timestamp 1000. This breaks monotonicity and ordering guarantees.<br><br>
+      <b>Three strategies:</b><br><br>
+      <b>1. Refuse to generate (safest):</b> Detect backward clock: <code>if (currentMs < lastMs) throw ClockSkewException()</code>. Wait until the clock catches up. Simple, guaranteed correct. Problem: introduces latency spikes if NTP corrects a large drift.<br><br>
+      <b>2. Wait for clock catch-up (production standard):</b> <code>while (currentMs < lastMs) { Thread.sleep(1ms) }</code>. Spin-wait until the clock is back to <code>lastMs</code>. For small skews (typical NTP correction is &lt;10ms), this is essentially invisible. This is what Twitter's original implementation does.<br><br>
+      <b>3. Extend the sequence (partial mitigation):</b> When clock goes back, keep using the last known timestamp and continue incrementing the sequence. Risk: if the backward skew is larger than the 4,096 sequence space, you'll generate duplicate IDs. Only safe for tiny skews (&lt;1ms).
+      <br><br>
+      <b>Best practice:</b> Use strategy 2 (wait) with monitoring. Alert if backward skew exceeds 10ms — indicates a serious NTP/hardware clock issue.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="snowflake" class="panel">
+  <div class="sec"><div class="sec-head">❄️ Bit Layout Visualised</div><div class="sec-body">
+    <div class="diag">
+      <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:200px">
+        <!-- Bit layout bar -->
+        <rect x="20" y="30" width="512" height="60" rx="0" fill="none"/>
+        <!-- Sign bit (1) -->
+        <rect x="20" y="30" width="12" height="60" rx="3" fill="rgba(244,63,94,.15)" stroke="#f43f5e" stroke-width="1.5"/>
+        <text x="26" y="65" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fb7185">0</text>
+        <!-- Timestamp (41 bits) -->
+        <rect x="34" y="30" width="246" height="60" rx="3" fill="rgba(251,146,60,.1)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="157" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" font-weight="700" fill="#fed7aa">41 bits</text>
+        <text x="157" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fb923c">Timestamp (ms since epoch)</text>
+        <!-- Datacenter (5 bits) -->
+        <rect x="282" y="30" width="60" height="60" rx="3" fill="rgba(167,139,250,.1)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="312" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" font-weight="700" fill="#c4b5fd">5</text>
+        <text x="312" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a78bfa">DC ID</text>
+        <!-- Machine (5 bits) -->
+        <rect x="344" y="30" width="60" height="60" rx="3" fill="rgba(167,139,250,.1)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="374" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" font-weight="700" fill="#c4b5fd">5</text>
+        <text x="374" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a78bfa">Wkr ID</text>
+        <!-- Sequence (12 bits) -->
+        <rect x="406" y="30" width="126" height="60" rx="3" fill="rgba(16,185,129,.1)" stroke="#10b981" stroke-width="1.5"/>
+        <text x="469" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="13" font-weight="700" fill="#6ee7b7">12 bits</text>
+        <text x="469" y="72" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#10b981">Sequence</text>
+        <!-- Annotations -->
+        <text x="26" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">sign</text>
+        <text x="157" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">2⁴¹ ms = 69 years capacity</text>
+        <text x="312" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2⁵ = 32 DCs</text>
+        <text x="374" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">2⁵ = 32 nodes</text>
+        <text x="469" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">4,096 IDs/ms/node</text>
+        <!-- Example ID -->
+        <text x="20" y="145" font-family="JetBrains Mono" font-size="10" fill="#6b7fa0">Example: 1696890000000 ms | DC=3 | Worker=7 | Seq=42</text>
+        <text x="20" y="162" font-family="JetBrains Mono" font-size="10" fill="#fb923c">→ ID = 7295413579498496042</text>
+        <text x="20" y="178" font-family="JetBrains Mono" font-size="9" fill="#4e6070">Decode timestamp: (ID >> 22) + EPOCH_MS → exact creation time in ms</text>
+      </svg>
+    </div>
+    <br>
+    <div class="two-col">
+      <div class="flow-box">
+        <div class="flow-title" style="color:#fed7aa">GENERATION ALGORITHM</div>
+        <div class="fs"><div class="fnum">1</div><div>Get <code>currentMs = System.currentTimeMillis()</code></div></div>
+        <div class="fs"><div class="fnum">2</div><div>If <code>currentMs == lastMs</code>: increment sequence. If sequence overflows 4096: spin-wait for next ms.</div></div>
+        <div class="fs"><div class="fnum">3</div><div>If <code>currentMs > lastMs</code>: reset sequence to 0. Update <code>lastMs</code>.</div></div>
+        <div class="fs"><div class="fnum">4</div><div>If <code>currentMs < lastMs</code>: clock went backward! Wait until clock catches up.</div></div>
+        <div class="fs"><div class="fnum">5</div><div>Pack: <code>(ts - epoch) << 22 | DC << 17 | worker << 12 | seq</code></div></div>
+      </div>
+      <div class="flow-box">
+        <div class="flow-title" style="color:#6ee7b7">CAPACITY MATH</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8;line-height:2.2">
+          <div>4,096 IDs/ms × 1,000 = <span style="color:#fb923c">4.1M IDs/sec/node</span></div>
+          <div>1,024 nodes × 4.1M = <span style="color:#fb923c">4.2B IDs/sec total</span></div>
+          <div>41-bit ts → <span style="color:#fb923c">69 years</span> capacity</div>
+          <div>Worker ID range: 0–1023 (10 bits)</div>
+          <div>Max monotonic within ms: 4,095</div>
+          <div>ID size: 64 bits = 8 bytes (vs UUID 16B)</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Per-node throughput:</span>
+  <span class="label">12-bit sequence → 4,096 IDs/ms                = </span><span class="val">4.096M IDs/sec/node</span>
+
+<span class="label">Cluster throughput:</span>
+  <span class="label">1,024 max workers × 4.096M                    = </span><span class="val">4.19B IDs/sec</span>
+
+<span class="label">Timestamp capacity:</span>
+  <span class="label">2⁴¹ ms ÷ 1000 ÷ 86400 ÷ 365                  = </span><span class="val">69.7 years</span>
+
+<span class="label">Storage: 64-bit integer = 8 bytes per ID</span>
+<span class="label">1 billion IDs (PostgreSQL table):             = </span><span class="val">8 GB</span>  <span class="label">vs 16 GB for UUID</span>
+
+<span class="label">Latency: in-process, no network call           = </span><span class="val">&lt;1 microsecond</span>
+
+<span class="result">→ A single Snowflake node exceeds typical production requirements. Cluster capacity is essentially unlimited.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Attribute</th><th>Snowflake</th><th>UUID v4</th><th>DB Auto-Increment</th></tr>
+      <tr><td>Size</td><td class="ans">8 bytes</td><td>16 bytes</td><td>4–8 bytes</td></tr>
+      <tr><td>Throughput</td><td class="ans">4.1M/sec/node</td><td>Unlimited</td><td>~10K/sec (DB bottleneck)</td></tr>
+      <tr><td>Sortable</td><td class="ans">Yes (time-ordered)</td><td class="hi">No</td><td class="ans">Yes</td></tr>
+      <tr><td>Decodes timestamp</td><td class="ans">Yes</td><td class="hi">No</td><td class="hi">No</td></tr>
+      <tr><td>No coordination</td><td class="ans">Yes</td><td class="ans">Yes</td><td class="hi">No (single writer)</td></tr>
+      <tr><td>SPOF</td><td class="ans">No</td><td class="ans">No</td><td class="hi">Yes</td></tr>
+      <tr><td>Clock dependency</td><td class="hi">Yes (skew risk)</td><td class="ans">No</td><td class="ans">No</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="compare" class="panel">
+  <div class="sec"><div class="sec-head">🆚 Approaches Compared</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">All Major ID Generation Strategies</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head" style="color:#f43f5e">❌ DB Auto-Increment</div>
+          <p><strong>How:</strong> Single DB table with AUTO_INCREMENT. All services call <code>INSERT INTO id_gen VALUES()</code> and use the returned ID.</p>
+          <p style="margin-top:8px"><strong>Problems:</strong> Single point of failure (DB is down → no IDs). 10K IDs/sec ceiling. Every ID generation requires a DB round-trip (~5ms). Multi-datacenter is impossible (two DBs would collide without coordination).</p>
+          <p style="margin-top:8px"><strong>When OK:</strong> Simple single-server apps, early stage product.</p>
+        </div>
+        <div class="to-col"><div class="to-col-head" style="color:#f59e0b">⚠️ UUID v4 (Random)</div>
+          <p><strong>How:</strong> 128 random bits. Generated client-side, no coordination needed.</p>
+          <p style="margin-top:8px"><strong>Problems:</strong> Not sortable → B-tree fragmentation. 16 bytes vs 8 bytes. No embedded timestamp. Counter-intuitive: completely random UUIDs cause 100% cache misses in DB writes as each row lands on a different page.</p>
+          <p style="margin-top:8px"><strong>When OK:</strong> When you don't care about sorting and storage isn't a concern. Idempotency keys, API tokens, session IDs.</p>
+        </div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Snowflake (chosen)</div>
+          <p><strong>How:</strong> 64-bit: 41b timestamp + 10b worker + 12b sequence. Each node generates independently.</p>
+          <p style="margin-top:8px"><strong>Strengths:</strong> Time-sorted (great for DB indexes), 8 bytes, decodes to creation time, no coordination, 4.1M/sec/node, embeds datacenter/worker for debugging.</p>
+          <p style="margin-top:8px"><strong>When to use:</strong> Any high-scale distributed system needing sortable, compact, unique IDs. Twitter, Discord, Instagram, Mastodon all use Snowflake variants.</p>
+        </div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">Snowflake Variants Used in Production</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head" style="color:#fb923c">Twitter Snowflake</div><p>Original: 41b ts + 5b DC + 5b worker + 12b seq. Epoch: Nov 4, 2010. Worker IDs assigned via ZooKeeper. Open-source reference implementation.</p></div>
+        <div class="to-col"><div class="to-col-head" style="color:#38bdf8">Discord Snowflake</div><p>Similar structure but epoch: Jan 1, 2015. First 42 bits = timestamp. Used in message IDs, channel IDs. Allows Discord to extract exact creation time of any entity from its ID alone.</p></div>
+        <div class="to-col"><div class="to-col-head" style="color:#10b981">Instagram (Shard + Seq)</div><p>64-bit: 41b timestamp + 13b shard ID + 10b sequence. Shard ID = DB shard the record lives on. Generated inside PostgreSQL using PL/pgSQL — no external service needed.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Implementation</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Snowflake ID Generator — Thread-safe Java
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">SnowflakeIdGenerator</span> {
+
+    <span class="cm">// Bit allocation</span>
+    <span class="kw">private static final int</span>  TIMESTAMP_BITS  = <span class="num">41</span>;
+    <span class="kw">private static final int</span>  DC_BITS         = <span class="num">5</span>;
+    <span class="kw">private static final int</span>  WORKER_BITS     = <span class="num">5</span>;
+    <span class="kw">private static final int</span>  SEQUENCE_BITS   = <span class="num">12</span>;
+
+    <span class="cm">// Bit shift positions</span>
+    <span class="kw">private static final int</span>  WORKER_SHIFT    = SEQUENCE_BITS;                           <span class="cm">// 12</span>
+    <span class="kw">private static final int</span>  DC_SHIFT        = SEQUENCE_BITS + WORKER_BITS;             <span class="cm">// 17</span>
+    <span class="kw">private static final int</span>  TIMESTAMP_SHIFT = SEQUENCE_BITS + WORKER_BITS + DC_BITS;  <span class="cm">// 22</span>
+
+    <span class="cm">// Max values</span>
+    <span class="kw">private static final long</span> MAX_SEQUENCE    = ~(-<span class="num">1L</span> << SEQUENCE_BITS);  <span class="cm">// 4095</span>
+    <span class="kw">private static final long</span> MAX_DC          = ~(-<span class="num">1L</span> << DC_BITS);        <span class="cm">// 31</span>
+    <span class="kw">private static final long</span> MAX_WORKER      = ~(-<span class="num">1L</span> << WORKER_BITS);    <span class="cm">// 31</span>
+
+    <span class="cm">// Custom epoch: Jan 1 2020 00:00:00 UTC (more bits available if recent epoch)</span>
+    <span class="kw">private static final long</span> EPOCH_MS        = <span class="num">1577836800000L</span>;
+
+    <span class="kw">private final long</span>         datacenterId;
+    <span class="kw">private final long</span>         workerId;
+    <span class="kw">private long</span>               sequence  = <span class="num">0L</span>;
+    <span class="kw">private long</span>               lastMs    = -<span class="num">1L</span>;
+
+    <span class="kw">public</span> <span class="cls">SnowflakeIdGenerator</span>(<span class="kw">long</span> datacenterId, <span class="kw">long</span> workerId) {
+        <span class="kw">if</span> (datacenterId > MAX_DC || datacenterId < <span class="num">0</span>)
+            <span class="kw">throw new</span> <span class="cls">IllegalArgumentException</span>(<span class="str">"DC ID out of range: "</span> + datacenterId);
+        <span class="kw">if</span> (workerId > MAX_WORKER || workerId < <span class="num">0</span>)
+            <span class="kw">throw new</span> <span class="cls">IllegalArgumentException</span>(<span class="str">"Worker ID out of range: "</span> + workerId);
+        <span class="kw">this</span>.datacenterId = datacenterId;
+        <span class="kw">this</span>.workerId     = workerId;
+    }
+
+    <span class="cm">/**
+     * Generate next Snowflake ID.
+     * Thread-safe via synchronized.
+     * Handles clock skew by waiting for clock to catch up.
+     */</span>
+    <span class="kw">public synchronized long</span> <span class="fn2">nextId</span>() {
+        <span class="kw">long</span> currentMs = <span class="cls">System</span>.currentTimeMillis();
+
+        <span class="cm">// Clock went backward — wait until it catches up</span>
+        <span class="kw">if</span> (currentMs < lastMs) {
+            <span class="kw">long</span> skew = lastMs - currentMs;
+            <span class="kw">if</span> (skew > <span class="num">5000</span>)
+                <span class="kw">throw new</span> <span class="cls">ClockSkewException</span>(
+                    <span class="str">"Clock skew too large: "</span> + skew + <span class="str">"ms"</span>);
+            <span class="kw">while</span> (currentMs <= lastMs) {
+                currentMs = <span class="cls">System</span>.currentTimeMillis();
+            }
+        }
+
+        <span class="kw">if</span> (currentMs == lastMs) {
+            <span class="cm">// Same millisecond: increment sequence</span>
+            sequence = (sequence + <span class="num">1</span>) & MAX_SEQUENCE;
+            <span class="kw">if</span> (sequence == <span class="num">0</span>) {
+                <span class="cm">// Sequence overflow: wait for next millisecond</span>
+                <span class="kw">while</span> (currentMs <= lastMs) {
+                    currentMs = <span class="cls">System</span>.currentTimeMillis();
+                }
+            }
+        } <span class="kw">else</span> {
+            <span class="cm">// New millisecond: reset sequence</span>
+            sequence = <span class="num">0L</span>;
+        }
+
+        lastMs = currentMs;
+
+        <span class="cm">// Pack all components into 64-bit ID</span>
+        <span class="kw">return</span> ((currentMs - EPOCH_MS) << TIMESTAMP_SHIFT)
+             | (datacenterId              << DC_SHIFT)
+             | (workerId                  << WORKER_SHIFT)
+             | sequence;
+    }
+
+    <span class="cm">/** Extract creation timestamp from a Snowflake ID */</span>
+    <span class="kw">public static long</span> <span class="fn2">extractTimestamp</span>(<span class="kw">long</span> id) {
+        <span class="kw">return</span> (id >> TIMESTAMP_SHIFT) + EPOCH_MS;
+    }
+
+    <span class="cm">/** Extract worker ID from a Snowflake ID */</span>
+    <span class="kw">public static long</span> <span class="fn2">extractWorkerId</span>(<span class="kw">long</span> id) {
+        <span class="kw">return</span> (id >> WORKER_SHIFT) & MAX_WORKER;
+    }
+
+    <span class="cm">/** Extract datacenter ID from a Snowflake ID */</span>
+    <span class="kw">public static long</span> <span class="fn2">extractDatacenterId</span>(<span class="kw">long</span> id) {
+        <span class="kw">return</span> (id >> DC_SHIFT) & MAX_DC;
+    }
+
+    <span class="cm">// Usage example:</span>
+    <span class="kw">public static void</span> <span class="fn2">main</span>(<span class="cls">String</span>[] args) {
+        <span class="cls">SnowflakeIdGenerator</span> gen = <span class="kw">new</span> <span class="cls">SnowflakeIdGenerator</span>(<span class="num">3</span>, <span class="num">7</span>);
+        <span class="kw">long</span> id = gen.nextId();
+
+        <span class="cls">System</span>.out.println(<span class="str">"ID: "</span> + id);
+        <span class="cls">System</span>.out.println(<span class="str">"Created: "</span> + <span class="kw">new</span> <span class="cls">Date</span>(<span class="cls">SnowflakeIdGenerator</span>.extractTimestamp(id)));
+        <span class="cls">System</span>.out.println(<span class="str">"Worker:  "</span> + <span class="cls">SnowflakeIdGenerator</span>.extractWorkerId(id));
+        <span class="cls">System</span>.out.println(<span class="str">"DC:      "</span> + <span class="cls">SnowflakeIdGenerator</span>.extractDatacenterId(id));
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Snowflake ID Generator — Python, thread-safe
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> threading, time, math
+
+<span class="kw">class</span> <span class="cls">SnowflakeIdGenerator</span>:
+    <span class="cm"># Epoch: Jan 1 2020 00:00:00 UTC</span>
+    EPOCH_MS       = <span class="num">1577836800000</span>
+    TIMESTAMP_BITS = <span class="num">41</span>
+    DC_BITS        = <span class="num">5</span>
+    WORKER_BITS    = <span class="num">5</span>
+    SEQUENCE_BITS  = <span class="num">12</span>
+
+    MAX_DC       = (1 << DC_BITS) - 1        <span class="cm"># 31</span>
+    MAX_WORKER   = (1 << WORKER_BITS) - 1    <span class="cm"># 31</span>
+    MAX_SEQUENCE = (1 << SEQUENCE_BITS) - 1  <span class="cm"># 4095</span>
+
+    WORKER_SHIFT    = SEQUENCE_BITS                        <span class="cm"># 12</span>
+    DC_SHIFT        = SEQUENCE_BITS + WORKER_BITS          <span class="cm"># 17</span>
+    TIMESTAMP_SHIFT = SEQUENCE_BITS + WORKER_BITS + DC_BITS <span class="cm"># 22</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, datacenter_id: int, worker_id: int):
+        <span class="kw">if not</span> (<span class="num">0</span> <= datacenter_id <= self.MAX_DC):
+            <span class="kw">raise</span> ValueError(f<span class="str">"datacenter_id must be 0-{self.MAX_DC}"</span>)
+        <span class="kw">if not</span> (<span class="num">0</span> <= worker_id <= self.MAX_WORKER):
+            <span class="kw">raise</span> ValueError(f<span class="str">"worker_id must be 0-{self.MAX_WORKER}"</span>)
+        self.datacenter_id = datacenter_id
+        self.worker_id     = worker_id
+        self._sequence     = <span class="num">0</span>
+        self._last_ms      = -<span class="num">1</span>
+        self._lock         = threading.Lock()
+
+    <span class="kw">def</span> <span class="fn2">next_id</span>(self) -> int:
+        <span class="str">"""Generate next Snowflake ID. Thread-safe."""</span>
+        <span class="kw">with</span> self._lock:
+            current_ms = self._current_ms()
+
+            <span class="cm"># Clock went backward — wait for catch-up</span>
+            <span class="kw">if</span> current_ms < self._last_ms:
+                skew = self._last_ms - current_ms
+                <span class="kw">if</span> skew > <span class="num">5000</span>:
+                    <span class="kw">raise</span> RuntimeError(f<span class="str">"Clock skew too large: {skew}ms"</span>)
+                <span class="kw">while</span> current_ms <= self._last_ms:
+                    current_ms = self._current_ms()
+
+            <span class="kw">if</span> current_ms == self._last_ms:
+                <span class="cm"># Same millisecond — increment sequence</span>
+                self._sequence = (self._sequence + <span class="num">1</span>) & self.MAX_SEQUENCE
+                <span class="kw">if</span> self._sequence == <span class="num">0</span>:
+                    <span class="cm"># Sequence full — wait for next ms</span>
+                    <span class="kw">while</span> current_ms <= self._last_ms:
+                        current_ms = self._current_ms()
+            <span class="kw">else</span>:
+                <span class="cm"># New millisecond — reset sequence</span>
+                self._sequence = <span class="num">0</span>
+
+            self._last_ms = current_ms
+
+            <span class="kw">return</span> (
+                ((current_ms - self.EPOCH_MS) << self.TIMESTAMP_SHIFT) |
+                (self.datacenter_id           << self.DC_SHIFT)         |
+                (self.worker_id               << self.WORKER_SHIFT)     |
+                self._sequence
+            )
+
+    <span class="kw">def</span> <span class="fn2">_current_ms</span>(self) -> int:
+        <span class="kw">return</span> int(time.time() * <span class="num">1000</span>)
+
+    <span class="cm"># ── Decode helpers ────────────────────────────</span>
+    <span class="kw">def</span> <span class="fn2">extract_timestamp_ms</span>(self, snowflake_id: int) -> int:
+        <span class="kw">return</span> (snowflake_id >> self.TIMESTAMP_SHIFT) + self.EPOCH_MS
+
+    <span class="kw">def</span> <span class="fn2">extract_worker_id</span>(self, snowflake_id: int) -> int:
+        <span class="kw">return</span> (snowflake_id >> self.WORKER_SHIFT) & self.MAX_WORKER
+
+    <span class="kw">def</span> <span class="fn2">extract_datacenter_id</span>(self, snowflake_id: int) -> int:
+        <span class="kw">return</span> (snowflake_id >> self.DC_SHIFT) & self.MAX_DC
+
+    <span class="kw">def</span> <span class="fn2">extract_sequence</span>(self, snowflake_id: int) -> int:
+        <span class="kw">return</span> snowflake_id & self.MAX_SEQUENCE
+
+
+<span class="cm"># Usage & verification</span>
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    gen = <span class="cls">SnowflakeIdGenerator</span>(datacenter_id=<span class="num">3</span>, worker_id=<span class="num">7</span>)
+
+    <span class="cm"># Generate 10 IDs — verify monotonically increasing</span>
+    ids = [gen.next_id() <span class="kw">for</span> _ <span class="kw">in</span> range(<span class="num">10</span>)]
+    <span class="kw">assert</span> ids == sorted(ids), <span class="str">"IDs must be monotonically increasing!"</span>
+
+    <span class="cm"># Decode first ID</span>
+    first = ids[<span class="num">0</span>]
+    ts_ms = gen.extract_timestamp_ms(first)
+    print(f<span class="str">"ID: {first}"</span>)
+    print(f<span class="str">"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(ts_ms/1000))}"</span>)
+    print(f<span class="str">"Worker: {gen.extract_worker_id(first)}"</span>)
+    print(f<span class="str">"DC: {gen.extract_datacenter_id(first)}"</span>)
+    print(f<span class="str">"Sequence: {gen.extract_sequence(first)}"</span>)
+
+    <span class="cm"># Benchmark</span>
+    start = time.time()
+    <span class="kw">for</span> _ <span class="kw">in</span> range(<span class="num">100_000</span>):
+        gen.next_id()
+    elapsed = time.time() - start
+    print(f<span class="str">"\nGenerated 100K IDs in {elapsed*1000:.1f}ms ({100000/elapsed:.0f} IDs/sec)"</span>)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">⏱ Epoch Choice: Impact on Longevity</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Custom recent epoch</div><p>Set epoch to system launch date (e.g., 2020). All 41 bits available for future time. 69 years from epoch date. Twitter chose 2010 — they run until 2079. If you choose Unix epoch (1970), you waste 50 years of bits and run out in 2039.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">❌ Unix epoch (1970)</div><p>41 bits from 1970 → overflow in 2039. Already burned 54 years = 1.7T ms. Only 15 years of IDs left. Never use Unix epoch with 41-bit timestamp. This is a hidden time bomb in many systems.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">💡 Extending longevity</div><p>If 69 years is not enough: increase timestamp bits to 42 (138 years), reduce sequence or worker bits. Alternatively, reduce timestamp resolution from ms to 10ms — halves the sequence generation rate but doubles the timestamp range. Trade-off between throughput and longevity.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🔧 Worker ID Assignment: Manual vs ZooKeeper vs DB</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Config file (simple)</div><p>Assign worker IDs in deployment config. DC=1, Worker=7. Easy, no dependencies. But: must manually ensure no two servers share a worker ID. Operationally fragile at large scale — easy to accidentally deploy two servers with the same worker ID.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ ZooKeeper / etcd (production)</div><p>Workers register with ZooKeeper on startup, claim a worker ID via ephemeral node. ZooKeeper ensures no two workers claim the same ID simultaneously. Automatic reclaim when worker dies. Twitter's original approach. Adds ZooKeeper as a dependency.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">DB lease table</div><p><code>worker_registry(worker_id, hostname, last_heartbeat)</code>. On startup: INSERT or claim expired lease. Works without ZooKeeper. Simpler operationally if you already have a DB. Requires periodic heartbeat to maintain lease.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

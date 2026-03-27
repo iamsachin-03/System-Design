@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #36 — Distributed Locking (Chubby / ZooKeeper)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#818cf8;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#e0e7ff;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(129,140,248,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#eef2ff 0%,#818cf8 50%,#4338ca 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(129,140,248,.07);color:#e0e7ff;border:1px solid rgba(129,140,248,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(129,140,248,.1);color:var(--ecolor);border:1.5px solid rgba(129,140,248,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(129,140,248,.08);color:var(--accent);border:1px solid rgba(129,140,248,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(129,140,248,.05);border:1px solid rgba(129,140,248,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#e0e7ff;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.warn-box{background:rgba(244,63,94,.05);border:1px solid rgba(244,63,94,.15);border-left:3px solid #f43f5e;border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fda4af;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(129,140,248,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Distributed Systems › <span>36 / Distributed Locking</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🔐</div>
+    <div>
+      <div class="h-title">Distributed Locking (Chubby / ZooKeeper)</div>
+      <div class="h-desc">Design a distributed lock service like Google Chubby or Apache ZooKeeper — enabling mutual exclusion across thousands of distributed processes, providing lease-based locks with automatic expiry, supporting leader election, and handling the hard problem of "fencing tokens" to prevent a slow lock holder from corrupting shared state after its lease expires.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Lease</span>
+        <span class="badge b-tag">Fencing Token</span>
+        <span class="badge b-tag">Raft Consensus</span>
+        <span class="badge b-tag">Leader Election</span>
+        <span class="badge b-tag">Ephemeral Node</span>
+        <span class="badge b-tag">Redlock</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('fence',this)">🔑 Fencing</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Distributed locking is one of the most subtle problems in distributed systems.</strong> The naive approach — Redis SETNX — seems simple but is dangerously wrong without fencing tokens. A process can acquire a lock, pause (GC, network blip), have its lease expire, and then resume — writing to the protected resource while another process also holds the lock. This is the ghost lock problem.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Acquire exclusive lock on a named resource</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Release lock explicitly or via lease expiry (TTL)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Leader election: exactly one leader at a time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Watch/notify: alert when lock becomes available</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Fencing token: monotonically increasing token to detect stale lock holders</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Safety: at most one lock holder at any time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Liveness: if lock holder dies, lock is eventually released</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Fault tolerant: survive minority node failures</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Acquire latency: &lt;10ms in same region</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>10K concurrent lock holders across the system</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — The Core Mechanism</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · LEASE-BASED LOCK</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you implement a distributed lock that releases automatically if the lock holder dies?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      A lease-based lock with heartbeat:<br><br>
+      <b>Acquire:</b> The client sends an acquire request. The lock server grants the lock with a TTL (e.g., 30 seconds) and returns a <b>lease ID</b> and a <b>fencing token</b> (a monotonically increasing number).<br><br>
+      <b>Heartbeat:</b> The lock holder must send a heartbeat (renew request) every 10 seconds. The server extends the TTL on each heartbeat.<br><br>
+      <b>Expiry:</b> If the lock holder crashes or becomes network-partitioned and can't send heartbeats, the TTL expires. The lock is automatically released. Another waiter can then acquire it.<br><br>
+      <b>ZooKeeper implementation:</b> Uses <i>ephemeral nodes</i> — a ZooKeeper node (znode) that is automatically deleted when the creating client's session expires (detected via heartbeat timeout). Client creates <code>/locks/resource-X/lock-001</code> as an ephemeral sequential node. The client with the lowest sequence number holds the lock. Others watch the next-lower node — when it's deleted, the next client gets the lock. No thundering herd (each client watches exactly one predecessor, not all watch the lock node).<br><br>
+      <b>Redis SETNX implementation:</b> <code>SET lock:resource-X {client-id} NX EX 30</code>. Only one client can set this key. On success: lock acquired. To release: Lua script <code>if GET key == client-id then DEL key end</code> (must be atomic to avoid deleting another client's lock).
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">⚠️ Phase 2 — The Fencing Token Problem</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · FENCING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Client A holds the lock. It gets hit by a long GC pause (30+ seconds). Its lease expires. Client B acquires the lock. Client A's GC finishes — it now writes to the database. Two clients are writing simultaneously. How do you prevent this?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      This is the "zombie lock holder" problem. The solution is a <b>fencing token</b>.<br><br>
+      When Client A acquires the lock, the lock service returns token=1. When Client A's lease expires and Client B acquires the lock, the service returns token=2. The token is a strictly monotonically increasing number.<br><br>
+      <b>The protocol:</b> Every write request to the protected resource (e.g., database, file storage) must include the fencing token. The resource server rejects any write with a token lower than the highest token it has seen.<br><br>
+      Timeline:<br>
+      <ul>
+        <li>Client A acquires lock, gets token=1. Starts writing. GC pause hits.</li>
+        <li>A's lease expires. Client B acquires lock, gets token=2. Writes with token=2. Resource records highest_seen=2.</li>
+        <li>Client A wakes from GC. Tries to write with token=1. Resource server sees 1 &lt; 2 → rejects A's write.</li>
+      </ul>
+      This prevents the zombie write even though we can't stop Client A from trying. The resource itself enforces the fencing.<br><br>
+      <b>Where to generate the token:</b> The lock service increments a counter on every lock grant and embeds it in the lease. ZooKeeper's sequential znodes implicitly provide this — the sequence number is the fencing token. etcd uses the lease ID or a revision number.
+    </div></div>
+    <div class="warn-box"><strong>⚠ Critical insight:</strong> A distributed lock alone cannot guarantee mutual exclusion unless the protected resource also validates fencing tokens. No distributed lock service can guarantee perfect mutual exclusion against process pauses (GC, VM suspension) — the fencing token pattern is the only correct solution.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">👑 Phase 3 — Leader Election</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · LEADER ELECTION</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you use a distributed lock service for leader election?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Leader election is just a distributed lock with a specific protocol:<br><br>
+      All candidates try to acquire the same lock (e.g., <code>/election/primary</code>). The one that succeeds is the leader. While leader, it holds the lock and sends heartbeats. If it fails, the lock expires and another candidate acquires it — becoming the new leader.<br><br>
+      <b>ZooKeeper leader election:</b> All candidates create ephemeral sequential znodes at <code>/election/candidate-</code>. The one with the lowest number is the leader. Others watch the node just below them. When the leader's session expires (its znode is deleted), the next-lowest node gets notified and becomes leader.<br><br>
+      <b>etcd-based election:</b> Candidates compete for a key with <code>PUT /election/leader {candidate-id} NX TTL=10</code>. The winner sends keepalives. Followers watch the key — when it's deleted, they compete to set it again.<br><br>
+      <b>Important protocol:</b> When a process loses its lock (lease expired), it must stop acting as leader <i>before</i> the new leader starts. This requires the leader to actively stop its work on lease expiry, not wait to be informed. This is why etcd's Patroni works — the old primary sets itself read-only when it can't renew the lease.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="fence" class="panel">
+  <div class="sec"><div class="sec-head">🔑 Fencing Token — Visual Timeline</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:320px">
+<defs><marker id="ia" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#818cf8"/></marker></defs>
+
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#818cf8" font-weight="700">FENCING TOKEN TIMELINE</text>
+
+<!-- Timeline background -->
+<rect x="10" y="28" width="820" height="280" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+
+<!-- Time axis -->
+<line x1="30" y1="250" x2="800" y2="250" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+<text x="30" y="265" font-family="JetBrains Mono" font-size="7" fill="#4e6070">T=0</text>
+<text x="170" y="265" font-family="JetBrains Mono" font-size="7" fill="#4e6070">T=10s</text>
+<text x="310" y="265" font-family="JetBrains Mono" font-size="7" fill="#4e6070">T=20s</text>
+<text x="450" y="265" font-family="JetBrains Mono" font-size="7" fill="#4e6070">T=30s (lease expires)</text>
+<text x="610" y="265" font-family="JetBrains Mono" font-size="7" fill="#4e6070">T=40s</text>
+<text x="730" y="265" font-family="JetBrains Mono" font-size="7" fill="#4e6070">T=50s</text>
+
+<!-- Client A bar -->
+<text x="20" y="65" font-family="JetBrains Mono" font-size="8" fill="#818cf8">Client A</text>
+<rect x="30" y="48" width="420" height="28" rx="4" fill="rgba(129,140,248,.15)" stroke="#818cf8" stroke-width="1.5"/>
+<text x="40" y="66" font-family="JetBrains Mono" font-size="8" fill="#818cf8">Holds lock (token=1)</text>
+<text x="240" y="66" font-family="JetBrains Mono" font-size="8" fill="#f43f5e">⟨GC PAUSE⟩</text>
+<!-- GC block -->
+<rect x="300" y="48" width="150" height="28" rx="4" fill="rgba(244,63,94,.2)" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="310" y="66" font-family="JetBrains Mono" font-size="8" fill="#f87171">GC pause: 25s</text>
+<!-- A's lease expired -->
+<line x1="450" y1="42" x2="450" y2="260" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="452" y="42" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">LEASE EXPIRED</text>
+<!-- A resumes -->
+<rect x="620" y="48" width="160" height="28" rx="4" fill="rgba(244,63,94,.1)" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="628" y="66" font-family="JetBrains Mono" font-size="8" fill="#f87171">A resumes (token=1) ZOMBIE</text>
+
+<!-- Client B bar -->
+<text x="20" y="115" font-family="JetBrains Mono" font-size="8" fill="#10b981">Client B</text>
+<rect x="450" y="98" width="330" height="28" rx="4" fill="rgba(16,185,129,.15)" stroke="#10b981" stroke-width="1.5"/>
+<text x="460" y="116" font-family="JetBrains Mono" font-size="8" fill="#10b981">Holds lock (token=2) ← newly elected</text>
+
+<!-- Lock service bar -->
+<text x="20" y="165" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Lock Svc</text>
+<rect x="30" y="148" width="420" height="28" rx="4" fill="rgba(245,158,11,.1)" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="40" y="166" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">Grant token=1 to A    → renew    → renew         → EXPIRE</text>
+<rect x="450" y="148" width="330" height="28" rx="4" fill="rgba(245,158,11,.1)" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="460" y="166" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">Grant token=2 to B → renew → renew ...</text>
+
+<!-- Resource bar -->
+<text x="20" y="215" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">Resource</text>
+<rect x="450" y="198" width="200" height="28" rx="4" fill="rgba(56,189,248,.1)" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="460" y="216" font-family="JetBrains Mono" font-size="8" fill="#bae6fd">B writes (token=2) ✓  highest=2</text>
+<!-- B write -->
+<!-- A's zombie write -->
+<rect x="670" y="198" width="110" height="28" rx="4" fill="rgba(244,63,94,.15)" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="676" y="211" font-family="JetBrains Mono" font-size="8" fill="#f87171">A write (token=1)</text>
+<text x="676" y="223" font-family="JetBrains Mono" font-size="8" fill="#f87171">REJECTED: 1&lt;2 ✓</text>
+
+<!-- Arrows -->
+<line x1="240" y1="76" x2="240" y2="145" stroke="#4e6070" stroke-width="1" stroke-dasharray="2,3"/>
+<line x1="450" y1="148" x2="450" y2="96" stroke="#10b981" stroke-width="1" stroke-dasharray="2,3"/>
+<line x1="700" y1="76" x2="700" y2="195" stroke="#f43f5e" stroke-width="1" stroke-dasharray="2,3"/>
+</svg>
+    </div>
+    <table class="math-table">
+      <tr><th>Property</th><th>Redis SETNX (no fencing)</th><th>Redis + Fencing Token</th><th>ZooKeeper / etcd</th></tr>
+      <tr><td>Zombie lock prevention</td><td style="color:#f87171">✗ NOT SAFE</td><td class="ans">✓ Safe</td><td class="ans">✓ Safe</td></tr>
+      <tr><td>Auto-expiry on crash</td><td class="ans">✓ TTL</td><td class="ans">✓ TTL</td><td class="ans">✓ Session expiry</td></tr>
+      <tr><td>Acquire latency</td><td class="hi">&lt;1ms</td><td class="hi">&lt;1ms</td><td class="hi">5-10ms</td></tr>
+      <tr><td>Consensus-based</td><td style="color:#f87171">No (single node)</td><td style="color:#f87171">No (Redlock: controversial)</td><td class="ans">Yes (Raft)</td></tr>
+      <tr><td>Use case</td><td style="color:#94a3b8">Non-critical short locks</td><td class="ans">Moderate criticality</td><td class="ans">High criticality, leader election</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture — Distributed Lock Service</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:300px">
+<defs>
+<marker id="ima" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#818cf8"/></marker>
+<marker id="img" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+</defs>
+<!-- Clients -->
+<rect x="10" y="60" width="100" height="50" rx="6" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+<text x="60" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#e0e7ff">Clients</text>
+<text x="60" y="98" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">acquire/release</text>
+<rect x="10" y="130" width="100" height="50" rx="6" fill="#131c2e" stroke="#818cf8" stroke-width="1.5"/>
+<text x="60" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#e0e7ff">Workers</text>
+<text x="60" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">lock holders</text>
+
+<!-- Raft cluster -->
+<rect x="130" y="30" width="420" height="220" rx="10" fill="rgba(129,140,248,.02)" stroke="rgba(129,140,248,.12)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="340" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#818cf8">LOCK SERVICE (5-node Raft cluster)</text>
+
+<rect x="140" y="60" width="120" height="120" rx="7" fill="#131c2e" stroke="#818cf8" stroke-width="2"/>
+<text x="200" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#e0e7ff">Node-1</text>
+<text x="200" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#818cf8">LEADER</text>
+<text x="200" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">accept writes</text>
+<text x="200" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">replicate to</text>
+<text x="200" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">majority (3/5)</text>
+<text x="200" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#818cf8">heartbeat 150ms</text>
+
+<rect x="275" y="60" width="110" height="120" rx="7" fill="#131c2e" stroke="#4e6070" stroke-width="1.5"/>
+<text x="330" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">Node-2</text>
+<text x="330" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">FOLLOWER</text>
+<text x="330" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">replicated log</text>
+
+<rect x="400" y="60" width="110" height="120" rx="7" fill="#131c2e" stroke="#4e6070" stroke-width="1.5"/>
+<text x="455" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#94a3b8">Node-3,4,5</text>
+<text x="455" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">FOLLOWER</text>
+<text x="455" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">vote in election</text>
+
+<!-- State machine -->
+<rect x="140" y="195" width="370" height="45" rx="6" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.04)"/>
+<text x="325" y="213" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#818cf8">State Machine: lock_table{resource → (holder, token, expiry)}</text>
+<text x="325" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">All mutations go through Raft log → committed when majority ack → applied to state machine</text>
+
+<!-- Protected resource -->
+<rect x="570" y="80" width="270" height="130" rx="8" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="705" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Protected Resource</text>
+<text x="705" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(DB, file storage, etc)</text>
+<text x="580" y="140" font-family="JetBrains Mono" font-size="8" fill="#10b981">Validates fencing token:</text>
+<text x="580" y="156" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">  if token &lt; max_seen:</text>
+<text x="580" y="170" font-family="JetBrains Mono" font-size="8" fill="#f87171">    reject (stale lock)</text>
+<text x="580" y="186" font-family="JetBrains Mono" font-size="8" fill="#34d399">  else: accept + store token</text>
+
+<!-- Protocol flow -->
+<rect x="10" y="240" width="530" height="50" rx="6" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="20" y="257" font-family="JetBrains Mono" font-size="8" fill="#818cf8">ZooKeeper Protocol: Client creates /locks/X/lock-00001 (ephemeral+sequential). Lowest node = lock holder.</text>
+<text x="20" y="272" font-family="JetBrains Mono" font-size="8" fill="#4e6070">Others watch predecessor node (no thundering herd). Session expiry auto-deletes node. Next lowest gets notified.</text>
+
+<!-- Arrows -->
+<line x1="110" y1="85" x2="138" y2="100" stroke="#818cf8" stroke-width="1.5" marker-end="url(#ima)"/>
+<line x1="110" y1="155" x2="138" y2="130" stroke="#818cf8" stroke-width="1.5" marker-end="url(#ima)"/>
+<line x1="550" y1="130" x2="568" y2="130" stroke="#10b981" stroke-width="1.5" marker-end="url(#img)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — Distributed Lock with Fencing Token</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Distributed Lock — Java: Redis-based with fencing token
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public class</span> <span class="cls">DistributedLock</span> {
+
+    <span class="kw">private static final</span> <span class="cls">String</span> ACQUIRE_SCRIPT = <span class="str">"""
+        local key   = KEYS[1]
+        local fence = KEYS[2]     -- fencing token counter key
+        local owner = ARGV[1]
+        local ttl   = tonumber(ARGV[2])
+
+        if redis.call('SET', key, owner, 'NX', 'EX', ttl) then
+            -- Increment and return the fencing token
+            return redis.call('INCR', fence)
+        end
+        return nil
+        """</span>;
+
+    <span class="kw">private static final</span> <span class="cls">String</span> RELEASE_SCRIPT = <span class="str">"""
+        if redis.call('GET', KEYS[1]) == ARGV[1] then
+            return redis.call('DEL', KEYS[1])
+        end
+        return 0
+        """</span>;
+
+    <span class="kw">private final</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+    <span class="kw">private final</span> <span class="cls">DefaultRedisScript</span>&lt;<span class="cls">Long</span>&gt; acquireScript;
+    <span class="kw">private final</span> <span class="cls">DefaultRedisScript</span>&lt;<span class="cls">Long</span>&gt; releaseScript;
+
+    <span class="cm">/**
+     * @return Optional.of(fencingToken) if acquired, Optional.empty() if not.
+     * The fencing token MUST be passed to every write operation on the protected resource.
+     */</span>
+    <span class="kw">public</span> <span class="cls">Optional</span>&lt;<span class="cls">Long</span>&gt; <span class="fn2">tryAcquire</span>(<span class="cls">String</span> resource, <span class="cls">String</span> ownerId, <span class="kw">int</span> ttlSeconds) {
+        <span class="cls">String</span> lockKey   = <span class="str">"lock:"</span> + resource;
+        <span class="cls">String</span> fenceKey  = <span class="str">"fence:"</span> + resource;
+
+        <span class="cls">Long</span> token = redis.execute(acquireScript,
+            <span class="cls">List</span>.of(lockKey, fenceKey), ownerId, <span class="cls">String</span>.valueOf(ttlSeconds));
+
+        <span class="kw">return</span> token != <span class="kw">null</span> ? <span class="cls">Optional</span>.of(token) : <span class="cls">Optional</span>.empty();
+    }
+
+    <span class="kw">public boolean</span> <span class="fn2">release</span>(<span class="cls">String</span> resource, <span class="cls">String</span> ownerId) {
+        <span class="cls">Long</span> result = redis.execute(releaseScript,
+            <span class="cls">List</span>.of(<span class="str">"lock:"</span> + resource), ownerId);
+        <span class="kw">return</span> <span class="cls">Long</span>.valueOf(<span class="num">1L</span>).equals(result);
+    }
+
+    <span class="cm">/**
+     * Renew the lock lease (heartbeat). Call every TTL/3 seconds.
+     * Returns false if the lock was already taken by someone else.
+     */</span>
+    <span class="kw">public boolean</span> <span class="fn2">renew</span>(<span class="cls">String</span> resource, <span class="cls">String</span> ownerId, <span class="kw">int</span> ttlSeconds) {
+        <span class="cls">String</span> renewScript = <span class="str">"""
+            if redis.call('GET', KEYS[1]) == ARGV[1] then
+                return redis.call('EXPIRE', KEYS[1], ARGV[2])
+            end
+            return 0
+            """</span>;
+        <span class="cls">Long</span> result = redis.execute(<span class="kw">new</span> <span class="cls">DefaultRedisScript</span>&lt;&gt;(renewScript, <span class="cls">Long</span>.<span class="kw">class</span>),
+            <span class="cls">List</span>.of(<span class="str">"lock:"</span> + resource), ownerId, <span class="cls">String</span>.valueOf(ttlSeconds));
+        <span class="kw">return</span> <span class="cls">Long</span>.valueOf(<span class="num">1L</span>).equals(result);
+    }
+}
+
+<span class="cm">// ── Usage with fencing token ──────────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">FileProcessor</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">DistributedLock</span> lock;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">FileStorage</span>       storage;
+
+    <span class="kw">public void</span> <span class="fn2">processFile</span>(<span class="cls">String</span> fileId) {
+        <span class="cls">String</span> owner = <span class="cls">UUID</span>.randomUUID().toString();
+        <span class="cls">Optional</span>&lt;<span class="cls">Long</span>&gt; tokenOpt = lock.tryAcquire(<span class="str">"file:"</span> + fileId, owner, <span class="num">30</span>);
+
+        <span class="kw">if</span> (tokenOpt.isEmpty()) {
+            <span class="kw">throw new</span> <span class="cls">LockNotAcquiredException</span>(<span class="str">"File locked by another worker"</span>);
+        }
+
+        <span class="kw">long</span> fencingToken = tokenOpt.get();
+        <span class="kw">try</span> {
+            <span class="cm">// Pass fencing token to every write — storage validates it</span>
+            storage.write(fileId, <span class="fn2">process</span>(fileId), fencingToken);
+        } <span class="kw">finally</span> {
+            lock.release(<span class="str">"file:"</span> + fileId, owner);
+        }
+    }
+}
+
+<span class="cm">// ── ZooKeeper lock (ephemeral sequential) ─────────────</span>
+<span class="kw">public class</span> <span class="cls">ZkDistributedLock</span> {
+    <span class="kw">private final</span> <span class="cls">CuratorFramework</span> curator;
+
+    <span class="kw">public void</span> <span class="fn2">withLock</span>(<span class="cls">String</span> path, <span class="cls">Runnable</span> task) <span class="kw">throws</span> <span class="cls">Exception</span> {
+        <span class="cls">InterProcessMutex</span> lock = <span class="kw">new</span> <span class="cls">InterProcessMutex</span>(curator, <span class="str">"/locks/"</span> + path);
+        <span class="kw">if</span> (lock.acquire(<span class="num">10</span>, <span class="cls">TimeUnit</span>.SECONDS)) {
+            <span class="kw">try</span> { task.run(); }
+            <span class="kw">finally</span> { lock.release(); }
+        } <span class="kw">else throw new</span> <span class="cls">TimeoutException</span>(<span class="str">"Failed to acquire lock"</span>);
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Distributed Lock — Python: Redis with fencing token
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> uuid, time, threading, contextlib
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+<span class="kw">import</span> redis
+
+r = redis.Redis()
+
+ACQUIRE_SCRIPT = <span class="str">"""
+local key   = KEYS[1]
+local fence = KEYS[2]
+local owner = ARGV[1]
+local ttl   = tonumber(ARGV[2])
+if redis.call('SET', key, owner, 'NX', 'EX', ttl) then
+    return redis.call('INCR', fence)
+end
+return false
+"""</span>
+
+RELEASE_SCRIPT = <span class="str">"""
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('DEL', KEYS[1])
+end
+return 0
+"""</span>
+
+_acquire = r.register_script(ACQUIRE_SCRIPT)
+_release = r.register_script(RELEASE_SCRIPT)
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">LockContext</span>:
+    resource:      str
+    owner_id:      str
+    fencing_token: int
+    ttl:           int
+    _stop:         threading.Event = None
+
+    <span class="kw">def</span> <span class="fn2">__post_init__</span>(self):
+        self._stop = threading.Event()
+        self._start_heartbeat()
+
+    <span class="kw">def</span> <span class="fn2">_start_heartbeat</span>(self):
+        <span class="kw">def</span> <span class="fn2">heartbeat</span>():
+            <span class="kw">while not</span> self._stop.wait(self.ttl / <span class="num">3</span>):
+                renew_script = <span class="str">"""
+                    if redis.call('GET', KEYS[1]) == ARGV[1] then
+                        return redis.call('EXPIRE', KEYS[1], ARGV[2])
+                    end
+                    return 0
+                """</span>
+                result = r.eval(renew_script, <span class="num">1</span>, f<span class="str">"lock:{self.resource}"</span>,
+                                self.owner_id, self.ttl)
+                <span class="kw">if not</span> result:
+                    print(f<span class="str">"[WARN] Lock lost for {self.resource}! TTL expired."</span>)
+                    self._stop.set()
+
+        threading.Thread(target=heartbeat, daemon=<span class="kw">True</span>).start()
+
+    <span class="kw">def</span> <span class="fn2">release</span>(self):
+        self._stop.set()
+        _release(keys=[f<span class="str">"lock:{self.resource}"</span>], args=[self.owner_id])
+
+
+<span class="kw">def</span> <span class="fn2">try_acquire</span>(resource: str, ttl: int = <span class="num">30</span>) -> Optional[<span class="cls">LockContext</span>]:
+    owner = str(uuid.uuid4())
+    token = _acquire(
+        keys=[f<span class="str">"lock:{resource}"</span>, f<span class="str">"fence:{resource}"</span>],
+        args=[owner, ttl])
+    <span class="kw">if not</span> token:
+        <span class="kw">return None</span>
+    <span class="kw">return</span> <span class="cls">LockContext</span>(resource=resource, owner_id=owner,
+                        fencing_token=int(token), ttl=ttl)
+
+
+<span class="ann">@contextlib</span>.contextmanager
+<span class="kw">def</span> <span class="fn2">distributed_lock</span>(resource: str, ttl: int = <span class="num">30</span>, retries: int = <span class="num">3</span>):
+    ctx = <span class="kw">None</span>
+    <span class="kw">for</span> attempt <span class="kw">in</span> range(retries):
+        ctx = try_acquire(resource, ttl)
+        <span class="kw">if</span> ctx: <span class="kw">break</span>
+        time.sleep(<span class="num">0.1</span> * (<span class="num">2</span> ** attempt))  <span class="cm"># exponential backoff</span>
+
+    <span class="kw">if not</span> ctx:
+        <span class="kw">raise</span> RuntimeError(f<span class="str">f"Could not acquire lock on {resource} after {retries} attempts"</span>)
+    <span class="kw">try</span>:
+        yield ctx  <span class="cm"># ctx.fencing_token must be passed to all writes</span>
+    <span class="kw">finally</span>:
+        ctx.release()
+
+
+<span class="cm"># ── Usage ─────────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">process_order</span>(order_id: str, storage):
+    <span class="kw">with</span> distributed_lock(f<span class="str">"order:{order_id}"</span>) <span class="kw">as</span> lock:
+        <span class="cm"># Pass fencing token to every write</span>
+        storage.write(order_id, compute_result(order_id), lock.fencing_token)
+        <span class="cm"># Storage validates: if fencing_token < max_seen: reject</span>
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🔐 Lock Service: Redis SETNX vs ZooKeeper vs etcd</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Redis SETNX + Fencing</div><p>Extremely fast (&lt;1ms). Simple to implement. Single Redis node = SPOF. Redlock (multi-node) is controversial — Martin Kleppmann proved it's unsafe due to timing assumptions. Use only when some lock violations are acceptable (idempotent operations). <strong>Not recommended for critical mutual exclusion.</strong></p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ ZooKeeper</div><p>Consensus-based (Zab protocol). Ephemeral sequential nodes are purpose-built for distributed locking. Session expiry = automatic lock release. Watch mechanism for efficient waiting (no polling). Proven at LinkedIn, Twitter scale. Operationally complex — requires dedicated ZK cluster. Strong consistency guarantee.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ etcd</div><p>Raft-based consensus. Lease-based locking with TTL. Used by Kubernetes for all distributed coordination. Simpler to operate than ZooKeeper. gRPC API. Watch support. Used by Patroni (DB failover) and Kubernetes scheduler. The modern choice for new systems. Linearizable reads/writes.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #33 — Distributed File System (GFS/HDFS)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#06b6d4;--a2:#0891b2;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#a855f7;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#cffafe;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border);background:linear-gradient(160deg,#07090f 0%,#070d10 40%,#07090f 100%)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(6,182,212,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#ecfeff 0%,#06b6d4 50%,#164e63 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(6,182,212,.07);color:#cffafe;border:1px solid rgba(6,182,212,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(6,182,212,.1);color:var(--ecolor);border:1.5px solid rgba(6,182,212,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(6,182,212,.08);color:var(--accent);border:1px solid rgba(6,182,212,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(6,182,212,.05);border:1px solid rgba(6,182,212,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#cffafe;margin:12px 0;line-height:1.65}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(6,182,212,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin}
+.cblock.active{display:block}
+pre{margin:0}code.bl{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.flow-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px}
+.flow-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.fs{display:flex;gap:10px;font-size:12.5px;color:#94a3b8;margin-bottom:9px;line-height:1.55;align-items:flex-start}
+.fnum{background:rgba(6,182,212,.12);color:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#06b6d4;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Infrastructure › <span>33 / Distributed File System</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🗂</div>
+    <div>
+      <div class="h-title">Distributed File System (GFS / HDFS)</div>
+      <div class="h-desc">Design a distributed file system like Google File System or HDFS — storing exabytes across thousands of commodity machines, with a single master/namenode tracking all file-to-chunk mappings, chunk servers streaming data directly to clients, a 3-way replication pipeline for durability, and automatic recovery when machines fail daily at this scale.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard (Staff/Principal)</span>
+        <span class="badge b-tag">Namenode</span>
+        <span class="badge b-tag">Chunk Replication</span>
+        <span class="badge b-tag">Heartbeat</span>
+        <span class="badge b-tag">Lease</span>
+        <span class="badge b-tag">Erasure Coding</span>
+        <span class="badge b-tag">SPOF Mitigation</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('arch',this)">🏗 Architecture</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">📐 HLD Diagram</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>GFS (2003) was Google's foundational insight:</strong> at scale, machine failure is the norm, not the exception. Design the system to expect and tolerate failure. Commodity hardware, 3-way replication, automatic recovery — not expensive SAN arrays. This paper changed how everyone builds distributed storage.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Store and retrieve large files (GBs to TBs each)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Files split into fixed-size chunks (64MB in GFS)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Each chunk replicated 3× across different rack/nodes</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Support: create, read, append, delete (no random write)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Automatic re-replication when chunk falls below 3 replicas</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Namespace management (directory tree, permissions)</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Exabyte-scale storage across 10,000+ nodes</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Optimised for large sequential reads (MapReduce workloads)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Throughput over latency — 100s of MB/s read bandwidth</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Durability: survive simultaneous failure of any 2 replicas</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Automatic recovery from node failures (1-3 nodes/day at scale)</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Master / Namenode Design</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · MASTER NODE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>The master tracks all file-to-chunk mappings. It's a single node. Isn't that a SPOF?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Yes — and GFS acknowledges it. The master is intentionally simple: it holds all metadata in memory (fast), writes a journal (operation log) to disk and to a shadow master for durability. If the master fails, a shadow master takes over (manual or automated failover in GFS; HDFS v2+ uses Zookeeper-based automatic HA).<br><br>
+      <b>Why is it acceptable?</b><br>
+      <ul>
+        <li>Metadata is small: 10 billion chunks × 64 bytes = 640 GB — fits in RAM of a single powerful server.</li>
+        <li>Master is never on the data path: clients contact the master only for chunk locations, then stream data directly to/from chunk servers. So master failure doesn't immediately interrupt in-progress data transfers.</li>
+        <li>Master is stateless beyond the journal: recovery = replay the journal from the last checkpoint. Fast recovery (&lt;60 seconds).</li>
+        <li>HDFS addressed this with NameNode HA: two namenodes in active-standby, Zookeeper for leader election, journal nodes for shared edit log.</li>
+      </ul>
+      <b>Master responsibilities:</b> File namespace (tree), chunk-to-server mapping (rebuilt from heartbeats — not persisted!), chunk placement, garbage collection, re-replication. <b>Chunk server locations are NOT persisted</b> — on startup, master polls all chunk servers for their chunk lists (heartbeat-based rebuild).
+    </div></div>
+    <div class="tip-box"><strong>💡 Key insight:</strong> Chunk-to-server mapping is rebuilt from heartbeats, not persisted. This is elegant — it avoids the master and chunk servers getting out of sync. The chunk servers are the ground truth of what they hold.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">📝 Phase 2 — Write Path & Lease</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · WRITE PATH</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Client wants to write data to a file. Walk me through the full write path.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>1. Client asks master:</b> "I want to write chunk 42 of file /logs/access.log." Master returns: primary chunk server (has lease) + 2 secondary replicas. The <b>lease</b> is given to one chunk server — the primary — for 60 seconds. The primary serialises all mutations to this chunk during its lease period.<br><br>
+      <b>2. Client pipelines data to all 3 replicas:</b> Client pushes data to the closest replica (by network topology). That replica forwards to the next, which forwards to the third. This pipeline uses the full bandwidth of each link — all three transfers happen in parallel. 64MB chunk: sent once from client, forwarded twice internally = only 1 RTT of latency for the chain (once all bytes arrive at replica 1, it starts forwarding to replica 2 simultaneously).<br><br>
+      <b>3. Client sends WRITE RPC to primary:</b> After all replicas acknowledge data receipt (buffered, not yet applied), client tells primary to apply the write. Primary applies it at a specific offset, assigns a serial number, sends WRITE to secondaries with the same serial number.<br><br>
+      <b>4. Secondaries acknowledge to primary, primary acks client.</b> If any secondary fails: client retries from step 2. Chunks may have diverged partially — handled at file close with garbage collection.<br><br>
+      <b>Why separate data flow from control flow?</b> Data (the actual bytes) flows client → replica → replica (pipeline). Control (where to write) flows client → primary → secondaries. This decoupling lets us optimise data transfer independently of coordination.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">💥 Phase 3 — Failure Recovery</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · FAILURE & RECOVERY</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>3 nodes per day fail out of 10,000. How does the system detect and recover?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Detection — heartbeats:</b> Each chunk server sends a heartbeat to the master every 3 seconds. Heartbeat includes: list of chunks it holds (used to rebuild chunk-to-server mapping on restart). If master receives no heartbeat for 30s: mark that chunk server as dead.<br><br>
+      <b>Recovery — re-replication:</b> Master scans all chunks that have a replica on the dead server. For each chunk now with &lt;3 replicas: add to re-replication queue. Priority: chunks with only 1 replica first (highest risk). Master instructs a chunk server with a copy to send a replica to another chunk server. Chunk servers copy directly — master only orchestrates, doesn't transfer data.<br><br>
+      <b>Placement strategy:</b> Replicas placed across different racks (rack-aware placement). One replica per unique rack. Ensures even a rack power failure (kills all nodes in a rack) can't lose data.<br><br>
+      <b>Re-replication bandwidth:</b> 3 node failures/day × 10TB per node × 3 replicas to rebuild / 86400 seconds = ~1 GB/sec sustained re-replication traffic. Each failed node's chunks spread across all surviving nodes — parallel recovery finishes in minutes not hours.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="arch" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture Deep Dive</div><div class="sec-body">
+    <div class="two-col">
+      <div class="flow-box">
+        <div class="flow-title" style="color:#cffafe">MASTER / NAMENODE</div>
+        <div class="fs"><div class="fnum">1</div><div><strong>In-memory namespace tree:</strong> directory hierarchy, file metadata, access control. All fits in RAM (640 GB for 10B chunks).</div></div>
+        <div class="fs"><div class="fnum">2</div><div><strong>Chunk mapping table:</strong> file → list of (chunk_handle, chunk_version, [server1, server2, server3]). Chunk-to-server NOT persisted — rebuilt from heartbeats.</div></div>
+        <div class="fs"><div class="fnum">3</div><div><strong>Operation log (journal):</strong> All namespace mutations written to log before taking effect. Checkpointed periodically. Recovery = last checkpoint + replay log.</div></div>
+        <div class="fs"><div class="fnum">4</div><div><strong>Shadow master:</strong> Replays journal asynchronously. Can serve read-only metadata queries if primary master fails. Failover: promote shadow to primary.</div></div>
+        <div class="fs"><div class="fnum">5</div><div><strong>Background tasks:</strong> garbage collect orphaned chunks, re-balance chunk placement, re-replicate under-replicated chunks, load balance.</div></div>
+      </div>
+      <div class="flow-box">
+        <div class="flow-title" style="color:#6ee7b7">CHUNK SERVERS / DATANODES</div>
+        <div class="fs"><div class="fnum">1</div><div><strong>Store chunks as flat files:</strong> Each chunk is a local file on the chunk server's disk. Chunk handle = filename. No RAID — replication provides durability.</div></div>
+        <div class="fs"><div class="fnum">2</div><div><strong>Heartbeat to master every 3s:</strong> Reports chunk list, disk usage, health. Master uses this to rebuild chunk-to-server mapping.</div></div>
+        <div class="fs"><div class="fnum">3</div><div><strong>Direct client streaming:</strong> After master tells client which servers hold the chunk, client connects directly to chunk server. Master is out of the data path.</div></div>
+        <div class="fs"><div class="fnum">4</div><div><strong>Checksum each block:</strong> 64KB blocks within a chunk have CRC32 checksums. Verified on every read. Silent corruption detected and reported to master for re-replication.</div></div>
+        <div class="fs"><div class="fnum">5</div><div><strong>Lease holder (primary):</strong> One chunk server per chunk holds the lease. Serialises concurrent writes. Lease expires after 60s or is explicitly released.</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Scale target: 1 exabyte (EB) raw storage</span>
+  <span class="label">With 3× replication: 1 EB / 3                     = </span><span class="val">333 PB</span>  <span class="label">usable</span>
+  <span class="label">10 TB per node: 333 PB / 10 TB                    = </span><span class="val">33,000 nodes</span>
+
+<span class="label">Chunk count:</span>
+  <span class="label">333 PB / 64 MB per chunk                          = </span><span class="val">~5 billion chunks</span>
+  <span class="label">Master RAM: 5B chunks × 64 bytes metadata          = </span><span class="val">320 GB</span>  <span class="label">fits in 1 master server</span>
+
+<span class="label">Heartbeat traffic:</span>
+  <span class="label">33K nodes × 1 heartbeat/3s                        = </span><span class="val">11K heartbeats/sec</span>
+  <span class="label">Each: ~1KB (chunk list delta) → 11 MB/sec to master → trivial</span>
+
+<span class="label">Read bandwidth (aggregate):</span>
+  <span class="label">33K nodes × 100 MB/s per node                     = </span><span class="val">3.3 PB/s</span>  <span class="label">theoretical max</span>
+  <span class="label">Practical (30% utilisation): ~1 PB/s aggregate</span>
+
+<span class="label">Re-replication on failure:</span>
+  <span class="label">10 TB failed node / (33K - 1 nodes parallel write) = </span><span class="val">~minutes</span>  <span class="label">not hours</span>
+
+<span class="result">→ Master RAM is the key bottleneck. 1 EB = 320 GB master RAM. Two masters (HA) = 640 GB total.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Notes</th></tr>
+      <tr><td>Chunk size</td><td class="hi">64 MB (GFS) / 128 MB (HDFS)</td><td>Large chunks = fewer metadata entries per byte</td></tr>
+      <tr><td>Replication factor</td><td class="hi">3× (default)</td><td>Rack-aware: 1 per rack minimum</td></tr>
+      <tr><td>Master RAM</td><td class="hi">320 GB for 1 EB</td><td>64 bytes per chunk × 5B chunks</td></tr>
+      <tr><td>Chunk server count</td><td class="hi">33,000</td><td>10 TB per node; commodity hardware</td></tr>
+      <tr><td>Heartbeat interval</td><td class="hi">3 seconds</td><td>30s timeout before marking node dead</td></tr>
+      <tr><td>Lease duration</td><td class="hi">60 seconds</td><td>Renewable; primary chunk server serialises writes</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">📐 Full Read & Write Flow</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 860 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+<defs>
+<marker id="ca" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#06b6d4"/></marker>
+<marker id="cg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="cy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+<marker id="cr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f43f5e"/></marker>
+</defs>
+
+<!-- Master -->
+<rect x="330" y="10" width="200" height="110" rx="8" fill="#131c2e" stroke="#06b6d4" stroke-width="2"/>
+<text x="430" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#cffafe">🧠 Master / Namenode</text>
+<text x="430" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">namespace tree (RAM)</text>
+<text x="430" y="64" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">chunk → server mapping</text>
+<text x="430" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">operation log (disk)</text>
+<text x="430" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">lease management</text>
+<text x="430" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">NOT on data path after metadata lookup</text>
+
+<!-- Client -->
+<rect x="10" y="140" width="120" height="80" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="70" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Client App</text>
+<text x="70" y="179" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">GFS / HDFS</text>
+<text x="70" y="194" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">client library</text>
+
+<!-- Chunk server 1 (primary) -->
+<rect x="180" y="240" width="160" height="100" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="260" y="264" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Chunk Server 1</text>
+<text x="260" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">(PRIMARY — has lease)</text>
+<text x="260" y="294" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">serialises writes</text>
+<text x="260" y="308" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">assigns serial #</text>
+<text x="260" y="323" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">Rack A</text>
+
+<!-- Chunk server 2 -->
+<rect x="370" y="240" width="150" height="100" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="445" y="264" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Chunk Server 2</text>
+<text x="445" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(SECONDARY)</text>
+<text x="445" y="294" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">applies mutation</text>
+<text x="445" y="308" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">on primary cmd</text>
+<text x="445" y="323" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">Rack B</text>
+
+<!-- Chunk server 3 -->
+<rect x="550" y="240" width="150" height="100" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="625" y="264" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Chunk Server 3</text>
+<text x="625" y="278" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">(SECONDARY)</text>
+<text x="625" y="294" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">applies mutation</text>
+<text x="625" y="308" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#4e6070">on primary cmd</text>
+<text x="625" y="323" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">Rack C</text>
+
+<!-- READ FLOW labels -->
+<text x="720" y="100" font-family="JetBrains Mono" font-size="8" fill="#06b6d4" font-weight="700">READ FLOW:</text>
+<text x="720" y="116" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">① Client → Master: file+offset</text>
+<text x="720" y="130" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">② Master → Client: chunk servers</text>
+<text x="720" y="144" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">③ Client → nearest replica: READ</text>
+<text x="720" y="158" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">→ Direct stream, no master</text>
+
+<!-- WRITE FLOW labels -->
+<text x="720" y="200" font-family="JetBrains Mono" font-size="8" fill="#f59e0b" font-weight="700">WRITE FLOW:</text>
+<text x="720" y="216" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">① Client → Master: chunk lease?</text>
+<text x="720" y="230" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">② Master → Client: primary + 2nd</text>
+<text x="720" y="244" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">③ Client pushes data → CS1 → CS2 → CS3</text>
+<text x="720" y="258" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">④ Client sends WRITE to primary</text>
+<text x="720" y="272" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">⑤ Primary → 2nd/3rd: apply mutation</text>
+<text x="720" y="286" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">⑥ ACK chain → client</text>
+
+<!-- Heartbeats -->
+<rect x="10" y="350" width="700" height="24" rx="4" fill="rgba(6,182,212,.06)" stroke="rgba(6,182,212,.12)"/>
+<text x="20" y="366" font-family="JetBrains Mono" font-size="7" fill="#06b6d4">HEARTBEAT every 3s: CS → Master (chunk list, disk usage). No heartbeat in 30s → node dead → re-replicate its chunks across surviving nodes</text>
+
+<!-- Arrows READ -->
+<line x1="70" y1="140" x2="330" y2="65" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#ca)"/>
+<line x1="330" y1="75" x2="140" y2="170" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#ca)"/>
+<line x1="130" y1="200" x2="180" y2="262" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#ca)"/>
+<!-- Arrows WRITE data pipeline -->
+<line x1="130" y1="200" x2="180" y2="268" stroke="#f59e0b" stroke-width="2" marker-end="url(#cy)"/>
+<line x1="340" y1="280" x2="368" y2="280" stroke="#f59e0b" stroke-width="2" marker-end="url(#cy)"/>
+<line x1="520" y1="280" x2="548" y2="280" stroke="#f59e0b" stroke-width="2" marker-end="url(#cy)"/>
+<!-- Heartbeats -->
+<line x1="260" y1="240" x2="400" y2="120" stroke="#4e6070" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="445" y1="240" x2="430" y2="120" stroke="#4e6070" stroke-width="1" stroke-dasharray="2,2"/>
+<line x1="625" y1="240" x2="450" y2="120" stroke="#4e6070" stroke-width="1" stroke-dasharray="2,2"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java (Master + Client)</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python (Chunk Server)</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code class="bl"><span class="cm">// ══════════════════════════════════════════════════════
+// Distributed File System — Java: Master + Client stubs
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── Master: namespace + chunk location tracking ──────</span>
+<span class="kw">public class</span> <span class="cls">Master</span> {
+    <span class="cm">// File namespace: path → list of (chunkHandle, version)</span>
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">List</span>&lt;<span class="cls">ChunkInfo</span>&gt;&gt; namespace = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+    <span class="cm">// Chunk location: chunkHandle → [server1, server2, server3]</span>
+    <span class="cm">// NOTE: rebuilt from heartbeats, NOT persisted to disk</span>
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">Long</span>, <span class="cls">List</span>&lt;<span class="cls">String</span>&gt;&gt; chunkLocations = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+    <span class="cm">// Lease holder: chunkHandle → (primary_server, expiry_time)</span>
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">Long</span>, <span class="cls">Lease</span>&gt; leases = <span class="kw">new</span> <span class="cls">ConcurrentHashMap</span>&lt;&gt;();
+
+    <span class="cm">/**
+     * Client lookup: return chunk servers for a file range.
+     * Client can then contact chunk servers directly.
+     */</span>
+    <span class="kw">public</span> <span class="cls">ChunkLocationResponse</span> <span class="fn2">getChunkLocations</span>(<span class="cls">String</span> filePath, <span class="kw">int</span> chunkIndex) {
+        <span class="cls">List</span>&lt;<span class="cls">ChunkInfo</span>&gt; chunks = namespace.get(filePath);
+        <span class="kw">if</span> (chunks == <span class="kw">null</span> || chunkIndex >= chunks.size())
+            <span class="kw">throw new</span> <span class="cls">FileNotFoundException</span>(filePath);
+        <span class="cls">ChunkInfo</span> chunk   = chunks.get(chunkIndex);
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; servers = chunkLocations.get(chunk.handle());
+        <span class="kw">return new</span> <span class="cls">ChunkLocationResponse</span>(chunk.handle(), chunk.version(), servers);
+    }
+
+    <span class="cm">/** Grant or renew a lease for writing a chunk (client asks before write). */</span>
+    <span class="kw">public</span> <span class="cls">LeaseResponse</span> <span class="fn2">grantLease</span>(<span class="kw">long</span> chunkHandle) {
+        <span class="cls">List</span>&lt;<span class="cls">String</span>&gt; servers = chunkLocations.get(chunkHandle);
+        <span class="cls">Lease</span> lease = <span class="kw">new</span> <span class="cls">Lease</span>(servers.get(<span class="num">0</span>), <span class="cls">System</span>.currentTimeMillis() + <span class="num">60_000</span>);
+        leases.put(chunkHandle, lease);
+        <span class="kw">return new</span> <span class="cls">LeaseResponse</span>(lease.primary(), servers.subList(<span class="num">1</span>, servers.size()));
+    }
+
+    <span class="cm">/** Heartbeat from chunk server — updates chunk location index. */</span>
+    <span class="kw">public void</span> <span class="fn2">heartbeat</span>(<span class="cls">String</span> serverId, <span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; chunkHandles) {
+        chunkHandles.forEach(handle ->
+            chunkLocations.computeIfAbsent(handle, k -> <span class="kw">new</span> <span class="cls">ArrayList</span>&lt;&gt;())
+                          .add(serverId));
+        <span class="fn2">checkUnderReplicated</span>(chunkHandles);
+    }
+
+    <span class="cm">/** Find chunks with &lt;3 replicas and trigger re-replication. */</span>
+    <span class="kw">private void</span> <span class="fn2">checkUnderReplicated</span>(<span class="cls">List</span>&lt;<span class="cls">Long</span>&gt; handles) {
+        handles.stream()
+            .filter(h -> chunkLocations.getOrDefault(h, <span class="cls">List</span>.of()).size() < <span class="num">3</span>)
+            .forEach(this::scheduleReplication);
+    }
+}
+
+<span class="cm">// ── GFS Client ────────────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">GFSClient</span> {
+    <span class="kw">private final</span> <span class="cls">Master</span>        master;
+    <span class="kw">private final</span> <span class="cls">Map</span>&lt;<span class="cls">String</span>, <span class="cls">ChunkLocationResponse</span>&gt; locationCache = <span class="kw">new</span> <span class="cls">HashMap</span>&lt;&gt;();
+
+    <span class="kw">public byte</span>[] <span class="fn2">read</span>(<span class="cls">String</span> file, <span class="kw">long</span> offset, <span class="kw">int</span> length) {
+        <span class="kw">int</span> chunkIndex = (<span class="kw">int</span>) (offset / <span class="cls">GFSConstants</span>.CHUNK_SIZE);
+        <span class="kw">long</span> chunkOffset = offset % <span class="cls">GFSConstants</span>.CHUNK_SIZE;
+
+        <span class="cm">// 1. Ask master for chunk location (cache for 5 minutes)</span>
+        <span class="cls">ChunkLocationResponse</span> loc = master.getChunkLocations(file, chunkIndex);
+
+        <span class="cm">// 2. Pick closest replica (by network distance / RTT)</span>
+        <span class="cls">String</span> closestServer = <span class="fn2">pickClosestReplica</span>(loc.servers());
+
+        <span class="cm">// 3. Stream data directly from chunk server — master not involved</span>
+        <span class="kw">return</span> chunkServerClient.read(closestServer, loc.handle(), chunkOffset, length);
+    }
+
+    <span class="kw">public void</span> <span class="fn2">write</span>(<span class="cls">String</span> file, <span class="kw">long</span> offset, <span class="kw">byte</span>[] data) {
+        <span class="cls">LeaseResponse</span> lease = master.grantLease(<span class="fn2">getChunkHandle</span>(file, offset));
+
+        <span class="cm">// Push data to all replicas via pipeline: primary → sec1 → sec2</span>
+        chunkServerClient.pushData(lease.primary(), data);  <span class="cm">// cascades to secondaries</span>
+
+        <span class="cm">// Send WRITE to primary; it serialises and acks secondaries</span>
+        chunkServerClient.write(lease.primary(), <span class="fn2">getChunkHandle</span>(file, offset), offset % <span class="cls">GFSConstants</span>.CHUNK_SIZE);
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code class="bl"><span class="cm"># ══════════════════════════════════════════════════════
+# DFS — Python: Chunk Server + Heartbeat + Checksum
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> os, hashlib, time, threading, struct
+<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> List
+
+CHUNK_SIZE   = <span class="num">64</span> * <span class="num">1024</span> * <span class="num">1024</span>  <span class="cm"># 64 MB</span>
+BLOCK_SIZE   = <span class="num">64</span> * <span class="num">1024</span>          <span class="cm"># 64 KB (for checksumming)</span>
+
+
+<span class="kw">class</span> <span class="cls">ChunkServer</span>:
+    <span class="str">"""Stores chunks as local files. Checksums each 64KB block."""</span>
+
+    <span class="kw">def</span> <span class="fn2">__init__</span>(self, server_id: str, data_dir: str, master_stub):
+        self.server_id  = server_id
+        self.data_dir   = Path(data_dir)
+        self.master     = master_stub
+        self.chunks:    dict[int, str] = {}  <span class="cm"># handle → filepath</span>
+        self.checksums: dict[int, list] = {}  <span class="cm"># handle → [crc32 per block]</span>
+        self.data_dir.mkdir(parents=True, exist_ok=<span class="kw">True</span>)
+        threading.Thread(target=self._heartbeat_loop, daemon=<span class="kw">True</span>).start()
+
+    <span class="kw">def</span> <span class="fn2">write_chunk</span>(self, handle: int, offset: int, data: bytes):
+        path = self.data_dir / str(handle)
+        <span class="kw">with</span> open(path, <span class="str">\'r+b\'</span> <span class="kw">if</span> path.exists() <span class="kw">else</span> <span class="str">\'w+b\'</span>) <span class="kw">as</span> f:
+            f.seek(offset)
+            f.write(data)
+        self.chunks[handle] = str(path)
+        self._update_checksums(handle, path)
+
+    <span class="kw">def</span> <span class="fn2">read_chunk</span>(self, handle: int, offset: int, length: int) -> bytes:
+        path = self.chunks.get(handle)
+        <span class="kw">if not</span> path:
+            <span class="kw">raise</span> <span class="cls">FileNotFoundError</span>(f<span class="str">\'Chunk {handle} not found\'</span>)
+        <span class="kw">with</span> open(path, <span class="str">\'rb\'</span>) <span class="kw">as</span> f:
+            f.seek(offset)
+            data = f.read(length)
+        self._verify_checksums(handle, path, offset, len(data))
+        <span class="kw">return</span> data
+
+    <span class="kw">def</span> <span class="fn2">_update_checksums</span>(self, handle: int, path: str):
+        <span class="str">"""Compute CRC32 for each 64KB block."""</span>
+        <span class="kw">import</span> zlib
+        blocks = []
+        <span class="kw">with</span> open(path, <span class="str">\'rb\'</span>) <span class="kw">as</span> f:
+            <span class="kw">while True</span>:
+                block = f.read(BLOCK_SIZE)
+                <span class="kw">if not</span> block: <span class="kw">break</span>
+                blocks.append(zlib.crc32(block))
+        self.checksums[handle] = blocks
+
+    <span class="kw">def</span> <span class="fn2">_verify_checksums</span>(self, handle: int, path: str, offset: int, length: int):
+        <span class="str">"""Verify CRC32 for blocks covering the read range."""</span>
+        <span class="kw">import</span> zlib
+        start_block = offset // BLOCK_SIZE
+        end_block   = (offset + length - <span class="num">1</span>) // BLOCK_SIZE
+        stored      = self.checksums.get(handle, [])
+        <span class="kw">with</span> open(path, <span class="str">\'rb\'</span>) <span class="kw">as</span> f:
+            <span class="kw">for</span> i <span class="kw">in</span> range(start_block, end_block + <span class="num">1</span>):
+                f.seek(i * BLOCK_SIZE)
+                block = f.read(BLOCK_SIZE)
+                actual = zlib.crc32(block)
+                <span class="kw">if</span> i < len(stored) <span class="kw">and</span> stored[i] != actual:
+                    self.master.report_corruption(self.server_id, handle, i)
+                    <span class="kw">raise</span> <span class="cls">IOError</span>(f<span class="str">\'Checksum mismatch chunk={handle} block={i}\'</span>)
+
+    <span class="kw">def</span> <span class="fn2">_heartbeat_loop</span>(self):
+        <span class="kw">while True</span>:
+            self.master.heartbeat(self.server_id, list(self.chunks.keys()))
+            time.sleep(<span class="num">3</span>)
+
+    <span class="kw">def</span> <span class="fn2">replicate_to</span>(self, handle: int, target_server: str):
+        <span class="str">"""Send chunk to another server (during re-replication)."""</span>
+        data = <span class="kw">open</span>(self.chunks[handle], <span class="str">\'rb\'</span>).read()
+        target_stub = get_chunk_server_stub(target_server)
+        target_stub.write_chunk(handle, <span class="num">0</span>, data)
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">💾 Durability: 3× Replication vs Erasure Coding</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">3× Replication (GFS/HDFS default)</div><p>Simple: 3 full copies. 200% storage overhead. Tolerates 2 simultaneous failures. Read from any replica — 3× read bandwidth. Fast recovery (copy one replica). Used for hot data and new writes. HDFS default since the beginning.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Erasure Coding (cold data)</div><p>Reed-Solomon (6+3): split file into 6 data fragments + 3 parity. Tolerate any 3 failures. Only 50% storage overhead vs 200% for 3× replication. CPU cost to encode/decode. Best for cold, infrequently accessed data (archival). HDFS 3.0+ supports EC natively. Used by Facebook/Meta for warm/cold tiers.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Tiered (hot + cold)</div><p>Hot data: 3× replication (fast writes, simple recovery). Cold data (&gt;30 days unaccessed): automatically migrate to erasure coded storage. Halves storage cost with minimal latency impact on cold reads. Industry standard (Google Colossus, AWS S3).</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">🧠 Master HA: Single Master vs Federated vs HDFS NameNode HA</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-why">Single Master (GFS original)</div><p>Simple. All metadata in one RAM. 320 GB for 1 EB. Manual failover to shadow master (minutes of downtime). Acceptable for batch workloads (MapReduce). Not acceptable for interactive or latency-sensitive workloads.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ HDFS NameNode HA</div><p>Active + standby NameNode. Shared edit log via Journal Nodes (3+). Zookeeper for leader election. Automatic failover in &lt;30s. Standard for production HDFS since Hadoop 2.x. Both namenodes keep namespace in RAM — identical state.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Federated NameNode</div><p>Multiple NameNodes each responsible for a subtree of the namespace. Horizontal scaling of metadata. Needed when namespace exceeds 320 GB RAM. Used by very large Hadoop clusters (Yahoo, Alibaba). More complex routing but eliminates the single-master bottleneck.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

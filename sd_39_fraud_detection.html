@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #39 — Fraud Detection System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#ef4444;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fee2e2;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(239,68,68,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fee2e2 0%,#ef4444 50%,#7f1d1d 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-hard{background:rgba(124,58,237,.12);color:#c4b5fd;border:1px solid rgba(124,58,237,.25)}
+.b-tag{background:rgba(239,68,68,.07);color:#fee2e2;border:1px solid rgba(239,68,68,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(239,68,68,.1);color:var(--ecolor);border:1.5px solid rgba(239,68,68,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(239,68,68,.08);color:var(--accent);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fee2e2;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(239,68,68,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#ef4444;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Fintech › <span>39 / Fraud Detection</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">🚨</div>
+    <div>
+      <div class="h-title">Fraud Detection System</div>
+      <div class="h-desc">Design a real-time fraud detection system for a payment processor like Stripe or PayPal — evaluating every transaction in under 100ms before it clears, combining rule-based velocity checks with ML scoring models, maintaining a real-time feature store for user/merchant behavior, and balancing false positive rates (blocking legitimate transactions) against false negatives (missing fraud).</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-hard">🟣 Hard</span>
+        <span class="badge b-tag">Real-time ML</span>
+        <span class="badge b-tag">Feature Store</span>
+        <span class="badge b-tag">Velocity Checks</span>
+        <span class="badge b-tag">Rules Engine</span>
+        <span class="badge b-tag">False Positive</span>
+        <span class="badge b-tag">Model Serving</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('pipeline',this)">⚙️ Pipeline</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Fraud detection is a real-time ML problem with an asymmetric cost function.</strong> Missing fraud (false negative) costs money directly. Blocking a legitimate transaction (false positive) loses a customer permanently. Typical target: 0.1% fraud rate, &lt;0.5% false positive rate. Every millisecond matters — the model must run synchronously before the transaction clears.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Score every transaction before it clears: APPROVE / DECLINE / REVIEW</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Velocity checks: transactions per hour, per day, per merchant</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Rule-based filters: country mismatch, unusual amount, new device</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>ML model scoring: gradient-boosted tree or neural network on 200+ features</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Feedback loop: confirmed fraud updates model and rules</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Case management: flagged transactions queued for analyst review</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Latency: &lt;100ms p99 per transaction decision</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Throughput: 100K transactions/sec peak (Black Friday)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>False negative rate: &lt;0.1% (miss &lt;1 in 1000 fraudulent txns)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>False positive rate: &lt;0.5% (block &lt;5 in 1000 legitimate txns)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Availability: 99.999% — fraud check must never block payment flow</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — The Three-Layer Decision System</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · DECISION LAYERS</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A transaction arrives. Walk me through every step from receipt to the APPROVE/DECLINE decision — and explain why you have multiple layers instead of just running the ML model.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Three layers, each progressively more expensive but more accurate:<br><br>
+      <b>Layer 1 — Hard Rules (1ms):</b> Instant DECLINE with no ML needed. Examples: transaction amount exceeds user's account limit, card reported stolen (blocklist lookup in Redis O(1)), country of transaction ≠ card's registered country by more than 2 hops, IP is in known fraud VPN/proxy list. These are high-precision signals — almost never wrong. If triggered: DECLINE immediately, no further processing.<br><br>
+      <b>Layer 2 — Velocity Checks (5ms):</b> Sliding window counters in Redis. Retrieve and compare:<br>
+      <ul>
+        <li>Transactions from this card in the last 1 hour (normal: 1-5, suspicious: &gt;20)</li>
+        <li>Transactions from this IP in the last 10 minutes (card testing attack: 50+ attempts)</li>
+        <li>Unique merchants this card visited in the last hour (normal: 1-2, suspicious: 10+)</li>
+        <li>Amount distribution: is this amount 10× larger than the user's average transaction?</li>
+      </ul>
+      Each check produces a "velocity feature" consumed by Layer 3.<br><br>
+      <b>Layer 3 — ML Model Scoring (20-50ms):</b> Gradient-boosted tree (XGBoost) or small neural network. Input: 200+ features combining transaction attributes (amount, merchant category, time of day) + user profile features (average spend, typical locations, device history) + real-time velocity features from Layer 2. Output: fraud probability 0.0-1.0. Threshold: &gt;0.8 → DECLINE, 0.4-0.8 → REVIEW (send to analyst queue), &lt;0.4 → APPROVE.<br><br>
+      Why not just ML? ML model startup cost is 20-50ms. Hard rules catch 30% of fraud in &lt;1ms. This reduces model invocations by 30% and prevents obvious fraud without ML's minimum latency overhead.
+    </div></div>
+    <div class="tip-box"><strong>💡 The key insight interviewers want to hear:</strong> You must always approve by default if the fraud system is unavailable (circuit breaker open). A payment processor that blocks ALL transactions when the fraud system crashes is worse than one that temporarily allows transactions through. Availability of the payment flow is the top priority; fraud detection is a best-effort safeguard.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🗄 Phase 2 — Real-Time Feature Store</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · FEATURE STORE</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Your ML model needs 200 features per transaction. Where do you get them from fast enough to hit 100ms?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      Features come from two sources with very different latency profiles:<br><br>
+      <b>Batch features (precomputed, refreshed hourly/daily):</b> User's 30-day average transaction amount, typical merchant categories, historical fraud rate for this merchant, user's home country, device fingerprint trust score. These are computed offline by Spark jobs and stored in Redis (hot) with a TTL. On each transaction: <code>HGETALL user_features:{user_id}</code> → returns 100+ features in &lt;2ms.<br><br>
+      <b>Real-time features (computed on the fly):</b> Current velocity (transactions in last 1h), time since last transaction, whether this merchant is new for this user, location distance from last transaction. Computed via Redis sorted sets and counters. Each feature: 1 Redis command, &lt;1ms. Total for 50 real-time features: 50 Redis pipeline commands = 5ms.<br><br>
+      <b>Feature store architecture:</b> All features (batch + real-time) are materialised into a single flat feature vector before calling the ML model. This "feature lookup" phase takes 10ms total. The ML model then runs inference on the preloaded vector in 20ms. Combined: 30ms for feature+inference — well within 100ms budget.<br><br>
+      <b>Feature freshness:</b> Batch features updated every 4 hours via Spark. Real-time features updated on every transaction (when a transaction completes, update the user's velocity counters). This means the model always has up-to-date velocity data even for features that require historical aggregation.
+    </div></div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🔄 Phase 3 — Feedback Loop & Model Retraining</div><div class="sec-body">
+    <div class="phase-label">PHASE 3 · FEEDBACK LOOP</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>Fraudsters adapt to your model. How do you keep the model up to date?</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      The label generation problem: you only know a transaction was fraudulent after the chargeback dispute is resolved (days to weeks). This creates a label delay — the model is always training on slightly stale ground truth.<br><br>
+      <b>Label pipeline:</b> Transaction logs → chargeback system (when user disputes a charge) → fraud label written to the training dataset with the original transaction's features. Lag: 7-14 days average for chargebacks. Immediate labels available from: user reporting fraud, card network fraud signals (Visa/MC share confirmed fraud events), and internal analyst decisions on REVIEW queue.<br><br>
+      <b>Retraining cadence:</b> Daily retraining on the last 90 days of labeled data (rolling window — older data is less relevant as fraud patterns evolve). Retrain is a Spark/offline job: runs on a GPU cluster, produces a new model artifact, deployed via A/B test (10% traffic to new model, 90% to existing) before full rollout.<br><br>
+      <b>Drift detection:</b> Monitor model score distribution daily. If the distribution shifts significantly (KS test), trigger an early retrain. Also monitor: fraud rate week-over-week, false positive rate (via user complaints about declined transactions). Sudden spike = new fraud vector → analysts investigate → write new hard rules immediately (faster than model retraining).
+    </div></div>
+  </div></div>
+</div>
+
+<div id="pipeline" class="panel">
+  <div class="sec"><div class="sec-head">⚙️ Decision Pipeline — Timing Budget</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:340px">
+<defs><marker id="fra" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ef4444"/></marker></defs>
+
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#ef4444" font-weight="700">FRAUD DECISION PIPELINE — 100ms BUDGET</text>
+
+<!-- Timeline bar -->
+<rect x="10" y="30" width="820" height="20" rx="3" fill="rgba(239,68,68,.08)" stroke="rgba(239,68,68,.15)"/>
+<text x="10" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">0ms</text>
+<text x="110" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">10ms</text>
+<text x="210" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">20ms</text>
+<text x="310" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">30ms</text>
+<text x="410" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">40ms</text>
+<text x="510" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">50ms</text>
+<text x="610" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">60ms</text>
+<text x="710" y="26" font-family="JetBrains Mono" font-size="7" fill="#4e6070">70ms</text>
+<text x="820" y="26" font-family="JetBrains Mono" font-size="7" fill="#ef4444">100ms</text>
+
+<!-- Step blocks -->
+<!-- Step 1: Hard Rules (0-5ms) -->
+<rect x="10" y="58" width="50" height="40" rx="4" fill="rgba(239,68,68,.15)" stroke="#ef4444" stroke-width="1.5"/>
+<text x="35" y="75" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#ef4444">Hard</text>
+<text x="35" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#ef4444">Rules</text>
+
+<!-- Step 2: Blocklist (0-2ms in parallel) -->
+<rect x="10" y="108" width="20" height="40" rx="4" fill="rgba(244,63,94,.12)" stroke="#f43f5e" stroke-width="1.5"/>
+<text x="20" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#f43f5e">Block</text>
+
+<!-- Step 3: Feature fetch from Redis (5-20ms) -->
+<rect x="65" y="58" width="150" height="90" rx="4" fill="rgba(56,189,248,.08)" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="140" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">Feature Fetch</text>
+<text x="140" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Redis pipeline:</text>
+<text x="140" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">batch features (2ms)</text>
+<text x="140" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">velocity counters (5ms)</text>
+<text x="140" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">total: ~10ms</text>
+
+<!-- Step 4: ML Inference (20-60ms) -->
+<rect x="220" y="58" width="300" height="90" rx="4" fill="rgba(167,139,250,.08)" stroke="#a78bfa" stroke-width="2"/>
+<text x="370" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">ML Model Inference</text>
+<text x="370" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">XGBoost / LightGBM on 200+ features</text>
+<text x="370" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">ONNX runtime, pre-loaded in memory</text>
+<text x="370" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">output: fraud_score ∈ [0.0, 1.0]</text>
+<text x="370" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">~20-30ms on CPU (no GPU needed at inference)</text>
+
+<!-- Step 5: Decision (55-65ms) -->
+<rect x="525" y="58" width="100" height="90" rx="4" fill="rgba(16,185,129,.08)" stroke="#10b981" stroke-width="1.5"/>
+<text x="575" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#6ee7b7">Threshold</text>
+<text x="575" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">&gt; 0.8 → DECLINE</text>
+<text x="575" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">0.4–0.8 → REVIEW</text>
+<text x="575" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">&lt; 0.4 → APPROVE</text>
+<text x="575" y="146" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">~5ms</text>
+
+<!-- Step 6: Async side-effects (after response) -->
+<rect x="630" y="58" width="195" height="90" rx="4" fill="rgba(245,158,11,.06)" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="727" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">Async (fire &amp; forget)</text>
+<text x="727" y="94" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">update velocity counters</text>
+<text x="727" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">log transaction + score</text>
+<text x="727" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">enqueue for analyst review</text>
+<text x="727" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">NOT in 100ms critical path</text>
+
+<!-- Features box -->
+<text x="10" y="174" font-family="JetBrains Mono" font-size="10" fill="#38bdf8" font-weight="700">KEY FEATURES (200+ total)</text>
+<rect x="10" y="184" width="820" height="145" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="20" y="204" font-family="JetBrains Mono" font-size="8" fill="#38bdf8">TRANSACTION (real-time)           USER PROFILE (batch, 4h TTL)          VELOCITY (real-time Redis)</text>
+<line x1="10" y1="210" x2="830" y2="210" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+<text x="20" y="226" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">amount                            user_age_days                          txns_1h</text>
+<text x="20" y="240" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">merchant_category (MCC)           avg_txn_amount_30d                     txns_24h</text>
+<text x="20" y="254" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">time_of_day / day_of_week         typical_countries                      unique_merchants_1h</text>
+<text x="20" y="268" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">device_fingerprint (new device?)  historical_fraud_count                 amount_zscore (vs user avg)</text>
+<text x="20" y="282" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">ip_country vs card_country        card_age_days                          time_since_last_txn</text>
+<text x="20" y="296" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">is_international                  merchant_fraud_rate_30d                location_jump_km (vs last txn)</text>
+<text x="20" y="312" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">card_present_vs_not               user_chargeback_rate                   is_first_txn_this_merchant</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Transaction volume:</span>
+  <span class="label">100K txns/sec peak (Black Friday)               = </span><span class="val">100K decisions/sec</span>
+  <span class="label">Average: 10K txns/sec                           = </span><span class="val">10K/sec baseline</span>
+
+<span class="label">Feature store (Redis):</span>
+  <span class="label">100 users × 200 features × 8 bytes each         = </span><span class="val">160 KB per user</span>
+  <span class="label">100M active users × 160 KB                      = </span><span class="val">16 TB</span>  <span class="label">(Redis cluster)</span>
+  <span class="label">100K txns/sec × 50 Redis commands (pipeline)    = </span><span class="val">5M Redis ops/sec</span>
+  <span class="label">Redis cluster: 50 nodes × 100K ops/sec          = </span><span class="val">5M ops/sec</span>  <span class="label">✓</span>
+
+<span class="label">ML model serving:</span>
+  <span class="label">XGBoost inference: 1ms per transaction (CPU)    </span>
+  <span class="label">100K txns/sec ÷ 1ms × 1 core = 100 cores        = </span><span class="val">25 × 4-core nodes</span>
+  <span class="label">(In practice: model servers run 50+ concurrent inferences)</span>
+
+<span class="label">Fraud rates &amp; economics:</span>
+  <span class="label">Fraud rate: 0.1% of transactions                = </span><span class="val">100 fraudulent txns/sec</span>
+  <span class="label">Avg fraud amount: $200 → 100 × $200             = </span><span class="val">$20K/sec saved</span>  <span class="label">by detection</span>
+  <span class="label">False positive rate: 0.5% of 10K = 50 blocked legitimate txns/sec</span>
+
+<span class="result">→ Redis cluster 50 nodes. 25 ML model servers. Total fraud detection: ~60ms p99.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Scale</th><th>Latency</th></tr>
+      <tr><td>Hard rules (Redis blocklist)</td><td class="hi">100K/sec</td><td class="ans">&lt;2ms</td></tr>
+      <tr><td>Feature fetch (Redis pipeline)</td><td class="hi">5M ops/sec</td><td class="ans">5-10ms</td></tr>
+      <tr><td>ML inference (XGBoost ONNX)</td><td class="hi">100K/sec on 25 nodes</td><td class="ans">20-30ms</td></tr>
+      <tr><td>Decision + async logging</td><td class="hi">100K/sec</td><td class="ans">&lt;5ms</td></tr>
+      <tr><td>Total p99</td><td class="hi">100K/sec peak</td><td class="ans">&lt;60ms</td></tr>
+      <tr><td>Model retraining</td><td class="hi">Daily batch</td><td class="ans">2-4 hours on GPU cluster</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:320px">
+<defs>
+<marker id="fma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ef4444"/></marker>
+<marker id="fmg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="fmb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+<marker id="fmy" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+</defs>
+
+<!-- Payment API -->
+<rect x="10" y="100" width="110" height="70" rx="6" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="65" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Payment API</text>
+<text x="65" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">sync call to</text>
+<text x="65" y="154" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">fraud service</text>
+<text x="65" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">timeout: 100ms</text>
+
+<!-- Fraud Service -->
+<rect x="140" y="60" width="190" height="180" rx="8" fill="rgba(239,68,68,.03)" stroke="rgba(239,68,68,.18)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="235" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#ef4444">FRAUD SERVICE</text>
+<rect x="150" y="90" width="170" height="140" rx="7" fill="#131c2e" stroke="#ef4444" stroke-width="2"/>
+<text x="235" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fee2e2">Decision Engine</text>
+<text x="235" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#ef4444">① Hard rules (&lt;2ms)</text>
+<text x="235" y="144" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">② Fetch features (10ms)</text>
+<text x="235" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">③ ML inference (25ms)</text>
+<text x="235" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">④ Threshold → decision</text>
+<text x="235" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#ef4444">⑤ Return in &lt;60ms</text>
+<text x="235" y="208" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Fallback: APPROVE if</text>
+<text x="235" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">feature store times out</text>
+
+<!-- Feature Store (Redis) -->
+<rect x="350" y="60" width="160" height="80" rx="7" fill="#131c2e" stroke="#38bdf8" stroke-width="2"/>
+<text x="430" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">Redis Feature Store</text>
+<text x="430" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">user_features:{uid}</text>
+<text x="430" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">velocity:{uid}:{window}</text>
+<text x="430" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">blocklist:{card_hash}</text>
+
+<!-- ML Model Servers -->
+<rect x="350" y="160" width="160" height="80" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="430" y="184" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Model Servers (25)</text>
+<text x="430" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">XGBoost ONNX runtime</text>
+<text x="430" y="214" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">model in process memory</text>
+<text x="430" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">&lt;30ms inference</text>
+
+<!-- Review Queue -->
+<rect x="540" y="60" width="150" height="80" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="615" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Review Queue</text>
+<text x="615" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Kafka topic</text>
+<text x="615" y="114" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">REVIEW decisions</text>
+<text x="615" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">→ analyst tools</text>
+
+<!-- Training Pipeline -->
+<rect x="540" y="160" width="150" height="80" rx="7" fill="#131c2e" stroke="#10b981" stroke-width="1.5"/>
+<text x="615" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#6ee7b7">Training Pipeline</text>
+<text x="615" y="198" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Spark daily job</text>
+<text x="615" y="212" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">chargeback labels</text>
+<text x="615" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#10b981">→ retrain → deploy</text>
+
+<!-- Feature Compute (Spark batch) -->
+<rect x="710" y="110" width="150" height="100" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="785" y="134" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fcd34d">Spark Batch</text>
+<text x="785" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">compute batch features</text>
+<text x="785" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">every 4 hours</text>
+<text x="785" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">→ refresh Redis</text>
+<text x="785" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">from txn history</text>
+
+<!-- Arrows -->
+<line x1="120" y1="135" x2="148" y2="135" stroke="#ef4444" stroke-width="1.5" marker-end="url(#fma)"/>
+<line x1="320" y1="110" x2="348" y2="100" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#fmb)"/>
+<line x1="320" y1="160" x2="348" y2="190" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#fma)"/>
+<line x1="510" y1="100" x2="538" y2="100" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#fmy)"/>
+<line x1="510" y1="200" x2="538" y2="200" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#fmg)"/>
+<line x1="690" y1="160" x2="708" y2="160" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#fmy)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — Velocity Checks + Decision Engine</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Fraud Detection — Java: Decision Engine
+// ══════════════════════════════════════════════════════</span>
+
+<span class="kw">public record</span> <span class="cls">Transaction</span>(
+    <span class="cls">String</span> txnId, <span class="cls">String</span> userId, <span class="cls">String</span> cardHash,
+    <span class="kw">double</span> amount, <span class="cls">String</span> merchantCategory,
+    <span class="cls">String</span> ipCountry, <span class="cls">String</span> cardCountry,
+    <span class="cls">String</span> deviceFingerprint, <span class="kw">long</span> timestampMs
+) {}
+
+<span class="kw">public enum</span> <span class="cls">FraudDecision</span> { APPROVE, DECLINE, REVIEW }
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">FraudDecisionEngine</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RulesEngine</span>        rules;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">FeatureStoreClient</span>  featureStore;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">MLModelClient</span>       mlModel;
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">KafkaTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">Object</span>&gt; kafka;
+
+    <span class="kw">public</span> <span class="cls">FraudDecision</span> <span class="fn2">evaluate</span>(<span class="cls">Transaction</span> txn) {
+        <span class="kw">long</span> start = <span class="cls">System</span>.currentTimeMillis();
+
+        <span class="cm">// Layer 1: Hard rules — instant decision, no ML needed</span>
+        <span class="cls">RuleResult</span> ruleResult = rules.evaluate(txn);
+        <span class="kw">if</span> (ruleResult.isDefiniteFraud()) {
+            <span class="fn2">logAsync</span>(txn, <span class="cls">FraudDecision</span>.DECLINE, <span class="num">1.0</span>, <span class="str">"hard_rule:"</span> + ruleResult.getRuleName());
+            <span class="kw">return</span> <span class="cls">FraudDecision</span>.DECLINE;
+        }
+
+        <span class="cm">// Layer 2: Fetch features (batch + real-time velocity in parallel)</span>
+        <span class="cls">FeatureVector</span> features;
+        <span class="kw">try</span> {
+            features = featureStore.fetchWithTimeout(txn.userId(), txn.cardHash(), <span class="num">15</span>); <span class="cm">// 15ms timeout</span>
+        } <span class="kw">catch</span> (<span class="cls">TimeoutException</span> e) {
+            <span class="cm">// Feature store unavailable — fail open (approve) to protect payment flow</span>
+            <span class="fn2">logAsync</span>(txn, <span class="cls">FraudDecision</span>.APPROVE, -<span class="num">1.0</span>, <span class="str">"feature_store_timeout"</span>);
+            <span class="kw">return</span> <span class="cls">FraudDecision</span>.APPROVE;
+        }
+
+        <span class="cm">// Layer 3: ML model scoring</span>
+        <span class="kw">double</span> fraudScore;
+        <span class="kw">try</span> {
+            fraudScore = mlModel.score(features, <span class="num">50</span>); <span class="cm">// 50ms timeout</span>
+        } <span class="kw">catch</span> (<span class="cls">TimeoutException</span> e) {
+            <span class="cm">// ML model unavailable — fall back to rules-only decision</span>
+            fraudScore = ruleResult.getRuleScore(); <span class="cm">// conservative estimate</span>
+        }
+
+        <span class="cm">// Layer 4: Decision threshold</span>
+        <span class="cls">FraudDecision</span> decision;
+        <span class="kw">if</span>      (fraudScore >= <span class="num">0.80</span>) decision = <span class="cls">FraudDecision</span>.DECLINE;
+        <span class="kw">else if</span> (fraudScore >= <span class="num">0.40</span>) decision = <span class="cls">FraudDecision</span>.REVIEW;
+        <span class="kw">else</span>                          decision = <span class="cls">FraudDecision</span>.APPROVE;
+
+        <span class="cm">// Async: update velocity counters + log (NOT in critical path)</span>
+        <span class="kw">final double</span> fs = fraudScore;
+        <span class="cls">CompletableFuture</span>.runAsync(() -> {
+            featureStore.incrementVelocity(txn.userId(), txn.cardHash());
+            <span class="fn2">logAsync</span>(txn, decision, fs, <span class="str">"ml_model"</span>);
+            <span class="kw">if</span> (decision == <span class="cls">FraudDecision</span>.REVIEW) kafka.send(<span class="str">"fraud-review"</span>, txn);
+        });
+
+        <span class="cls">Metrics</span>.timer(<span class="str">"fraud.decision.latency"</span>).record(<span class="cls">System</span>.currentTimeMillis() - start, <span class="cls">MILLISECONDS</span>);
+        <span class="kw">return</span> decision;
+    }
+}
+
+<span class="cm">// ── Velocity Checks via Redis Sliding Window ──────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">VelocityChecker</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+
+    <span class="cm">/** Record a transaction and return velocity features. */</span>
+    <span class="kw">public</span> <span class="cls">VelocityFeatures</span> <span class="fn2">recordAndFetch</span>(<span class="cls">String</span> userId, <span class="cls">String</span> cardHash, <span class="kw">long</span> nowMs) {
+        <span class="cls">String</span> cardKey = <span class="str">"vel:card:"</span>  + cardHash;
+        <span class="cls">String</span> userKey = <span class="str">"vel:user:"</span>  + userId;
+        <span class="kw">long</span>   oneHourAgo = nowMs - <span class="num">3_600_000L</span>;
+
+        <span class="cm">// Add current timestamp to sorted set, then count in window — atomic via Lua</span>
+        <span class="cls">String</span> luaScript = <span class="str">"""
+            redis.call('ZADD', KEYS[1], ARGV[1], ARGV[1])
+            redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[2])
+            redis.call('EXPIRE', KEYS[1], 7200)
+            return redis.call('ZCARD', KEYS[1])
+            """</span>;
+
+        <span class="cls">Long</span> cardTxns1h = (<span class="cls">Long</span>) redis.execute(
+            <span class="kw">new</span> <span class="cls">DefaultRedisScript</span>&lt;&gt;(luaScript, <span class="cls">Long</span>.<span class="kw">class</span>),
+            <span class="cls">List</span>.of(cardKey), <span class="cls">String</span>.valueOf(nowMs), <span class="cls">String</span>.valueOf(oneHourAgo));
+
+        <span class="kw">return</span> <span class="cls">VelocityFeatures</span>.builder()
+            .cardTxns1h(cardTxns1h != <span class="kw">null</span> ? cardTxns1h : <span class="num">0</span>)
+            .build();
+    }
+}
+
+<span class="cm">// ── Rules Engine ──────────────────────────────────────</span>
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">RulesEngine</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+
+    <span class="kw">public</span> <span class="cls">RuleResult</span> <span class="fn2">evaluate</span>(<span class="cls">Transaction</span> txn) {
+        <span class="cm">// Rule 1: Card blocklist (O(1) Redis lookup)</span>
+        <span class="kw">if</span> (redis.hasKey(<span class="str">"blocklist:card:"</span> + txn.cardHash()))
+            <span class="kw">return</span> <span class="cls">RuleResult</span>.decline(<span class="str">"card_blocked"</span>, <span class="num">1.0</span>);
+
+        <span class="cm">// Rule 2: Country mismatch</span>
+        <span class="kw">if</span> (!txn.ipCountry().equals(txn.cardCountry()))
+            <span class="kw">return</span> <span class="cls">RuleResult</span>.suspicious(<span class="str">"country_mismatch"</span>, <span class="num">0.6</span>);
+
+        <span class="cm">// Rule 3: Amount exceeds hard limit</span>
+        <span class="kw">if</span> (txn.amount() > <span class="num">10_000.0</span>)
+            <span class="kw">return</span> <span class="cls">RuleResult</span>.suspicious(<span class="str">"high_amount"</span>, <span class="num">0.5</span>);
+
+        <span class="kw">return</span> <span class="cls">RuleResult</span>.ok();
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Fraud Detection — Python: Decision Engine + Velocity
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> time, redis, numpy <span class="kw">as</span> np
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> enum <span class="kw">import</span> Enum
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+<span class="kw">import</span> onnxruntime <span class="kw">as</span> ort
+
+r = redis.Redis(decode_responses=<span class="kw">True</span>)
+
+
+<span class="kw">class</span> <span class="cls">Decision</span>(Enum):
+    APPROVE = <span class="str">"approve"</span>
+    DECLINE = <span class="str">"decline"</span>
+    REVIEW  = <span class="str">"review"</span>
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">Transaction</span>:
+    txn_id:             str
+    user_id:            str
+    card_hash:          str
+    amount:             float
+    merchant_category:  str
+    ip_country:         str
+    card_country:       str
+    device_fingerprint: str
+    timestamp_ms:       int
+
+
+<span class="cm"># ── Velocity check via Redis sorted set ───────────────</span>
+VELOCITY_LUA = <span class="str">"""
+local key    = KEYS[1]
+local now    = tonumber(ARGV[1])
+local cutoff = tonumber(ARGV[2])
+redis.call('ZADD', key, now, now)
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+redis.call('EXPIRE', key, 7200)
+return redis.call('ZCARD', key)
+"""</span>
+_vel_script = r.register_script(VELOCITY_LUA)
+
+
+<span class="kw">def</span> <span class="fn2">get_velocity</span>(card_hash: str, window_ms: int = <span class="num">3_600_000</span>) -> int:
+    now     = int(time.time() * <span class="num">1000</span>)
+    cutoff  = now - window_ms
+    key     = f<span class="str">"vel:card:{card_hash}"</span>
+    <span class="kw">return</span> int(_vel_script(keys=[key], args=[now, cutoff]) <span class="kw">or</span> <span class="num">0</span>)
+
+
+<span class="cm"># ── Feature fetch from Redis ──────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">fetch_features</span>(txn: <span class="cls">Transaction</span>) -> Optional[np.ndarray]:
+    pipe = r.pipeline()
+    pipe.hgetall(f<span class="str">"user_features:{txn.user_id}"</span>)
+    pipe.zscore(f<span class="str">"card_last_txn:{txn.card_hash}"</span>, <span class="str">"ts"</span>)
+    results = pipe.execute()
+
+    user_f  = results[<span class="num">0</span>] <span class="kw">or</span> {}
+    last_ts = float(results[<span class="num">1</span>] <span class="kw">or</span> <span class="num">0</span>)
+
+    velocity_1h = get_velocity(txn.card_hash, <span class="num">3_600_000</span>)
+    velocity_24h = get_velocity(txn.card_hash, <span class="num">86_400_000</span>)
+    time_since_last = (txn.timestamp_ms - last_ts) / <span class="num">1000</span>  <span class="cm"># seconds</span>
+
+    avg_amount = float(user_f.get(<span class="str">"avg_amount_30d"</span>, txn.amount))
+    amount_zscore = (txn.amount - avg_amount) / max(avg_amount * <span class="num">0.5</span>, <span class="num">1</span>)
+
+    is_international = <span class="num">1</span> <span class="kw">if</span> txn.ip_country != txn.card_country <span class="kw">else</span> <span class="num">0</span>
+    is_blocked = <span class="num">1</span> <span class="kw">if</span> r.exists(f<span class="str">"blocklist:card:{txn.card_hash}"</span>) <span class="kw">else</span> <span class="num">0</span>
+
+    <span class="kw">return</span> np.array([
+        txn.amount,
+        amount_zscore,
+        velocity_1h,
+        velocity_24h,
+        time_since_last,
+        is_international,
+        is_blocked,
+        float(user_f.get(<span class="str">"historical_fraud_count"</span>, <span class="num">0</span>)),
+        float(user_f.get(<span class="str">"user_age_days"</span>, <span class="num">0</span>)),
+        float(user_f.get(<span class="str">"chargeback_rate"</span>, <span class="num">0</span>)),
+    ], dtype=np.float32)
+
+
+<span class="cm"># ── ONNX Model for fast inference ────────────────────</span>
+_sess: Optional[ort.InferenceSession] = <span class="kw">None</span>
+
+<span class="kw">def</span> <span class="fn2">load_model</span>(model_path: str):
+    <span class="kw">global</span> _sess
+    _sess = ort.InferenceSession(model_path, providers=[<span class="str">"CPUExecutionProvider"</span>])
+
+<span class="kw">def</span> <span class="fn2">score_transaction</span>(features: np.ndarray) -> float:
+    <span class="kw">if</span> _sess <span class="kw">is None</span>: <span class="kw">return</span> <span class="num">0.5</span>  <span class="cm"># model not loaded — conservative</span>
+    result = _sess.run(<span class="kw">None</span>, {<span class="str">"features"</span>: features.reshape(<span class="num">1</span>, -<span class="num">1</span>)})
+    <span class="kw">return</span> float(result[<span class="num">0</span>][<span class="num">0</span>][<span class="num">1</span>])  <span class="cm"># P(fraud)</span>
+
+
+<span class="cm"># ── Main decision function ────────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">evaluate</span>(txn: <span class="cls">Transaction</span>) -> Decision:
+    start = time.time()
+
+    <span class="cm"># Layer 1: Hard rules</span>
+    <span class="kw">if</span> r.exists(f<span class="str">"blocklist:card:{txn.card_hash}"</span>):
+        <span class="kw">return</span> <span class="cls">Decision</span>.DECLINE
+
+    <span class="cm"># Layer 2+3: Feature fetch + ML scoring</span>
+    <span class="kw">try</span>:
+        features = fetch_features(txn)
+        <span class="kw">if</span> features <span class="kw">is None</span>: <span class="kw">return</span> <span class="cls">Decision</span>.APPROVE  <span class="cm"># fail open</span>
+
+        <span class="cm"># Early hard-rule exit on extreme velocity</span>
+        <span class="kw">if</span> features[<span class="num">2</span>] > <span class="num">50</span>:  <span class="cm"># velocity_1h > 50 = definite card testing</span>
+            <span class="kw">return</span> <span class="cls">Decision</span>.DECLINE
+
+        fraud_score = score_transaction(features)
+
+    <span class="kw">except Exception</span>:
+        <span class="kw">return</span> <span class="cls">Decision</span>.APPROVE  <span class="cm"># fail open on any error</span>
+
+    <span class="cm"># Layer 4: Threshold decision</span>
+    latency_ms = (time.time() - start) * <span class="num">1000</span>
+    print(f<span class="str">"[FRAUD] txn={txn.txn_id} score={fraud_score:.3f} latency={latency_ms:.1f}ms"</span>)
+
+    <span class="kw">if</span>   fraud_score >= <span class="num">0.80</span>: <span class="kw">return</span> <span class="cls">Decision</span>.DECLINE
+    <span class="kw">elif</span> fraud_score >= <span class="num">0.40</span>: <span class="kw">return</span> <span class="cls">Decision</span>.REVIEW
+    <span class="kw">else</span>:                     <span class="kw">return</span> <span class="cls">Decision</span>.APPROVE
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🤖 Model Choice: Rules Only vs ML vs Hybrid</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Rules Only</div><p>Hand-coded if/then rules. Explainable: "declined because of country mismatch + high amount." Instant to update: add a rule in hours. Problem: can't detect novel fraud patterns not yet encoded as rules. Fraudsters adapt quickly — rules become stale. False positive rate is high without fine-tuning.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Hybrid (chosen)</div><p>Rules for obvious fraud (blocklists, hard limits) + ML for nuanced pattern detection. Rules execute first — ML only runs if rules don't trigger. Best of both: fast obvious-case handling, adaptive pattern detection. Used by Stripe, PayPal, Visa. Rules catch ~30%, ML catches the remaining 70%.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">ML Only</div><p>Gradient-boosted tree or neural network on all 200+ features. Highest accuracy. Handles complex non-linear patterns rules can't express. Problem: black box — hard to explain why a transaction was declined (required for customer service and regulatory compliance). Slower to update (requires retrain cycle).</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">⚖️ Threshold Tuning: Precision vs Recall</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">High threshold (0.9+)</div><p>Only decline very high-confidence fraud. Fewer false positives — most legitimate transactions go through. High false negative rate — miss more fraud. Cost: fraud losses increase. Good for premium merchants where false positives destroy trust (luxury goods, enterprise).</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Adaptive threshold + REVIEW band</div><p>0.8+ = DECLINE, 0.4-0.8 = REVIEW (human analyst), &lt;0.4 = APPROVE. The REVIEW band handles uncertain cases without blocking or allowing blindly. Analysts decisions feed back into model training. Extra friction (3D Secure challenge) can be added for REVIEW band instead of full DECLINE. Used by Stripe Radar.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Low threshold (0.3)</div><p>Decline at lower confidence. Catches more fraud. But false positive rate spikes — legitimate customers are blocked. At scale, even 1% false positives means 1000 declined good transactions per 100K. Each declined legitimate transaction risks losing that customer permanently. Never use without a REVIEW band.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>

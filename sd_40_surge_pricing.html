@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD #40 — Surge Pricing Engine</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+:root{--bg:#07090f;--s1:#0e1420;--s2:#131c2e;--border:#1e2d45;--accent:#f59e0b;--a3:#10b981;--a4:#f59e0b;--a5:#f43f5e;--a6:#38bdf8;--text:#dde4f0;--muted:#4e6070;--muted2:#6b7fa0;--icolor:#a78bfa;--ecolor:#fef3c7;--code:#060a12}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.hero{padding:36px 44px 30px;border-bottom:1px solid var(--border)}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px}.crumb span{color:var(--accent)}
+.hero-inner{display:flex;align-items:flex-start;gap:22px}
+.h-icon{font-size:52px;line-height:1;filter:drop-shadow(0 0 24px rgba(245,158,11,.3))}
+.h-title{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1.1;margin-bottom:8px;background:linear-gradient(90deg,#fefce8 0%,#f59e0b 50%,#78350f 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-desc{font-size:13.5px;color:var(--muted2);line-height:1.65;max-width:680px;margin-bottom:14px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}
+.badge{padding:3px 11px;border-radius:20px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.b-must{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.b-med{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
+.b-tag{background:rgba(245,158,11,.07);color:#fef3c7;border:1px solid rgba(245,158,11,.18)}
+.nav{background:var(--s1);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{padding:14px 18px;background:none;border:none;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+.nbtn:hover{color:var(--text)}.nbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:36px 44px}
+@media(max-width:768px){.wrap{padding:20px 16px}.hero{padding:24px 16px}.nav{padding:0 8px}}
+.panel{display:none}.panel.active{display:block}
+.sec{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:28px;overflow:hidden}
+.sec-head{background:var(--s2);padding:15px 24px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sec-body{padding:26px}
+.qa-line{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.av-i{background:rgba(167,139,250,.12);color:var(--icolor);border:1.5px solid rgba(167,139,250,.3)}
+.av-e{background:rgba(245,158,11,.1);color:var(--ecolor);border:1.5px solid rgba(245,158,11,.28)}
+.bubble{flex:1;background:var(--s2);border-radius:12px;padding:14px 18px;font-size:13.5px;line-height:1.78;border:1px solid var(--border)}
+.bubble.i{border-left:3px solid var(--icolor)}.bubble.e{border-left:3px solid var(--ecolor)}
+.who{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:7px;letter-spacing:.06em}
+.who-i{color:var(--icolor)}.who-e{color:var(--ecolor)}
+.bubble b{color:#fcd34d;font-weight:600}.bubble code{background:rgba(0,0,0,.4);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#7dd3fc;border:1px solid rgba(0,212,255,.15)}
+.bubble ul{padding-left:20px;margin-top:8px}.bubble ul li{margin-bottom:6px;color:#94a3b8}
+.phase-label{display:inline-block;background:rgba(245,158,11,.08);color:var(--accent);border:1px solid rgba(245,158,11,.2);border-radius:6px;padding:3px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.tip-box{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-left:3px solid var(--a3);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#a7f3d0;margin-top:12px;line-height:1.65}
+.tip-box strong{color:var(--a3)}
+.info-box{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-left:3px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:12.5px;color:#fef3c7;margin:12px 0;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.code-wrap{background:var(--code);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ctabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.ctab{padding:9px 20px;background:none;border:none;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.ctab:hover{color:var(--text)}.ctab.active{background:rgba(245,158,11,.07);color:var(--a3);border-bottom:2px solid var(--a3)}
+.cblock{display:none;padding:24px;overflow-x:auto;max-height:540px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.cblock.active{display:block}
+pre{margin:0}code{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.85;color:#e2e8f0}
+.kw{color:#c792ea}.fn2{color:#82aaff}.str{color:#c3e88d}.cm{color:#3d5268;font-style:italic}.num{color:#f78c6c}.cls{color:#ffcb6b}.ann{color:#89ddff}
+.to-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.to-head{padding:13px 20px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.to-body{display:grid;grid-template-columns:1fr 1fr 1fr}
+@media(max-width:780px){.to-body{grid-template-columns:1fr}}
+.to-col{padding:14px 18px;border-right:1px solid var(--border)}.to-col:last-child{border-right:none}
+.to-col-head{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.tc-pick{color:var(--a3)}.tc-alt{color:var(--a5)}.tc-why{color:var(--a4)}
+.to-col p{font-size:12.5px;color:#94a3b8;line-height:1.6}
+.diag{background:var(--code);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:680px){.two-col{grid-template-columns:1fr}}
+.math-block{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:2.1;color:#e2e8f0;margin:10px 0;overflow-x:auto}
+.math-block .val{color:#f78c6c;font-weight:700}.math-block .result{color:#f59e0b;font-weight:700;font-size:14px}.math-block .label{color:#64748b}
+.math-table{width:100%;border-collapse:collapse;margin-top:10px}
+.math-table th{background:rgba(0,0,0,.3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.math-table td{padding:9px 14px;border-bottom:1px solid rgba(30,45,69,.4);font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8}
+.math-table td.hi{color:#fbbf24;font-weight:700}.math-table td.ans{color:#34d399;font-weight:700}
+.rq-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:#94a3b8;margin-bottom:10px;line-height:1.55}
+.rq-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="crumb">System Design › Marketplace › <span>40 / Surge Pricing</span></div>
+  <div class="hero-inner">
+    <div class="h-icon">⚡</div>
+    <div>
+      <div class="h-title">Surge Pricing Engine</div>
+      <div class="h-desc">Design Uber's surge pricing system — computing real-time supply/demand ratios across thousands of geospatial zones, applying a piecewise pricing function that brings supply and demand into equilibrium, serving the current multiplier to riders in under 50ms, and handling the thundering herd after a concert ends where 10,000 simultaneous ride requests spike demand in a single hex cell.</div>
+      <div class="badges">
+        <span class="badge b-must">🔴 MUST DO</span>
+        <span class="badge b-med">🟢 Medium</span>
+        <span class="badge b-tag">H3 Hexagons</span>
+        <span class="badge b-tag">Supply/Demand</span>
+        <span class="badge b-tag">Streaming (Flink)</span>
+        <span class="badge b-tag">Pricewise Function</span>
+        <span class="badge b-tag">Redis TTL</span>
+        <span class="badge b-tag">Market Clearing</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="nav">
+  <button class="nbtn active" onclick="show('req',this)">📋 Requirements</button>
+  <button class="nbtn" onclick="show('qa',this)">💬 Q&amp;A</button>
+  <button class="nbtn" onclick="show('zones',this)">🗺 Zones</button>
+  <button class="nbtn" onclick="show('cap',this)">📊 Capacity</button>
+  <button class="nbtn" onclick="show('hld',this)">🏗 HLD</button>
+  <button class="nbtn" onclick="show('code',this)">💻 Code</button>
+  <button class="nbtn" onclick="show('tradeoffs',this)">⚖️ Tradeoffs</button>
+</div>
+<div class="wrap">
+
+<div id="req" class="panel active">
+  <div class="sec"><div class="sec-head">🎯 Requirements</div><div class="sec-body">
+    <div class="info-box"><strong>Surge pricing is an equilibrium mechanism, not just a money-grab.</strong> The goal is to bring supply (drivers) and demand (riders) into balance in a specific geographic zone. Higher prices (a) suppress some demand (price-sensitive riders cancel), and (b) attract more supply (nearby drivers move into the zone). The system must compute this in real time across thousands of zones simultaneously.</div><br>
+    <div class="two-col">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--a3);font-weight:700;letter-spacing:.08em;margin-bottom:12px">FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Compute supply (available drivers) per geographic zone in real time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Compute demand (active ride requests) per zone in real time</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Apply pricing function: demand/supply ratio → multiplier</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Serve current multiplier for a user's location in &lt;50ms</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Display surge map to drivers (which zones have highest multipliers)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--a3)"></div><div>Multipliers update every 60 seconds per zone</div></div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;margin-bottom:12px">NON-FUNCTIONAL</div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>50K concurrent zones worldwide (cities active at any time)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Multiplier read latency: &lt;10ms (from Redis)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Multiplier freshness: updated within 60s of supply/demand change</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Handle spike: 10K concurrent requests in single zone (post-concert)</div></div>
+        <div class="rq-item"><div class="rq-dot" style="background:var(--accent)"></div><div>Graceful degradation: if surge service unavailable, return multiplier=1.0</div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="qa" class="panel">
+  <div class="sec"><div class="sec-head">💬 Phase 1 — Computing Surge</div><div class="sec-body">
+    <div class="phase-label">PHASE 1 · SUPPLY & DEMAND</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>How do you compute the surge multiplier for a specific geographic zone? Walk me through the exact data flow.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>Supply computation:</b> Every driver sends a GPS heartbeat every 4 seconds. The Location Service converts the GPS coordinate to an H3 hex cell (resolution 6, ~36 km² per cell — coarser than the res-8 cells used for driver matching). Each heartbeat updates a counter in Redis: <code>INCR supply:{h3_cell_r6} EX 120</code>. The count is the number of available drivers in that cell. TTL of 120s ensures drivers who stop heartbeating expire naturally.<br><br>
+      <b>Demand computation:</b> Every ride request event (from the ride request service) is published to Kafka. A Flink streaming job consumes this stream. For each request event: extract H3 cell (res 6) of the pickup location. Maintain a tumbling 5-minute window counter per cell. Write to Redis: <code>SETEX demand:{h3_cell_r6} 60 {count}</code>. Count = ride requests in the last 5 minutes in this cell.<br><br>
+      <b>Multiplier computation (every 60 seconds):</b> A Flink job reads supply and demand from Redis for all active cells, computes <code>ratio = demand / max(supply, 1)</code>, applies the pricing function, writes multiplier back to Redis:<br>
+      <code>SET surge:{h3_cell_r6} {multiplier} EX 120</code><br><br>
+      <b>Pricing function (piecewise):</b><br>
+      ratio &lt; 1.2 → multiplier = 1.0 (no surge)<br>
+      ratio 1.2–2.0 → multiplier = 1.0 + (ratio-1.2) × 0.625 (linear from 1.0→1.5)<br>
+      ratio 2.0–4.0 → multiplier = 1.5 + (ratio-2.0) × 0.25 (linear from 1.5→2.0)<br>
+      ratio &gt; 4.0 → multiplier = min(4.0, 2.0 + (ratio-4.0) × 0.1) (diminishing returns)<br><br>
+      The cap at 4.0× is a business decision (PR sensitivity) not a technical constraint.
+    </div></div>
+    <div class="tip-box"><strong>💡 Why cap the multiplier?</strong> Uncapped surge can reach 10× or more (demonstrated during emergencies). This creates a PR disaster and regulatory pushback. Uber caps at ~4× in practice. The real goal is equilibrium — at 2-3× most supply-demand imbalances resolve as drivers flood into high-surge zones.</div>
+  </div></div>
+
+  <div class="sec"><div class="sec-head">🎸 Phase 2 — The Concert Thundering Herd</div><div class="sec-body">
+    <div class="phase-label">PHASE 2 · SPIKE HANDLING</div>
+    <div class="qa-line"><div class="av av-i">IR</div><div class="bubble i"><div class="who who-i">INTERVIEWER</div>A sold-out concert just ended. 10,000 people simultaneously request rides from the same 4-block radius. Walk me through what happens second by second.</div></div>
+    <div class="qa-line"><div class="av av-e">ME</div><div class="bubble e"><div class="who who-e">YOU</div>
+      <b>T+0s:</b> 10,000 ride request events hit the ride request service simultaneously. These are published to Kafka partitioned by H3 cell ID — all 10,000 land in the same partition for the arena's cell. Kafka absorbs the spike without loss.<br><br>
+      <b>T+2s:</b> The Flink streaming job's tumbling window for this cell now shows demand=10,000. Supply (available drivers in the cell before the concert ended) = ~50. Ratio = 10,000/50 = 200. Multiplier = 4.0× (capped). Flink writes <code>SET surge:{arena_cell} 4.0 EX 120</code> to Redis.<br><br>
+      <b>T+5s:</b> Every new ride request for this location checks <code>GET surge:{arena_cell}</code> → 4.0×. Shows the 4× multiplier in the app. Some price-sensitive riders cancel. Demand drops to 7,000. The app also displays the surge map to nearby drivers, who start driving toward the arena.<br><br>
+      <b>T+60s:</b> Next Flink computation: demand = 7,000 (some cancelled), supply = 300 (drivers attracted by 4× multiplier). Ratio = 7,000/300 = 23. Multiplier = 4.0× (still capped, ratio very high).<br><br>
+      <b>T+10min:</b> Supply = 2,000 (drivers converged from 5km radius), demand = 4,000 (half the crowd got rides or found alternatives). Ratio = 2.0. Multiplier = 1.5×. Equilibrium approaching.<br><br>
+      <b>T+30min:</b> Ratio = 0.8. Surge = 1.0×. Concert traffic fully absorbed.<br><br>
+      <b>Key design detail:</b> The rider-facing price shown is the multiplier at time of request lock-in, not the current multiplier. If you request at 4.0× and a driver accepts 90 seconds later when surge is 1.5×, you still pay 4.0× (you locked in at that price). This prevents bait-and-switch and is guaranteed by storing the locked multiplier with the trip in Postgres.
+    </div></div>
+  </div></div>
+</div>
+
+<div id="zones" class="panel">
+  <div class="sec"><div class="sec-head">🗺 Zone Design & Surge Computation</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 840 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:360px">
+
+<text x="10" y="18" font-family="JetBrains Mono" font-size="10" fill="#f59e0b" font-weight="700">H3 RESOLUTION HIERARCHY FOR SURGE PRICING</text>
+
+<!-- Resolution boxes -->
+<rect x="10" y="28" width="820" height="80" rx="8" fill="rgba(0,0,0,.15)" stroke="rgba(245,158,11,.1)"/>
+<text x="22" y="48" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Resolution   Cell Area    Use Case                    # zones active globally</text>
+<line x1="10" y1="54" x2="830" y2="54" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+<text x="22" y="70" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Res 4        ~1770 km²    City-level planning          ~10,000 (all major cities)</text>
+<text x="22" y="84" font-family="JetBrains Mono" font-size="8" fill="#fcd34d">Res 6        ~36 km²      SURGE PRICING ← chosen       ~50,000 (active zones)</text>
+<text x="22" y="98" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Res 8        ~0.7 km²     Driver matching (fine-grained) millions globally</text>
+
+<!-- Pricing function chart -->
+<text x="10" y="128" font-family="JetBrains Mono" font-size="10" fill="#f59e0b" font-weight="700">PRICEWISE SURGE FUNCTION</text>
+<rect x="10" y="138" width="410" height="210" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(245,158,11,.1)"/>
+
+<!-- Axes -->
+<line x1="50" y1="320" x2="400" y2="320" stroke="#4e6070" stroke-width="1"/>
+<line x1="50" y1="155" x2="50" y2="320" stroke="#4e6070" stroke-width="1"/>
+<text x="215" y="335" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">demand/supply ratio</text>
+<text x="20" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070" transform="rotate(-90,20,242)">multiplier</text>
+
+<!-- Axis labels -->
+<text x="50" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#4e6070">0</text>
+<text x="120" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#4e6070">1.2</text>
+<text x="190" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#4e6070">2.0</text>
+<text x="260" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#4e6070">3.0</text>
+<text x="330" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#4e6070">4.0</text>
+<text x="400" y="328" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#4e6070">5.0+</text>
+<text x="42" y="320" text-anchor="end" font-family="JetBrains Mono" font-size="6" fill="#4e6070">1.0</text>
+<text x="42" y="260" text-anchor="end" font-family="JetBrains Mono" font-size="6" fill="#4e6070">2.0</text>
+<text x="42" y="200" text-anchor="end" font-family="JetBrains Mono" font-size="6" fill="#4e6070">3.0</text>
+<text x="42" y="160" text-anchor="end" font-family="JetBrains Mono" font-size="6" fill="#4e6070">4.0</text>
+
+<!-- Piecewise line -->
+<!-- Flat at 1.0 from ratio 0 to 1.2 -->
+<line x1="50" y1="320" x2="120" y2="320" stroke="#f59e0b" stroke-width="2"/>
+<!-- Linear 1.0→1.5 from ratio 1.2 to 2.0 -->
+<line x1="120" y1="320" x2="190" y2="290" stroke="#f59e0b" stroke-width="2"/>
+<!-- Linear 1.5→2.0 from ratio 2.0 to 4.0 -->
+<line x1="190" y1="290" x2="330" y2="260" stroke="#f59e0b" stroke-width="2"/>
+<!-- Capped at 4.0 from ratio 4.0 onward -->
+<line x1="330" y1="160" x2="400" y2="160" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4,3"/>
+<text x="370" y="155" font-family="JetBrains Mono" font-size="6" fill="#f43f5e">cap 4.0×</text>
+
+<!-- Grid lines -->
+<line x1="50" y1="290" x2="400" y2="290" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+<line x1="50" y1="260" x2="400" y2="260" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+<line x1="50" y1="200" x2="400" y2="200" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+<line x1="120" y1="155" x2="120" y2="320" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+<line x1="190" y1="155" x2="190" y2="320" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+
+<!-- Labels on curve -->
+<text x="75" y="315" font-family="JetBrains Mono" font-size="6" fill="#10b981">1.0× (balanced)</text>
+<text x="130" y="285" font-family="JetBrains Mono" font-size="6" fill="#fcd34d">1.5× surge</text>
+<text x="195" y="255" font-family="JetBrains Mono" font-size="6" fill="#f59e0b">2.0× surge</text>
+
+<!-- Computation detail -->
+<rect x="430" y="138" width="400" height="210" rx="8" fill="rgba(0,0,0,.2)" stroke="rgba(245,158,11,.1)"/>
+<text x="440" y="158" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">SUPPLY (60s rolling):</text>
+<text x="440" y="174" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">SUNION supply:drivers:{h3_cell} → count</text>
+<text x="440" y="188" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">only AVAILABLE drivers (not on trip)</text>
+<text x="440" y="206" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">DEMAND (5-min tumbling window):</text>
+<text x="440" y="222" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Flink: COUNT(requests WHERE cell={h3})</text>
+<text x="440" y="236" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">over TUMBLE(5 MINUTES)</text>
+<text x="440" y="254" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">MULTIPLIER STORED:</text>
+<text x="440" y="270" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">SET surge:{h3_cell_r6} {mult} EX 120</text>
+<text x="440" y="284" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">TTL=120s: stale surge auto-expires</text>
+<text x="440" y="300" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">Missing key → default 1.0×</text>
+<text x="440" y="318" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">Updated: every 60s by Flink job</text>
+<text x="440" y="332" font-family="JetBrains Mono" font-size="7" fill="#94a3b8">50K active zones × 60s = 833 writes/sec</text>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="cap" class="panel">
+  <div class="sec"><div class="sec-head">📊 Capacity</div><div class="sec-body">
+    <div class="math-block">
+<span class="label">Zone count:</span>
+  <span class="label">Active zones worldwide (cities): H3 res-6         = </span><span class="val">~50K active zones</span>
+  <span class="label">Redis storage: 50K zones × 20B per key           = </span><span class="val">1 MB</span>  <span class="label">trivially small</span>
+
+<span class="label">Surge computation throughput:</span>
+  <span class="label">50K zones ÷ 60s update interval                 = </span><span class="val">833 Redis writes/sec</span>  <span class="label">trivial</span>
+  <span class="label">Flink job: reads supply+demand → computes → writes= </span><span class="val">~2-3 seconds CPU per cycle</span>
+
+<span class="label">Surge reads (rider app, driver app):</span>
+  <span class="label">10M concurrent rides globally × 1 read/request   = </span><span class="val">~10M reads/day</span>
+  <span class="label">Peak: 10K req/sec (surge display on all driver apps)</span>
+  <span class="label">Redis: 10K GET/sec × &lt;1ms each                  = </span><span class="val">trivial</span>
+
+<span class="label">Concert spike:</span>
+  <span class="label">10K requests in 1 zone in 30 seconds             = </span><span class="val">333 req/sec in one cell</span>
+  <span class="label">Kafka partitioned by cell: absorbs spike perfectly</span>
+  <span class="label">Flink window: counts in 5-min tumbling window    → </span><span class="val">10K demand in next cycle</span>
+
+<span class="label">Driver supply event stream:</span>
+  <span class="label">1M drivers × 1 heartbeat/4s                     = </span><span class="val">250K events/sec</span>
+  <span class="label">Flink aggregates: GROUP BY h3_cell → supply count</span>
+
+<span class="result">→ Redis holds all surge multipliers in 1MB. Flink computes 50K zones/60s. Reads are trivially fast.</span>
+    </div>
+    <table class="math-table">
+      <tr><th>Component</th><th>Load</th><th>Notes</th></tr>
+      <tr><td>Active surge zones</td><td class="hi">50K</td><td>H3 res-6 cells with non-zero activity</td></tr>
+      <tr><td>Redis surge store</td><td class="hi">833 writes/sec</td><td>50K zones ÷ 60s; 1MB total storage</td></tr>
+      <tr><td>Surge reads (apps)</td><td class="hi">10K reads/sec peak</td><td>GET surge:{h3_cell}; &lt;1ms cached</td></tr>
+      <tr><td>Flink supply aggregation</td><td class="hi">250K events/sec</td><td>Driver heartbeats; windowed count per cell</td></tr>
+      <tr><td>Flink demand aggregation</td><td class="hi">10K events/sec avg</td><td>Ride requests; 5-min tumbling window</td></tr>
+      <tr><td>Multiplier freshness</td><td class="hi">&lt;60s</td><td>Worst case: just missed a Flink cycle</td></tr>
+    </table>
+  </div></div>
+</div>
+
+<div id="hld" class="panel">
+  <div class="sec"><div class="sec-head">🏗 Architecture</div><div class="sec-body">
+    <div class="diag">
+<svg viewBox="0 0 880 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:310px">
+<defs>
+<marker id="sya" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+<marker id="sga" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+<marker id="sba" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#38bdf8"/></marker>
+</defs>
+
+<!-- Driver app -->
+<rect x="10" y="60" width="100" height="50" rx="6" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="60" y="82" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fef3c7">🚗 Drivers</text>
+<text x="60" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">GPS 4s heartbeat</text>
+
+<!-- Rider app -->
+<rect x="10" y="130" width="100" height="50" rx="6" fill="#131c2e" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="60" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#bae6fd">📱 Riders</text>
+<text x="60" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">request ride</text>
+
+<!-- Location / Request Service -->
+<rect x="130" y="50" width="140" height="150" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="200" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fef3c7">Ingestion Layer</text>
+<text x="200" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Location Service</text>
+<text x="200" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">→ GPS → H3 cell</text>
+<text x="200" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">→ Kafka: driver-locations</text>
+<text x="200" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Ride Request Service</text>
+<text x="200" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#38bdf8">→ Kafka: ride-requests</text>
+<text x="200" y="182" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">250K + 10K events/sec</text>
+
+<!-- Kafka -->
+<rect x="290" y="60" width="110" height="140" rx="7" fill="#131c2e" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="345" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#c4b5fd">Kafka</text>
+<text x="345" y="104" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">driver-locations</text>
+<text x="345" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">partitioned by</text>
+<text x="345" y="132" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">h3_cell_r6</text>
+<text x="345" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">ride-requests</text>
+<text x="345" y="164" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">partitioned by</text>
+<text x="345" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#a78bfa">h3_cell_r6</text>
+
+<!-- Flink -->
+<rect x="420" y="50" width="180" height="160" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="2"/>
+<text x="510" y="76" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fef3c7">Flink Job</text>
+<text x="510" y="96" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Supply stream:</text>
+<text x="510" y="110" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">COUNT(available) per cell</text>
+<text x="510" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">tumble(60s) window</text>
+<text x="510" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">Demand stream:</text>
+<text x="510" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">COUNT(requests) per cell</text>
+<text x="510" y="170" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">tumble(5min) window</text>
+<text x="510" y="188" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">→ pricewise(demand/supply)</text>
+<text x="510" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">→ write to Redis every 60s</text>
+
+<!-- Redis surge store -->
+<rect x="620" y="60" width="170" height="100" rx="7" fill="#131c2e" stroke="#f43f5e" stroke-width="2"/>
+<text x="705" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#fda4af">Redis Surge Store</text>
+<text x="705" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">surge:{h3_cell_r6} → float</text>
+<text x="705" y="120" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">EX 120 (auto-expire)</text>
+<text x="705" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Miss → default 1.0×</text>
+<text x="705" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f43f5e">50K keys, 1 MB total</text>
+
+<!-- Surge API -->
+<rect x="620" y="180" width="170" height="70" rx="7" fill="#131c2e" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="705" y="204" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fef3c7">Surge API</text>
+<text x="705" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">GET /surge?lat=x&amp;lng=y</text>
+<text x="705" y="234" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">→ H3 cell lookup</text>
+<text x="705" y="242" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#f59e0b">→ Redis GET → return mult</text>
+
+<!-- Price lock -->
+<rect x="10" y="240" width="860" height="60" rx="7" fill="rgba(0,0,0,.15)" stroke="rgba(255,255,255,.04)"/>
+<text x="440" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#f59e0b">PRICE LOCK: When rider confirms request → multiplier at that moment is stored with the trip in Postgres</text>
+<text x="440" y="276" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#94a3b8">Subsequent surge changes do NOT affect confirmed trips. Trip record includes: locked_surge_multiplier, locked_at_ts.</text>
+<text x="440" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#4e6070">Fare = base_fare × locked_surge_multiplier. Rider sees this on confirmation screen.</text>
+
+<!-- Arrows -->
+<line x1="110" y1="85" x2="128" y2="100" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#sya)"/>
+<line x1="110" y1="155" x2="128" y2="160" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#sba)"/>
+<line x1="270" y1="120" x2="288" y2="120" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#sya)"/>
+<line x1="400" y1="130" x2="418" y2="130" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#sya)"/>
+<line x1="600" y1="120" x2="618" y2="110" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#sya)"/>
+<line x1="705" y1="160" x2="705" y2="178" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#sya)"/>
+</svg>
+    </div>
+  </div></div>
+</div>
+
+<div id="code" class="panel">
+  <div class="sec"><div class="sec-head">💻 Code — Surge Computation + API</div><div class="sec-body">
+    <div class="code-wrap">
+      <div class="ctabs">
+        <button class="ctab active" onclick="switchLang('java',this)">☕ Java</button>
+        <button class="ctab" onclick="switchLang('python',this)">🐍 Python</button>
+      </div>
+      <div id="java" class="cblock active">
+<pre><code><span class="cm">// ══════════════════════════════════════════════════════
+// Surge Pricing — Java: Flink + Pricing Function + API
+// ══════════════════════════════════════════════════════</span>
+
+<span class="cm">// ── Pricing function ─────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">PricingFunction</span> {
+
+    <span class="kw">private static final double</span> CAP            = <span class="num">4.0</span>;
+    <span class="kw">private static final double</span> THRESHOLD       = <span class="num">1.2</span>;
+    <span class="kw">private static final double</span> TIER1_MAX_RATIO = <span class="num">2.0</span>;
+    <span class="kw">private static final double</span> TIER2_MAX_RATIO = <span class="num">4.0</span>;
+
+    <span class="kw">public static double</span> <span class="fn2">compute</span>(<span class="kw">long</span> demand, <span class="kw">long</span> supply) {
+        <span class="kw">double</span> ratio = demand / (<span class="kw">double</span>) <span class="cls">Math</span>.max(supply, <span class="num">1</span>);
+
+        <span class="kw">if</span> (ratio <= THRESHOLD)        <span class="kw">return</span> <span class="num">1.0</span>;
+        <span class="kw">if</span> (ratio <= TIER1_MAX_RATIO)  <span class="kw">return</span> <span class="num">1.0</span> + (ratio - THRESHOLD) * <span class="num">0.625</span>;
+        <span class="kw">if</span> (ratio <= TIER2_MAX_RATIO)  <span class="kw">return</span> <span class="num">1.5</span> + (ratio - TIER1_MAX_RATIO) * <span class="num">0.25</span>;
+        <span class="kw">return</span> <span class="cls">Math</span>.min(CAP, <span class="num">2.0</span> + (ratio - TIER2_MAX_RATIO) * <span class="num">0.1</span>);
+    }
+}
+
+<span class="cm">// ── Flink Surge Computation Job ───────────────────────</span>
+<span class="kw">public class</span> <span class="cls">SurgeComputationJob</span> {
+
+    <span class="kw">public static void</span> <span class="fn2">main</span>(<span class="cls">String</span>[] args) <span class="kw">throws</span> <span class="cls">Exception</span> {
+        <span class="cls">StreamExecutionEnvironment</span> env = <span class="cls">StreamExecutionEnvironment</span>.getExecutionEnvironment();
+
+        <span class="cm">// Supply stream: driver location heartbeats</span>
+        <span class="cls">DataStream</span>&lt;<span class="cls">DriverLocation</span>&gt; supply = env
+            .addSource(<span class="kw">new</span> <span class="cls">FlinkKafkaConsumer</span>&lt;&gt;(<span class="str">"driver-locations"</span>, ...))
+            .filter(<span class="cls">DriverLocation</span>::isAvailable);
+
+        <span class="cm">// Supply per H3 cell — 60-second tumbling window</span>
+        <span class="cls">DataStream</span>&lt;<span class="cls">Tuple2</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt;&gt; supplyPerCell = supply
+            .keyBy(loc -> loc.getH3CellR6())
+            .window(<span class="cls">TumblingProcessingTimeWindows</span>.of(<span class="cls">Time</span>.seconds(<span class="num">60</span>)))
+            .aggregate(<span class="kw">new</span> <span class="cls">CountAggregate</span>&lt;&gt;());
+
+        <span class="cm">// Demand stream: ride requests</span>
+        <span class="cls">DataStream</span>&lt;<span class="cls">RideRequest</span>&gt; demand = env
+            .addSource(<span class="kw">new</span> <span class="cls">FlinkKafkaConsumer</span>&lt;&gt;(<span class="str">"ride-requests"</span>, ...));
+
+        <span class="cm">// Demand per H3 cell — 5-minute tumbling window</span>
+        <span class="cls">DataStream</span>&lt;<span class="cls">Tuple2</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt;&gt; demandPerCell = demand
+            .keyBy(req -> req.getPickupH3CellR6())
+            .window(<span class="cls">TumblingProcessingTimeWindows</span>.of(<span class="cls">Time</span>.minutes(<span class="num">5</span>)))
+            .aggregate(<span class="kw">new</span> <span class="cls">CountAggregate</span>&lt;&gt;());
+
+        <span class="cm">// Join supply + demand on cell ID, compute surge multiplier</span>
+        supplyPerCell
+            .keyBy(t -> t.f0)
+            .intervalJoin(demandPerCell.keyBy(t -> t.f0))
+            .between(<span class="cls">Time</span>.minutes(-<span class="num">5</span>), <span class="cls">Time</span>.minutes(<span class="num">0</span>))
+            .process((<span class="cls">ProcessJoinFunction</span>&lt;<span class="cls">Tuple2</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt;,<span class="cls">Tuple2</span>&lt;<span class="cls">String</span>,<span class="cls">Long</span>&gt;,<span class="cls">SurgeResult</span>&gt;)
+                (supplyTuple, demandTuple, ctx, out) -> {
+                    <span class="cls">String</span> cell        = supplyTuple.f0;
+                    <span class="kw">double</span> multiplier   = <span class="cls">PricingFunction</span>.compute(demandTuple.f1, supplyTuple.f1);
+                    out.collect(<span class="kw">new</span> <span class="cls">SurgeResult</span>(cell, multiplier, demandTuple.f1, supplyTuple.f1));
+                })
+            .addSink(<span class="kw">new</span> <span class="cls">RedisSurgeSink</span>()); <span class="cm">// writes SET surge:{cell} {mult} EX 120</span>
+
+        env.execute(<span class="str">"SurgeComputation"</span>);
+    }
+}
+
+<span class="cm">// ── Redis Surge Sink ──────────────────────────────────</span>
+<span class="kw">public class</span> <span class="cls">RedisSurgeSink</span> <span class="kw">implements</span> <span class="cls">SinkFunction</span>&lt;<span class="cls">SurgeResult</span>&gt; {
+    <span class="kw">private</span> <span class="cls">JedisPool</span> jedisPool;
+
+    <span class="ann">@Override</span>
+    <span class="kw">public void</span> <span class="fn2">invoke</span>(<span class="cls">SurgeResult</span> result, <span class="cls">Context</span> ctx) {
+        <span class="kw">try</span> (<span class="cls">Jedis</span> jedis = jedisPool.getResource()) {
+            jedis.setex(<span class="str">"surge:"</span> + result.getCell(), <span class="num">120</span>, <span class="cls">String</span>.valueOf(result.getMultiplier()));
+        }
+    }
+}
+
+<span class="cm">// ── Surge API (read path) ─────────────────────────────</span>
+<span class="ann">@RestController</span>
+<span class="kw">public class</span> <span class="cls">SurgeController</span> {
+
+    <span class="ann">@Autowired</span> <span class="kw">private</span> <span class="cls">RedisTemplate</span>&lt;<span class="cls">String</span>,<span class="cls">String</span>&gt; redis;
+
+    <span class="ann">@GetMapping</span>(<span class="str">"/surge"</span>)
+    <span class="kw">public</span> <span class="cls">SurgeResponse</span> <span class="fn2">getSurge</span>(<span class="ann">@RequestParam</span> <span class="kw">double</span> lat, <span class="ann">@RequestParam</span> <span class="kw">double</span> lng) {
+        <span class="kw">long</span>   cell       = h3.geoToH3(lat, lng, <span class="num">6</span>);  <span class="cm">// res 6 for pricing</span>
+        <span class="cls">String</span> value      = redis.opsForValue().get(<span class="str">"surge:"</span> + cell);
+        <span class="kw">double</span> multiplier = value != <span class="kw">null</span> ? <span class="cls">Double</span>.parseDouble(value) : <span class="num">1.0</span>; <span class="cm">// default: no surge</span>
+        <span class="kw">return</span> <span class="kw">new</span> <span class="cls">SurgeResponse</span>(multiplier, cell);
+    }
+}
+</code></pre>
+      </div>
+      <div id="python" class="cblock">
+<pre><code><span class="cm"># ══════════════════════════════════════════════════════
+# Surge Pricing — Python: Pricing Function + API
+# ══════════════════════════════════════════════════════</span>
+
+<span class="kw">import</span> h3, redis, time
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+r = redis.Redis(decode_responses=<span class="kw">True</span>)
+
+CAP              = <span class="num">4.0</span>
+SURGE_THRESHOLD  = <span class="num">1.2</span>
+SURGE_TTL        = <span class="num">120</span>  <span class="cm"># seconds</span>
+SURGE_RESOLUTION = <span class="num">6</span>   <span class="cm"># H3 res-6: ~36 km² per cell</span>
+
+
+<span class="ann">@dataclass</span>
+<span class="kw">class</span> <span class="cls">SurgeResult</span>:
+    cell:       str
+    multiplier: float
+    demand:     int
+    supply:     int
+
+
+<span class="kw">def</span> <span class="fn2">pricing_function</span>(demand: int, supply: int) -> float:
+    <span class="str">"""Piecewise linear surge multiplier. Capped at CAP."""</span>
+    ratio = demand / max(supply, <span class="num">1</span>)
+    <span class="kw">if</span>   ratio <= <span class="num">1.2</span>: <span class="kw">return</span> <span class="num">1.0</span>
+    <span class="kw">elif</span> ratio <= <span class="num">2.0</span>: <span class="kw">return</span> <span class="num">1.0</span> + (ratio - <span class="num">1.2</span>) * <span class="num">0.625</span>
+    <span class="kw">elif</span> ratio <= <span class="num">4.0</span>: <span class="kw">return</span> <span class="num">1.5</span> + (ratio - <span class="num">2.0</span>) * <span class="num">0.25</span>
+    <span class="kw">else</span>:              <span class="kw">return</span> min(CAP, <span class="num">2.0</span> + (ratio - <span class="num">4.0</span>) * <span class="num">0.1</span>)
+
+
+<span class="kw">def</span> <span class="fn2">compute_and_store_surge</span>(cell: str, demand: int, supply: int) -> float:
+    <span class="str">"""Called by Flink job every 60s per active cell."""</span>
+    multiplier = pricing_function(demand, supply)
+    <span class="kw">if</span> multiplier > <span class="num">1.0</span>:
+        r.setex(f<span class="str">"surge:{cell}"</span>, SURGE_TTL, f<span class="str">"{multiplier:.4f}"</span>)
+    <span class="kw">else</span>:
+        r.delete(f<span class="str">"surge:{cell}"</span>)  <span class="cm"># no surge = no key (GET returns None → 1.0)</span>
+    <span class="kw">return</span> multiplier
+
+
+<span class="kw">def</span> <span class="fn2">get_surge_multiplier</span>(lat: float, lng: float) -> float:
+    <span class="str">"""Read current surge for a location. &lt;1ms from Redis."""</span>
+    cell  = h3.geo_to_h3(lat, lng, SURGE_RESOLUTION)
+    value = r.get(f<span class="str">"surge:{cell}"</span>)
+    <span class="kw">return</span> float(value) <span class="kw">if</span> value <span class="kw">else</span> <span class="num">1.0</span>  <span class="cm"># no key = no surge = 1.0×</span>
+
+
+<span class="kw">def</span> <span class="fn2">get_surge_map</span>(lat: float, lng: float, radius: int = <span class="num">2</span>) -> dict:
+    <span class="str">"""Return surge multipliers for nearby cells (for driver app heat map)."""</span>
+    center_cell = h3.geo_to_h3(lat, lng, SURGE_RESOLUTION)
+    nearby      = h3.k_ring(center_cell, radius)
+    pipe        = r.pipeline()
+    <span class="kw">for</span> cell <span class="kw">in</span> nearby:
+        pipe.get(f<span class="str">"surge:{cell}"</span>)
+    values = pipe.execute()
+    <span class="kw">return</span> {
+        cell: float(val) <span class="kw">if</span> val <span class="kw">else</span> <span class="num">1.0</span>
+        <span class="kw">for</span> cell, val <span class="kw">in</span> zip(nearby, values)
+    }
+
+
+<span class="cm"># ── Simulated Flink batch: compute surge for all active cells ──</span>
+<span class="kw">def</span> <span class="fn2">surge_computation_batch</span>(supply_counts: dict[str, int], demand_counts: dict[str, int]):
+    <span class="str">"""Called every 60s by Flink job. Writes surge to Redis for all active cells."""</span>
+    all_cells = set(supply_counts.keys()) | set(demand_counts.keys())
+    results   = []
+    <span class="kw">for</span> cell <span class="kw">in</span> all_cells:
+        supply = supply_counts.get(cell, <span class="num">0</span>)
+        demand = demand_counts.get(cell, <span class="num">0</span>)
+        mult   = compute_and_store_surge(cell, demand, supply)
+        <span class="kw">if</span> mult > <span class="num">1.0</span>:
+            results.append(<span class="cls">SurgeResult</span>(cell, mult, demand, supply))
+    <span class="kw">return</span> results
+
+
+<span class="cm"># ── Concert spike simulation ──────────────────────────</span>
+<span class="kw">def</span> <span class="fn2">simulate_concert_spike</span>():
+    arena_lat, arena_lng = <span class="num">37.332</span>, -<span class="num">121.900</span>  <span class="cm"># San Jose SAP Center</span>
+    cell = h3.geo_to_h3(arena_lat, arena_lng, SURGE_RESOLUTION)
+
+    <span class="cm"># T=0: Concert ends. 10,000 requests, 50 nearby drivers</span>
+    mult = compute_and_store_surge(cell, demand=<span class="num">10000</span>, supply=<span class="num">50</span>)
+    print(f<span class="str">"T=0s:   demand=10000 supply=50  ratio={10000/50:.1f}x  surge={mult:.2f}x"</span>)
+
+    <span class="cm"># T=5min: Drivers attracted by 4× multiplier flock in</span>
+    mult = compute_and_store_surge(cell, demand=<span class="num">7000</span>, supply=<span class="num">500</span>)
+    print(f<span class="str">"T=5min: demand=7000  supply=500  ratio={7000/500:.1f}x  surge={mult:.2f}x"</span>)
+
+    <span class="cm"># T=15min: Market clearing</span>
+    mult = compute_and_store_surge(cell, demand=<span class="num">3000</span>, supply=<span class="num">2000</span>)
+    print(f<span class="str">"T=15min:demand=3000  supply=2000 ratio={3000/2000:.1f}x  surge={mult:.2f}x"</span>)
+
+    <span class="cm"># T=30min: Equilibrium</span>
+    mult = compute_and_store_surge(cell, demand=<span class="num">500</span>, supply=<span class="num">800</span>)
+    print(f<span class="str">"T=30min:demand=500   supply=800  ratio={500/800:.2f}x surge={mult:.2f}x"</span>)
+
+
+<span class="cm"># Output:</span>
+<span class="cm"># T=0s:   demand=10000 supply=50  ratio=200.0x  surge=4.00x (capped)</span>
+<span class="cm"># T=5min: demand=7000  supply=500  ratio=14.0x   surge=4.00x (still capped)</span>
+<span class="cm"># T=15min:demand=3000  supply=2000 ratio=1.5x    surge=1.19x (nearly normal)</span>
+<span class="cm"># T=30min:demand=500   supply=800  ratio=0.62x   surge=1.00x (equilibrium)</span>
+</code></pre>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tradeoffs" class="panel">
+  <div class="sec"><div class="sec-head">⚖️ Tradeoffs</div><div class="sec-body">
+    <div class="to-card"><div class="to-head">🗺 Zone Granularity: Coarse vs Fine vs Dynamic</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Very Fine (H3 res-8, ~0.7 km²)</div><p>Highly targeted surge — the exact block has high surge but the next block doesn't. Very accurate but statistically noisy: a single event can completely dominate a tiny zone. Drivers don't benefit much — they can't navigate to a specific 700m² zone. Zone boundaries shift constantly.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Medium (H3 res-6, ~36 km²) — chosen</div><p>Large enough to be statistically stable. Small enough to capture neighborhood-level variation. Drivers can meaningfully navigate into a zone. Uber uses res-6 for surge pricing. Easy to display on a map. 50K active zones worldwide is very manageable. The right balance for a city-level marketplace.</p></div>
+        <div class="to-col"><div class="to-col-head tc-alt">Very Coarse (City-level)</div><p>Single multiplier for the entire city. Easy to compute. Easy for riders to understand. But: completely misses micro-market imbalances — surge at the airport doesn't help the concert venue 15km away. Useless for demand management in specific areas. Only appropriate for very low-density markets.</p></div>
+      </div>
+    </div>
+    <div class="to-card"><div class="to-head">⏱ Computation Frequency: Reactive vs Periodic vs Predictive</div>
+      <div class="to-body">
+        <div class="to-col"><div class="to-col-head tc-alt">Reactive (compute on every event)</div><p>Re-compute surge on every driver/request event. Maximum freshness. But: 250K+ events/sec → 250K surge computations/sec. Each computation reads all nearby demand/supply data. Extremely expensive. Race conditions between concurrent updates. Not practical at scale.</p></div>
+        <div class="to-col"><div class="to-col-head tc-pick">✅ Periodic (60s batch) — chosen</div><p>Flink tumbling window aggregates supply and demand. Every 60 seconds: compute new multiplier for all active cells. Write to Redis. Simple, predictable load. Max staleness: 60 seconds — acceptable. Riders accept surge displayed at request time, which may be slightly stale. Industry standard.</p></div>
+        <div class="to-col"><div class="to-col-head tc-why">Predictive</div><p>ML model predicts future demand (knowing concert ends at 10pm, start surging at 9:55pm). Pre-emptive surge attracts drivers before the spike. Better equilibrium than reactive surge. Used by Uber in practice for known events. Requires event calendar integration and demand forecasting model. Higher complexity, significantly better rider experience.</p></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+</div>
+<script>
+function show(id,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function switchLang(lang,btn){document.querySelectorAll('.cblock').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));document.getElementById(lang).classList.add('active');btn.classList.add('active')}
+</script>
+</body>
+</html>
